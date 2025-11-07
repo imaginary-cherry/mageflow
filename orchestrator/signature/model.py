@@ -281,8 +281,8 @@ class TaskSignature(AtomicRedisModel):
             await self.change_status(last_status)
 
     @classmethod
-    async def suspend_from_id(self, task_id: TaskIdentifierType):
-        async with self.lock_from_id(task_id) as task:
+    async def suspend_from_id(cls, task_id: TaskIdentifierType):
+        async with cls.lock_from_id(task_id) as task:
             await task.suspend()
 
     async def suspend(self):
