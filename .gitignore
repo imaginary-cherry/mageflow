@@ -211,3 +211,6 @@ __marimo__/
 CLAUDE.md
 .vscode
 future-features
+
+# Ignore dynaconf secret files
+.secrets.*
