@@ -2,14 +2,16 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Self, Any
 
+from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
 from pydantic import (
     BaseModel,
     field_validator,
     Field,
 )
-from rapyer import AtomicRedisModel
+from rapyer import AtomicRedisModel, RedisDict, RedisList
 from rapyer.errors.base import KeyNotFound
+from rapyer.types.datetime import RedisDatetime
 
 from orchestrator.errors import MissingSignatureError
 from orchestrator.init import orchestrator_config
@@ -17,7 +19,9 @@ from orchestrator.models.message import ReturnValue
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from orchestrator.signature.types import TaskIdentifierType, HatchetTaskType
+from orchestrator.task.model import HatchetTaskModel
 from orchestrator.utils.models import get_marked_fields
+from orchestrator.workflows import OrchestratorWorkflow
 
 
 class TaskSignature(AtomicRedisModel):
@@ -90,9 +94,8 @@ class TaskSignature(AtomicRedisModel):
         cls, task_name: str, input_validator: type[BaseModel] = None, **kwargs
     ) -> Self:
         if not input_validator:
-            input_validator = await load_validator(
-                orchestrator_config.redis_client, task_name
-            )
+            task_def = await HatchetTaskModel.get(task_name)
+            input_validator = task_def.input_validator if task_def else None
 
         model_fields = list(cls.__pydantic_fields__)
         optional_task_params = {
@@ -125,7 +128,8 @@ class TaskSignature(AtomicRedisModel):
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         input_validators = self.model_validators
         total_kwargs = self.kwargs | task_additional_params
-        task = await load_name(redis, task)
+        task_def = await HatchetTaskModel.get(self.task_name)
+        task = task_def.task_name if task_def else self.task_name
 
         return_field = "results" if use_return_field else None
         if input_validators and return_field:
@@ -133,6 +137,7 @@ class TaskSignature(AtomicRedisModel):
             if return_value_fields:
                 return_field = return_value_fields[0][1]
 
+        hatchet = orchestrator_config.hatchet_client
         workflow = hatchet.workflow(
             name=task, input_validator=input_validators, **self.workflow_params
         )
@@ -276,7 +281,7 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.aio_run_no_wait(FakeModel())
+            await self.aio_run_no_wait(EmptyModel())
         else:
             await self.change_status(last_status)
 
