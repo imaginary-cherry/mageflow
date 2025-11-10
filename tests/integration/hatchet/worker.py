@@ -118,13 +118,7 @@ workflows = [
 
 
 def main() -> None:
-    asyncio.run(orchestrator.init_from_dynaconf(workflows))
-
-    worker = hatchet.worker(
-        "dono-infra-test",
-        workflows=workflows,
-        lifespan=lifespan_initialize,
-    )
+    worker = hatchet.worker("tests", workflows=workflows, lifespan=lifespan_initialize)
 
     worker.start()
 

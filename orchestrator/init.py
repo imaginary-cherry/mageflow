@@ -7,7 +7,7 @@ from redis.asyncio.client import Redis
 from config import settings
 from orchestrator.task.model import HatchetTaskModel
 
-WORKER_FLAG_TO_STORE_NAME = "__orchestrator_task_name__"
+REGISTERED_TASKS: list[tuple] = []
 
 
 class ConfigModel(BaseModel):
@@ -31,10 +31,9 @@ class OrchestratorConfigModel(ConfigModel):
 orchestrator_config = OrchestratorConfigModel()
 
 
-async def init_from_dynaconf(workers: list = None):
+async def init_from_dynaconf():
     orchestrator_config.set_from_dynaconf()
-    if workers:
-        await register_workflows(workers)
+    await register_workflows()
 
     await update_register_signature_models()
 
@@ -54,11 +53,9 @@ async def update_register_signature_models():
     )
 
 
-async def register_workflows(workflows: list):
-    for workflow in workflows:
-        if not hasattr(workflow, WORKER_FLAG_TO_STORE_NAME):
-            continue
-        orchestrator_task_name = getattr(workflow, WORKER_FLAG_TO_STORE_NAME)
+async def register_workflows():
+    for reg_task in REGISTERED_TASKS:
+        workflow, orchestrator_task_name = reg_task
         hatchet_task = HatchetTaskModel(
             task_name=orchestrator_task_name,
             hatchet_task_name=workflow.name,
