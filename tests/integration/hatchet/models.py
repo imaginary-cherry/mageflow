@@ -1,0 +1,18 @@
+from typing import Any, Annotated
+
+from pydantic import BaseModel, Field
+
+from orchestrator.models.message import ReturnValue
+
+
+class ContextMessage(BaseModel):
+    context: dict = Field(default_factory=dict)
+
+
+class CommandMessageWithResult(ContextMessage):
+    task_result: Annotated[Any, ReturnValue()]
+
+
+class SleepTaskMessage(ContextMessage):
+    sleep_time: int = 2
+    result: Any = None

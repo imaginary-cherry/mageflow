@@ -123,8 +123,7 @@ async def assert_task_was_paused(
     # Check kwargs were stored
     hatchet_call = wf_by_task_id[task_id]
     assert hatchet_call.status == V1TaskStatus.CANCELLED
-    # TODO - .value should be removed in the rayper v1.0.0
-    expected_dump = task.model_validators.value.validate(hatchet_call.input["input"])
+    expected_dump = task.model_validators.validate(hatchet_call.input["input"])
     updated_callback_signature = await TaskSignature.from_id(task_id)
     for key, value in expected_dump.model_dump().items():
         assert updated_callback_signature.kwargs[key] == value, f"{key} != {value}"

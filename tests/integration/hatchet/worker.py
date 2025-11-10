@@ -1,18 +1,19 @@
 import asyncio
 import json
-from typing import Any, Annotated
 
 from dynaconf import Dynaconf
-from pydantic import BaseModel, Field
-
-import orchestrator
 from hatchet_sdk import Hatchet, ClientConfig, Context
 from hatchet_sdk.config import HealthcheckConfig
 
+import orchestrator
 from orchestrator.callbacks import AcceptParams
 from orchestrator.init import lifespan_initialize
-from orchestrator.models.message import ReturnValue
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
+from tests.integration.hatchet.models import (
+    ContextMessage,
+    CommandMessageWithResult,
+    SleepTaskMessage,
+)
 
 settings = Dynaconf(
     envvar_prefix="DYNACONF",
@@ -26,19 +27,6 @@ config_obj = ClientConfig(
 )
 
 hatchet = Hatchet(debug=True, config=config_obj)
-
-
-class ContextMessage(BaseModel):
-    context: dict = Field(default_factory=dict)
-
-
-class CommandMessageWithResult(ContextMessage):
-    task_result: Annotated[Any, ReturnValue()]
-
-
-class SleepTaskMessage(ContextMessage):
-    sleep_time: int = 2
-    result: Any = None
 
 
 # > Default priority
