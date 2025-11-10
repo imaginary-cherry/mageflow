@@ -37,9 +37,7 @@ class HatchetInvoker(BaseInvoker):
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
             current_task = await TaskSignature.from_id_safe(task_id)
-            task_success_workflows = current_task.activate_success(
-                result, context=self.message.context
-            )
+            task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
         if success_publish_tasks:
@@ -52,9 +50,7 @@ class HatchetInvoker(BaseInvoker):
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
             current_task = await TaskSignature.from_id_safe(task_id)
-            task_error_workflows = current_task.activate_error(
-                self.message, context=self.message.context
-            )
+            task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
         if error_publish_tasks:
