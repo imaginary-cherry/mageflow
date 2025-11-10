@@ -18,6 +18,7 @@ from tests.integration.hatchet.worker import (
     fail_task,
     CommandMessageWithResult,
     ContextMessage,
+    task1_test_reg_name,
 )
 
 
@@ -105,11 +106,9 @@ async def test_signature_from_registered_task_name_execution_and_redis_cleanup_s
     )
     message = ContextMessage(context=test_ctx)
 
-    registered_task_name = "task1-test"
-
     # Act
     signature = await orchestrator.sign(
-        registered_task_name, input_validator=ContextMessage
+        task1_test_reg_name, input_validator=ContextMessage
     )
     await signature.aio_run_no_wait(message, options=trigger_options)
 

@@ -33,8 +33,10 @@ hatchet = Hatchet(debug=True, config=config_obj)
 DEFAULT_PRIORITY = 1
 SLEEP_TIME = 0.25
 
+task1_test_reg_name = "task1-test"
 
-@orchestrator.register_task("task1-test")
+
+@orchestrator.register_task(task1_test_reg_name)
 @hatchet.task(name="task1", input_validator=ContextMessage)
 @orchestrator.handle_task_callback()
 def task1(msg):
