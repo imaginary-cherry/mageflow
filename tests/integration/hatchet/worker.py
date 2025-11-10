@@ -3,7 +3,7 @@ import json
 from typing import Any, Annotated
 
 from dynaconf import Dynaconf
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import orchestrator
 from hatchet_sdk import Hatchet, ClientConfig, Context
@@ -29,7 +29,7 @@ hatchet = Hatchet(debug=True, config=config_obj)
 
 
 class ContextMessage(BaseModel):
-    context: dict
+    context: dict = Field(default_factory=dict)
 
 
 class CommandMessageWithResult(ContextMessage):
