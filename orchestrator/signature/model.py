@@ -103,9 +103,12 @@ class TaskSignature(AtomicRedisModel):
             for field_name in model_fields
             if field_name in kwargs
         }
-        more_kwargs = dict(model_validators=input_validator)
-        kwargs |= more_kwargs
-        signature = cls(task_name=task_name, kwargs=kwargs, **optional_task_params)
+        signature = cls(
+            task_name=task_name,
+            kwargs=kwargs,
+            model_validators=input_validator,
+            **optional_task_params,
+        )
         await signature.save()
         return signature
 
