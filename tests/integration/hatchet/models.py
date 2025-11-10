@@ -6,7 +6,7 @@ from orchestrator.models.message import ReturnValue
 
 
 class ContextMessage(BaseModel):
-    context: dict = Field(default_factory=dict)
+    base_data: dict = Field(default_factory=dict)
 
 
 class CommandMessageWithResult(ContextMessage):

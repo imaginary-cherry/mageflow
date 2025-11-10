@@ -35,7 +35,7 @@ async def test__set_result_in_return_value(
     main_signature = await orchestrator.sign(
         sleep_task, success_callbacks=[callback_signature, second_callback_signature]
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     # Act
     await callback_signature.change_status(SignatureStatus.SUSPENDED)
@@ -59,7 +59,7 @@ async def test_signature_pause_with_callback_redis_cleanup_sanity(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     callback_signature = await orchestrator.sign(callback_with_redis)
     main_signature = await orchestrator.sign(

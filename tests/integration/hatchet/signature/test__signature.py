@@ -31,7 +31,7 @@ async def test_signature_creation_and_execution_with_redis_cleanup_sanity(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     # Act
     signature = await orchestrator.sign(task1)
@@ -53,7 +53,7 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     callback_signature = await orchestrator.sign(task1_callback)
     main_signature = await orchestrator.sign(
@@ -81,7 +81,7 @@ async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     error_callback_signature = await orchestrator.sign(error_callback)
 
@@ -104,7 +104,7 @@ async def test_signature_from_registered_task_name_execution_and_redis_cleanup_s
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
 
     # Act
     signature = await orchestrator.sign(
@@ -130,7 +130,7 @@ async def test_task_with_success_callback_execution_and_redis_cleanup_sanity(
     )
 
     success_callback_signature = await orchestrator.sign(task1_callback)
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
     task = await orchestrator.sign(
         task2, success_callbacks=[success_callback_signature.id]
     )
@@ -157,7 +157,7 @@ async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
     )
 
     error_callback_signature = await orchestrator.sign(error_callback)
-    message = ContextMessage(context=test_ctx)
+    message = ContextMessage(base_data=test_ctx)
     task = await orchestrator.sign(
         fail_task, error_callbacks=[error_callback_signature]
     )
