@@ -24,23 +24,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Generate token from GitHub App
-        id: generate-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - name: Configure Git credentials for private repos
-        run: |
-          # Set up git credentials that Poetry will inherit
-          echo "https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com" > ~/.git-credentials
-          git config --global credential.helper store
-
-          # Also configure URL rewriting as a fallback
-          git config --global url."https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
-
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
