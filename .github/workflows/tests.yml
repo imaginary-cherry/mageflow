@@ -59,7 +59,7 @@ jobs:
           echo "HATCHET_API_KEY=$HATCHET_API_KEY"
           echo "HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED=True" >> $GITHUB_ENV
 
-      - name: Run unit tests
+      - name: Run Tests
         env:
           PYTHONHASHSEED: 0
         run: |
