@@ -1,6 +1,21 @@
-from typing import TypeVar
+from datetime import timedelta
+from typing import TypeVar, Callable, Concatenate
 
-from hatchet_sdk import Hatchet
+from hatchet_sdk import Hatchet, DurableContext
+from hatchet_sdk.hatchet import P
+from hatchet_sdk.labels import DesiredWorkerLabel
+from hatchet_sdk.rate_limit import RateLimit
+from hatchet_sdk.runnables.types import (
+    TWorkflowInput,
+    StickyStrategy,
+    ConcurrencyExpression,
+    DefaultFilter,
+    EmptyModel,
+    R,
+)
+from hatchet_sdk.runnables.workflow import Standalone
+from hatchet_sdk.utils.timedelta_to_expression import Duration
+from hatchet_sdk.utils.typing import CoroutineLike
 
 from orchestrator.callbacks import AcceptParams, register_task, handle_task_callback
 
@@ -27,6 +42,18 @@ class HatchetOrchestrator(Hatchet):
 
     def task(self, *, name: str | None = None, **kwargs):
         hatchet_task = super().task(name=name, **kwargs)
+
+        def decorator(func):
+            handler_dec = handle_task_callback(self.param_config)
+            func = handler_dec(func)
+            wf = hatchet_task(func)
+            register = register_task(name)
+            return register(wf)
+
+        return decorator
+
+    def durable_task(self, *, name: str | None = None, **kwargs):
+        hatchet_task = super().durable_task(name=name, **kwargs)
 
         def decorator(func):
             handler_dec = handle_task_callback(self.param_config)
