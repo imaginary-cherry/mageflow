@@ -1,0 +1,69 @@
+import asyncio
+
+from orchestrator.chain.messages import ChainSuccessTaskCommandMessage
+from orchestrator.chain.model import ChainTaskSignature
+from orchestrator.chain.workflows import ON_CHAIN_ERROR, ON_CHAIN_END
+from orchestrator.signature.creator import (
+    TaskSignatureConvertible,
+    resolve_signature_id,
+)
+from orchestrator.signature.model import TaskIdentifierType, TaskSignature
+
+
+async def chain(
+    tasks: list[TaskSignatureConvertible],
+    name: str = None,
+    error: TaskIdentifierType = None,
+    success: TaskIdentifierType = None,
+) -> ChainTaskSignature:
+    tasks = [await resolve_signature_id(task) for task in tasks]
+
+    # Create a chain task that will be deleted only at the end of the chain
+    first_task = tasks[0]
+    chain_task_signature = ChainTaskSignature(
+        task_name=f"chain-task:{name or first_task.task_name}",
+        success_callbacks=[success] if success else [],
+        error_callbacks=[error] if error else [],
+        tasks=tasks,
+    )
+    await chain_task_signature.save()
+
+    callback_kwargs = dict(chain_task_id=chain_task_signature.id)
+    on_chain_error = TaskSignature(
+        task_name=ON_CHAIN_ERROR,
+        task_identifiers=callback_kwargs,
+        model_validators=ChainSuccessTaskCommandMessage,
+    )
+    on_chain_success = TaskSignature(
+        task_name=ON_CHAIN_END,
+        task_identifiers=callback_kwargs,
+        model_validators=ChainSuccessTaskCommandMessage,
+    )
+    await _chain_task_to_previous_success(tasks, on_chain_error, on_chain_success)
+    return chain_task_signature
+
+
+async def _chain_task_to_previous_success(
+    tasks: list[TaskSignature], error: TaskSignature, success: TaskSignature
+) -> TaskIdentifierType:
+    """
+    Take a list of tasks and connect each one to the previous one.
+    """
+    if len(tasks) < 2:
+        raise ValueError(
+            "Chained tasks must contain at least two tasks. "
+            "If you want to run a single task, use `create_workflow` instead."
+        )
+
+    total_tasks = tasks + [success]
+    error_tasks = await error.duplicate_many(len(tasks))
+    store_errors = [error.save() for error in error_tasks]
+
+    # Store tasks
+    await asyncio.gather(success.save(), *store_errors)
+    update_tasks = [
+        task.add_callbacks(success=[total_tasks[i + 1]], errors=[error_tasks[i]])
+        for i, task in enumerate(tasks)
+    ]
+    chained_tasks = await asyncio.gather(*update_tasks)
+    return chained_tasks[0]

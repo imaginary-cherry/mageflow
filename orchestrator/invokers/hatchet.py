@@ -3,7 +3,7 @@ from typing import Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
-from hatchet_sdk.runnables.types import EmptyModel
+from pydantic import BaseModel
 
 from orchestrator.invokers.base import BaseInvoker
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
@@ -13,7 +13,7 @@ from orchestrator.workflows import TASK_DATA_PARAM_NAME
 
 
 class HatchetInvoker(BaseInvoker):
-    def __init__(self, message: EmptyModel, ctx: Context):
+    def __init__(self, message: BaseModel, ctx: Context):
         self.message = message
         self.task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
         self.workflow_id = ctx.workflow_id
