@@ -43,7 +43,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install --with tests
+          poetry install --with dev
 
       - name: Deploy Hatch Lite
         run: |
