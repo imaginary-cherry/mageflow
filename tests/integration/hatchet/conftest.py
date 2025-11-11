@@ -19,7 +19,7 @@ import redis
 import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from orchestrator.init import orchestrator_config
+from orchestrator.init import orchestrator_config, init_orchestrator
 from orchestrator.task.model import HatchetTaskModel
 from redis.asyncio.client import Redis
 from tests.integration.hatchet.worker import (
