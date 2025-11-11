@@ -1528,16 +1528,20 @@ name = "rapyer"
 version = "1.0.2"
 description = "Pydantic models with Redis as the backend"
 optional = false
-python-versions = "<4.0,>=3.11"
+python-versions = ">=3.11,<4.0"
 groups = ["main"]
-files = [
-    {file = "rapyer-1.0.2-py3-none-any.whl", hash = "sha256:588d3cb09e3f8868c6deb1b0043a794f950dafb24aac21509b5b0004cebb6841"},
-    {file = "rapyer-1.0.2.tar.gz", hash = "sha256:f9a61955d4645d02ddb286f19407cd78d735dcafcc8fa4d4494db59672c59e22"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 pydantic = ">=2.11.0,<2.12.0"
 redis = {version = ">=6.4.0,<6.5.0", extras = ["async"]}
+
+[package.source]
+type = "git"
+url = "https://github.com/yedidyakfir/rapyer.git"
+reference = "develop"
+resolved_reference = "97dfd5127c873f6b0a61b617d970fcbcde46e13b"
 
 [[package]]
 name = "redis"
@@ -1836,4 +1840,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <4.0"
-content-hash = "fdc75693c6e243ddfcc386b739c292974d7c9bb83bc4899f555055069953479b"
+content-hash = "0ba6268b42c66ba2f13a132fda085ccf8947e901c89ce7c63c16e3df4d842b70"
