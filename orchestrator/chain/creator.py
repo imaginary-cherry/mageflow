@@ -1,8 +1,8 @@
 import asyncio
 
+from orchestrator.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
 from orchestrator.chain.messages import ChainSuccessTaskCommandMessage
 from orchestrator.chain.model import ChainTaskSignature
-from orchestrator.chain.workflows import ON_CHAIN_ERROR, ON_CHAIN_END
 from orchestrator.signature.creator import (
     TaskSignatureConvertible,
     resolve_signature_id,

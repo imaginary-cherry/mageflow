@@ -6,8 +6,6 @@ from orchestrator.errors import MissingSignatureError
 from orchestrator.signature.model import TaskSignature, TaskIdentifierType
 from orchestrator.signature.status import SignatureStatus
 
-CHAIN_TASK_ID_NAME = "chain_task_id"
-
 
 class ChainTaskSignature(TaskSignature):
     tasks: list[TaskIdentifierType] = Field(default_factory=list)

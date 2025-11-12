@@ -3,14 +3,12 @@ import asyncio
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
+from orchestrator.chain.consts import CHAIN_TASK_ID_NAME
 from orchestrator.chain.messages import ChainSuccessTaskCommandMessage
-from orchestrator.chain.model import ChainTaskSignature, CHAIN_TASK_ID_NAME
+from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.invokers.hatchet import HatchetInvoker
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.signature.model import TaskSignature
-
-ON_CHAIN_ERROR = "orchestrator_on_chain_error"
-ON_CHAIN_END = "orchestrator_on_chain_end"
 
 
 async def chain_end_task(msg: ChainSuccessTaskCommandMessage, ctx: Context) -> None:
