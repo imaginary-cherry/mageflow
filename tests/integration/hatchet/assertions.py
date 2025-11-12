@@ -100,11 +100,18 @@ def _assert_task_done(
     assert task_id in wf_map
     task_workflow = wf_map[task_id]
     if not allow_fails:
-        assert task_workflow.status == V1TaskStatus.COMPLETED
+        assert (
+            task_workflow.status == V1TaskStatus.COMPLETED
+        ), f"{task_workflow.workflow_name} didn't finish"
     if input_params is not None:
-        assert input_params.items() <= task_workflow.input["input"].items()
+        assert (
+            input_params.items() <= task_workflow.input["input"].items()
+        ), f"{task_workflow.workflow_name} has some missing parameters"
     if results is not None:
-        assert task_workflow.output["hatchet_results"] == results
+        task_res = task_workflow.output["hatchet_results"]
+        assert (
+            task_res == results
+        ), f"{task_workflow.workflow_name} has different results than expected: {task_res}"
     return task_workflow
 
 

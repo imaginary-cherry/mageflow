@@ -102,7 +102,7 @@ async def test_chain_fail(
     assert task3.id not in wf_by_signature
 
     # Check that callback was called
-    assert_signature_done(runs, chain_success_error_callback, test_ctx)
+    assert_signature_done(runs, chain_success_error_callback)
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
