@@ -1,12 +1,30 @@
 import asyncio
 import uuid
 
-from orchestrator.signature.creator import TaskSignatureConvertible
-from orchestrator.swarm.model import SwarmTaskSignature
+from orchestrator.signature.creator import (
+    TaskSignatureConvertible,
+    TaskSignatureOptions,
+)
+from orchestrator.swarm.model import SwarmTaskSignature, SwarmConfig
+
+try:
+    # Python 3.12+
+    from typing import Unpack
+except ImportError:
+    # Older Python versions
+    from typing_extensions import Unpack
+
+
+class SignatureOptions(TaskSignatureOptions):
+    is_swarm_closed: bool
+    config: SwarmConfig
+    task_kwargs: dict
 
 
 async def swarm(
-    tasks: list[TaskSignatureConvertible] = None, task_name: str = None, **kwargs
+    tasks: list[TaskSignatureConvertible] = None,
+    task_name: str = None,
+    **kwargs: Unpack[SignatureOptions],
 ) -> SwarmTaskSignature:
     tasks = tasks or []
     task_name = task_name or f"swarm-task-{uuid.uuid4()}"
