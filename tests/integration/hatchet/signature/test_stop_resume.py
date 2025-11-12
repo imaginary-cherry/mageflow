@@ -4,7 +4,6 @@ import pytest
 
 import orchestrator
 from orchestrator.signature.status import SignatureStatus
-
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_task_was_paused,

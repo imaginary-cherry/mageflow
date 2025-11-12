@@ -9,7 +9,6 @@ from orchestrator.invokers.hatchet import HatchetInvoker
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.signature.model import TaskSignature
 
-
 ON_CHAIN_ERROR = "orchestrator_on_chain_error"
 ON_CHAIN_END = "orchestrator_on_chain_end"
 

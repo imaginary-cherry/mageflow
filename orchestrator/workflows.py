@@ -3,7 +3,6 @@ from typing import Any, cast
 from hatchet_sdk import WorkflowRunRef
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions, WorkflowRunTriggerConfig
 from hatchet_sdk.runnables.types import TWorkflowInput, EmptyModel
-
 from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel

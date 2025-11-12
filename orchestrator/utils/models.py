@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
 
+
 def get_marked_fields(
     model: type[BaseModel], mark_type: type[PropType]
 ) -> list[tuple[PropType, str]]:

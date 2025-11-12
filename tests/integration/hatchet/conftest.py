@@ -11,7 +11,6 @@ from pathlib import Path
 from threading import Thread
 from typing import Generator, Callable, AsyncGenerator
 
-import orchestrator
 import psutil
 import pytest
 import pytest_asyncio
@@ -19,9 +18,11 @@ import redis
 import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from orchestrator.init import orchestrator_config, init_orchestrator
-from orchestrator.task.model import HatchetTaskModel
 from redis.asyncio.client import Redis
+
+import orchestrator
+from orchestrator.startup import orchestrator_config, init_orchestrator
+from orchestrator.task.model import HatchetTaskModel
 from tests.integration.hatchet.worker import (
     config_obj,
     settings,

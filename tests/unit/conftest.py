@@ -3,14 +3,14 @@ import pytest
 import pytest_asyncio
 from hatchet_sdk import Hatchet, ClientConfig
 
-from orchestrator.init import update_register_signature_models
 from orchestrator.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
+from orchestrator.startup import update_register_signature_models
 from tests.integration.hatchet.worker import settings
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def redis_client():
-    update_register_signature_models()
+    await update_register_signature_models()
     client = fakeredis.aioredis.FakeRedis()
     settings.redis_client = client
     await client.flushall()

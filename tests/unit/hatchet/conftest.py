@@ -1,5 +1,5 @@
-from unittest.mock import AsyncMock, patch
 from dataclasses import dataclass
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio

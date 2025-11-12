@@ -56,7 +56,7 @@ def handle_task_callback(expected_params: AcceptParams = AcceptParams.NO_CTX):
 
 
 def register_task(register_name: str):
-    from orchestrator.init import REGISTERED_TASKS
+    from orchestrator.startup import REGISTERED_TASKS
 
     def decorator(func):
         REGISTERED_TASKS.append((func, register_name))

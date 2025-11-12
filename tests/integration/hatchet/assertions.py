@@ -5,8 +5,8 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 
 from orchestrator.chain.model import ChainTaskSignature
-from orchestrator.signature.model import TaskSignature
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
+from orchestrator.signature.model import TaskSignature
 from orchestrator.signature.types import TaskIdentifierType
 from orchestrator.workflows import TASK_DATA_PARAM_NAME
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis

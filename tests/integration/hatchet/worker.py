@@ -6,8 +6,8 @@ from hatchet_sdk import Hatchet, ClientConfig, Context
 from hatchet_sdk.config import HealthcheckConfig
 
 import orchestrator
-from orchestrator.init import lifespan_initialize
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
+from orchestrator.startup import lifespan_initialize
 from tests.integration.hatchet.models import (
     ContextMessage,
     CommandMessageWithResult,
