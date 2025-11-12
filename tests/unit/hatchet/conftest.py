@@ -7,6 +7,7 @@ import pytest_asyncio
 import orchestrator
 from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.signature.model import TaskSignature
+from orchestrator.swarm.model import SwarmTaskSignature
 from tests.integration.hatchet.worker import ContextMessage
 
 pytest.register_assert_rewrite("tests.assertions")
@@ -15,7 +16,7 @@ pytest.register_assert_rewrite("tests.assertions")
 @dataclass
 class SwarmTestData:
     task_signatures: list
-    # swarm_signature: SwarmTaskSignature
+    swarm_signature: SwarmTaskSignature
 
 
 @pytest_asyncio.fixture

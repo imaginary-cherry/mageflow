@@ -8,6 +8,7 @@ from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.signature.model import TaskSignature
 from orchestrator.signature.types import TaskIdentifierType
+from orchestrator.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 from orchestrator.workflows import TASK_DATA_PARAM_NAME
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
@@ -166,9 +167,8 @@ def assert_signature_not_called(runs: HatchetRuns, task_sign: TaskSignature | st
 
 def assert_swarm_task_done(
     runs: HatchetRuns,
-    # swarm_task: SwarmTaskSignature,
-    # batch_items: list[BatchItemTaskSignature],
-    test_ctx=None,
+    swarm_task: SwarmTaskSignature,
+    batch_items: list[BatchItemTaskSignature],
 ):
     batch_map = {batch_item.id: batch_item for batch_item in batch_items}
 
@@ -177,7 +177,6 @@ def assert_swarm_task_done(
         assert_signature_done(
             runs,
             batch_map[batch_id].original_task_id,
-            test_ctx,
             check_called_once=False,
             check_finished_once=True,
             allow_fails=True,
@@ -193,9 +192,7 @@ def assert_swarm_task_done(
         if "hatchet_results" in task_output
     ]
     for callback_sign in swarm_task.success_callbacks:
-        callback_wf = assert_signature_done(
-            runs, callback_sign, test_ctx, check_called_once=True
-        )
+        callback_wf = assert_signature_done(runs, callback_sign, check_called_once=True)
         for result in callback_wf.input["input"]["task_result"]:
             assert (
                 result in expected_output

@@ -1,0 +1,234 @@
+import asyncio
+
+import pytest
+
+import orchestrator
+from orchestrator.signature.model import TaskSignature
+from orchestrator.swarm.model import SwarmConfig
+from tests.integration.hatchet.assertions import (
+    assert_redis_is_clean,
+    assert_swarm_task_done,
+    get_runs,
+    assert_signature_done,
+)
+from tests.integration.hatchet.conftest import HatchetInitData
+from tests.integration.hatchet.models import ContextMessage
+from tests.integration.hatchet.worker import (
+    callback_with_redis,
+    fail_task,
+    error_callback,
+    task1_callback,
+)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_swarm_with_three_tasks_integration_sanity(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    sign_callback1,
+    sign_task1,
+    sign_task2,
+    sign_task3,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    swarm_tasks = [sign_task1, sign_task2, sign_task3]
+    swarm = await orchestrator.swarm(
+        tasks=swarm_tasks,
+        success_callbacks=[sign_callback1],
+        kwargs={"param1": "nice", "param2": ["test", 2]},
+    )
+    batch_tasks = await asyncio.gather(
+        *[orchestrator.load_signature(batch_id) for batch_id in swarm.tasks]
+    )
+    await swarm.close_swarm()
+
+    # Act
+    # Test individual tasks directly to verify they work with the message format
+    regular_message = ContextMessage(base_data=test_ctx)
+    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
+
+    # Wait for all tasks to complete
+    await asyncio.sleep(15)
+
+    # Assert
+    # Check that all subtasks were called by checking Hatchet runs
+    runs = await get_runs(hatchet, ctx_metadata)
+
+    assert_swarm_task_done(runs, swarm, batch_tasks)
+    # Check that Redis is clean except for persistent keys
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_swarm_with_mixed_success_failed_tasks_integration_edge_case(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    sign_task1,
+    sign_task2,
+    sign_task3,
+    sign_fail_task,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    # Create task signatures: 3 success tasks only
+    fail_tasks = await sign_fail_task.duplicate_many(3)
+    await sign_fail_task.remove()
+
+    swarm_callback_sig = await orchestrator.sign(callback_with_redis)
+    swarm_error_callback_sig = await orchestrator.sign(error_callback)
+    reg_tasks = [sign_task1, sign_task2, sign_task3]
+    swarm = await orchestrator.swarm(
+        tasks=reg_tasks + fail_tasks,
+        success_callbacks=[swarm_callback_sig],
+        error_callbacks=[swarm_error_callback_sig],
+        config=SwarmConfig(max_concurrency=2, stop_after_n_failures=2),
+    )
+    await swarm.close_swarm()
+
+    # Act
+    regular_message = ContextMessage(base_data=test_ctx)
+    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
+
+    # Wait for tasks to complete
+    await asyncio.sleep(60)
+
+    # Assert
+    # Get all workflow runs for this test
+    runs = await get_runs(hatchet, ctx_metadata)
+    wf_names = set([wf.workflow_name for wf in runs])
+    workflows_by_name = {
+        wf_name: [wf for wf in runs if wf.workflow_name == wf_name]
+        for wf_name in wf_names
+    }
+
+    # Check that the success callback was not called
+    assert (
+        callback_with_redis.name not in workflows_by_name
+    ), f"Success callback no have been called"
+
+    # Check error callback was activated using the assert function
+    assert_signature_done(runs, swarm_error_callback_sig)
+
+    error_callback_runs = workflows_by_name[error_callback.name]
+    assert (
+        len(error_callback_runs) == 1
+    ), f"Error callback no have been called exactly once"
+
+    # Check no task was activated after the last error
+    error_wf = workflows_by_name[fail_task.name]
+    last_error_wf = sorted(error_wf, key=lambda wf: wf.started_at)[-1]
+    assert any(wf.started_at > last_error_wf.started_at for wf in runs)
+
+    # Check that Redis is clean (success callback sets one key)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_swarm_mixed_task_all_done_before_closing_task(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    sign_task1,
+    sign_task2,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    swarm_callback_sig = await orchestrator.sign(task1_callback)
+    swarm_error_callback_sig = await orchestrator.sign(error_callback)
+    reg_tasks = [sign_task1, fail_task]
+    swarm = await orchestrator.swarm(
+        tasks=reg_tasks,
+        success_callbacks=[swarm_callback_sig],
+        error_callbacks=[swarm_error_callback_sig],
+        config=SwarmConfig(stop_after_n_failures=2),
+    )
+
+    # We set so all the tasks that were sent from here will use this ctx (task marker for this test)
+    from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
+
+    add_metadata = ctx_additional_metadata.get() or {}
+    add_metadata.update(ctx_metadata)
+    ctx_additional_metadata.set(add_metadata)
+
+    # Act
+    regular_message = ContextMessage(base_data=test_ctx)
+    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
+    await asyncio.sleep(20)
+    new_task = await swarm.add_task(sign_task2)
+    await new_task.aio_run_no_wait(regular_message, options=trigger_options)
+    batch_tasks = await asyncio.gather(
+        *[TaskSignature.from_id(batch_id) for batch_id in swarm.tasks]
+    )
+    # Wait for tasks to complete
+    await asyncio.sleep(15)
+    await swarm.close_swarm()
+
+    # Wait for tasks to complete
+    await asyncio.sleep(15)
+
+    # Assert
+    # Get all workflow runs for this test
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_swarm_task_done(runs, swarm, batch_tasks)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    sign_task2,
+    sign_task3,
+    sign_fail_task,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    swarm_callback_sig = await orchestrator.sign(task1_callback)
+    swarm_error_callback_sig = await orchestrator.sign(error_callback)
+    reg_tasks = [sign_fail_task, sign_task2, sign_task3]
+    swarm = await orchestrator.swarm(
+        tasks=reg_tasks,
+        success_callbacks=[swarm_callback_sig],
+        error_callbacks=[swarm_error_callback_sig],
+        config=SwarmConfig(stop_after_n_failures=2),
+        is_swarm_closed=True,
+    )
+    batch_items = await asyncio.gather(
+        *[TaskSignature.from_id(batch_id) for batch_id in swarm.tasks]
+    )
+
+    # Act
+    regular_message = ContextMessage(base_data=test_ctx)
+    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
+    await asyncio.sleep(60)
+
+    # Assert
+    # Get all workflow runs for this test
+    runs = await get_runs(hatchet, ctx_metadata)
+
+    assert_swarm_task_done(runs, swarm, batch_items)
+    await assert_redis_is_clean(redis_client)
