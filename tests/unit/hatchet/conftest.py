@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 
 import orchestrator
+from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.signature.model import TaskSignature
 from tests.integration.hatchet.worker import ContextMessage
 
@@ -64,7 +65,7 @@ def mock_aio_run_no_wait():
 @dataclass
 class ChainTestData:
     task_signatures: list
-    # chain_signature: ChainTaskSignature
+    chain_signature: ChainTaskSignature
 
 
 @pytest_asyncio.fixture
