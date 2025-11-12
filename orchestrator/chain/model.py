@@ -1,6 +1,7 @@
 import asyncio
+from typing import Annotated
 
-from pydantic import field_validator, Field
+from pydantic import field_validator, Field, BeforeValidator
 
 from orchestrator.errors import MissingSignatureError
 from orchestrator.signature.model import TaskSignature, TaskIdentifierType
@@ -14,7 +15,7 @@ class ChainTaskSignature(TaskSignature):
 
     @field_validator("tasks", mode="before")
     @classmethod
-    def validate_tasks(cls, v):
+    def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_id(item) for item in v]
 
     async def workflow(self, **task_additional_params):

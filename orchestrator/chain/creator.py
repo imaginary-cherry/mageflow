@@ -7,14 +7,18 @@ from orchestrator.signature.creator import (
     TaskSignatureConvertible,
     resolve_signature_id,
 )
-from orchestrator.signature.model import TaskIdentifierType, TaskSignature
+from orchestrator.signature.model import (
+    TaskIdentifierType,
+    TaskSignature,
+    TaskInputType,
+)
 
 
 async def chain(
     tasks: list[TaskSignatureConvertible],
     name: str = None,
-    error: TaskIdentifierType = None,
-    success: TaskIdentifierType = None,
+    error: TaskInputType = None,
+    success: TaskInputType = None,
 ) -> ChainTaskSignature:
     tasks = [await resolve_signature_id(task) for task in tasks]
 

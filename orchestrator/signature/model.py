@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import Optional, Self, Any
+from typing import Optional, Self, Any, TypeAlias
 
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
@@ -327,6 +327,7 @@ class TaskSignature(AtomicRedisModel):
 
 
 SIGNATURES_NAME_MAPPING: dict[str, type[TaskSignature]] = {}
+TaskInputType: TypeAlias = TaskIdentifierType | TaskSignature
 
 
 def extract_class_and_id(
