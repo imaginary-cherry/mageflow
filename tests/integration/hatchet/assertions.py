@@ -4,6 +4,7 @@ from datetime import datetime
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 
+from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.signature.model import TaskSignature
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.signature.types import TaskIdentifierType
@@ -92,7 +93,7 @@ def assert_signature_done(
 def _assert_task_done(
     task_id: str,
     wf_map: WF_MAPPING_TYPE,
-    input_params: dict,
+    input_params: dict = None,
     results=None,
     allow_fails=False,
 ) -> V1TaskSummary:
@@ -199,17 +200,16 @@ def assert_swarm_task_done(
 
 def assert_chain_done(
     runs: HatchetRuns,
-    # chain_signature: ChainTaskSignature,
+    chain_signature: ChainTaskSignature,
     chain_tasks: list[TaskSignature],
-    test_ctx=None,
 ):
     wf_by_signature = map_wf_by_id(runs)
     assert_tasks_in_order(wf_by_signature, chain_tasks)
     for chain_task_id in chain_signature.tasks:
-        _assert_task_done(chain_task_id, wf_by_signature, test_ctx)
+        _assert_task_done(chain_task_id, wf_by_signature, None)
 
     for chain_success in chain_signature.success_callbacks:
-        _assert_task_done(chain_success, wf_by_signature, test_ctx)
+        _assert_task_done(chain_success, wf_by_signature, None)
 
 
 def assert_paused(runs: HatchetRuns, start_time: datetime, end_time: datetime):
