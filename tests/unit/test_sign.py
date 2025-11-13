@@ -1,23 +1,24 @@
 from dataclasses import dataclass, fields
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any
 
 import pytest
 
 import orchestrator
-from orchestrator import TaskSignature
+from orchestrator.signature.model import TaskSignature
+from orchestrator.signature.types import TaskIdentifierType
 
 
 @dataclass
 class SignParamOptions:
-    kwargs: Optional[Dict[str, Any]] = None
-    workflow_params: Optional[Dict[str, Any]] = None
+    kwargs: Optional[dict[str, Any]] = None
+    workflow_params: Optional[dict[str, Any]] = None
     creation_time: Optional[datetime] = None
-    success_callbacks: Optional[List[orchestrator.TaskIdentifierType]] = None
-    error_callbacks: Optional[List[orchestrator.TaskIdentifierType]] = None
-    task_identifiers: Optional[Dict[str, Any]] = None
+    success_callbacks: Optional[list[TaskIdentifierType]] = None
+    error_callbacks: Optional[list[TaskIdentifierType]] = None
+    task_identifiers: Optional[dict[str, Any]] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {}
         for field in fields(self):
             value = getattr(self, field.name)
@@ -58,7 +59,7 @@ def task(request):
     [
         [
             SignParamOptions(),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -67,7 +68,7 @@ def task(request):
         ],
         [
             SignParamOptions(kwargs={"param1": "value1"}),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={"param1": "value1"},
                 workflow_params={},
@@ -76,7 +77,7 @@ def task(request):
         ],
         [
             SignParamOptions(workflow_params={"workflow_param": "value"}),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={"workflow_param": "value"},
@@ -85,7 +86,7 @@ def task(request):
         ],
         [
             SignParamOptions(creation_time=datetime(2023, 1, 1)),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -95,7 +96,7 @@ def task(request):
         ],
         [
             SignParamOptions(task_identifiers={"identifier": "test_id"}),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -104,7 +105,7 @@ def task(request):
         ],
         [
             SignParamOptions(success_callbacks=["TaskSignature:success_task_1"]),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -114,7 +115,7 @@ def task(request):
         ],
         [
             SignParamOptions(error_callbacks=["TaskSignature:error_task_1"]),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -130,7 +131,7 @@ def task(request):
                 ],
                 error_callbacks=["TaskSignature:error_task_1"],
             ),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={},
                 workflow_params={},
@@ -154,7 +155,7 @@ def task(request):
                     "TaskSignature:complex_error_2",
                 ],
             ),
-            orchestrator.TaskSignature(
+            TaskSignature(
                 task_name="test_task",
                 kwargs={"param1": "value1", "param2": 42},
                 workflow_params={"wp1": "val1", "wp2": True},

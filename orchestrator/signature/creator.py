@@ -54,3 +54,10 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
         return await TaskSignature.from_task_name(task, **options)
     else:
         return await TaskSignature.from_task(task, **options)
+
+
+load_signature = TaskSignature.from_id_safe
+resume_task = TaskSignature.resume_from_id
+lock_task = TaskSignature.lock_from_id
+resume = TaskSignature.resume_from_id
+pause = TaskSignature.pause_from_id
