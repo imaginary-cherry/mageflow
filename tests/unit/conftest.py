@@ -3,6 +3,7 @@ import pytest
 import pytest_asyncio
 from hatchet_sdk import Hatchet, ClientConfig
 
+import orchestrator
 from orchestrator.chain.model import ChainTaskSignature
 from orchestrator.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
 from orchestrator.startup import update_register_signature_models
@@ -32,6 +33,11 @@ def hatchet_mock():
     settings.hatchet_client = hatchet
 
     yield hatchet
+
+
+@pytest.fixture()
+def orch(hatchet_mock, redis_client):
+    yield orchestrator.Orchestrator(hatchet_mock)
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
