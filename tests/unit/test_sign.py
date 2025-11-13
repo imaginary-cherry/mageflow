@@ -175,6 +175,7 @@ async def test__sign_task__sanity(
     task, sign_options, expected_signature: TaskSignature
 ):
     # Arrange
+    expected_signature = expected_signature.model_copy()
     sign_params = sign_options.to_dict()
     if not (isinstance(task, str) or expected_signature.model_validators):
         expected_signature.model_validators = task.input_validator
