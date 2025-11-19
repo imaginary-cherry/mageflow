@@ -81,7 +81,7 @@ async def create_app():
                 id="task-tabs",
                 value=start_tasks[0] if start_tasks else None,
                 children=tabs,
-                style={"height": "40px", "display": "flex", "flexDirection": "row"},
+                className="tabs-container",
             ),
             html.Div(
                 [
