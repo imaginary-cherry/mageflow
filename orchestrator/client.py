@@ -1,3 +1,4 @@
+import functools
 from typing import TypeVar, Any
 
 from hatchet_sdk import Hatchet, Worker
@@ -7,6 +8,12 @@ from hatchet_sdk.worker.worker import LifespanFn
 from orchestrator.callbacks import AcceptParams, register_task, handle_task_callback
 from orchestrator.init import init_orchestrator_hatchet_tasks
 from orchestrator.startup import lifespan_initialize
+
+
+async def merge_lifespan(original_lifespan: LifespanFn):
+    await lifespan_initialize()
+    async for res in original_lifespan():
+        yield res
 
 
 class HatchetOrchestrator(Hatchet):
@@ -45,6 +52,22 @@ class HatchetOrchestrator(Hatchet):
             return register(wf)
 
         return decorator
+
+    def worker(
+        self,
+        *args,
+        workflows: list[BaseWorkflow[Any]] | None = None,
+        lifespan: LifespanFn | None = None,
+        **kwargs,
+    ) -> Worker:
+        orchestrator_flows = init_orchestrator_hatchet_tasks(self.hatchet)
+        workflows += orchestrator_flows
+        if lifespan is None:
+            lifespan = lifespan_initialize
+        else:
+            lifespan = functools.partial(merge_lifespan, lifespan)
+
+        return super().worker(*args, workflows=workflows, lifespan=lifespan, **kwargs)
 
 
 T = TypeVar("T")
