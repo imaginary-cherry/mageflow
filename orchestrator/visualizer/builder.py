@@ -1,4 +1,6 @@
+import abc
 import dataclasses
+from abc import ABC
 from queue import Queue
 from typing import Generic, TypeVar
 
@@ -30,10 +32,56 @@ class GraphData:
     next_tasks: list[str] = dataclasses.field(default_factory=list)
 
 
-class TaskBuilder(Generic[T]):
+class Builder(ABC):
+    @abc.abstractmethod
+    def draw(self) -> GraphData:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def id(self):
+        pass
+
+
+class EmptyBuilder(Builder):
+    def __init__(
+        self,
+        task_id: str,
+        success_tasks: list[str] = None,
+        error_tasks: list[str] = None,
+    ):
+        self.task_id = task_id
+        self.success_tasks = success_tasks or []
+        self.error_tasks = error_tasks or []
+
+    @property
+    def id(self):
+        return self.task_id
+
+    def draw(self) -> GraphData:
+        task_node = {"data": {"id": self.task_id, "label": self.task_id}}
+        success_edges = [
+            {"data": {"source": self.task_id, "target": task_id}}
+            for task_id in self.success_tasks
+        ]
+        error_edges = [
+            {"data": {"source": self.task_id, "target": task_id}}
+            for task_id in self.error_tasks
+        ]
+        return GraphData(
+            main_node=task_node,
+            edges=success_edges + error_edges,
+        )
+
+
+class TaskBuilder(Builder, Generic[T]):
     def __init__(self, task: T):
         self.task = task
         self.ctx: dict[str, "TaskBuilder"] = {}
+
+    @property
+    def id(self):
+        return self.task.id
 
     def set_ctx(self, ctx: dict[str, "TaskBuilder"]):
         self.ctx = ctx
@@ -92,6 +140,14 @@ class ChainTaskBuilder(TaskBuilder[ChainTaskSignature]):
         base_node = super().draw()
 
         sub_tasks = [self.ctx.get(task_id) for task_id in self.task.tasks]
+        sub_tasks = [
+            (
+                task
+                if task
+                else EmptyBuilder(self.task.tasks[i], [self.task.tasks[i + 1]])
+            )
+            for i, task in enumerate(sub_tasks)
+        ]
         draw_tasks = [task_builder.draw() for task_builder in sub_tasks]
         for drawn_task in draw_tasks:
             drawn_task.main_node["data"]["parent"] = base_node.main_node["data"]["id"]
@@ -121,12 +177,16 @@ class ChainTaskBuilder(TaskBuilder[ChainTaskSignature]):
 class BatchItemTaskBuilder(TaskBuilder[BatchItemTaskSignature]):
     def draw(self) -> GraphData:
         original_task = self.ctx.get(self.task.original_task_id)
-        return original_task.draw()
+        if original_task:
+            return original_task.draw()
+        return super().draw()
 
     def drawn_tasks(self):
         return super().drawn_tasks() + [self.task.original_task_id]
 
     def mentioned_tasks(self) -> list[str]:
+        if self.task.original_task_id in self.ctx:
+            return self.ctx.get(self.task.original_task_id).mentioned_tasks()
         return []
 
 

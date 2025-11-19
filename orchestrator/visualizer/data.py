@@ -49,7 +49,6 @@ async def create_chain(name: str):
 
 async def create():
     chain_task1 = await create_chain("chain1")
-    return
     chain_task2 = await create_chain("chain2")
     chain_task3 = await create_chain("chain3")
     chain_task4 = await create_chain("chain4")
