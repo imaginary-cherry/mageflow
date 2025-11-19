@@ -1,0 +1,173 @@
+/* Task Information Section */
+.task-info-header {
+    margin: 0 0 10px 0;
+}
+
+.task-info-header-detailed {
+    margin: 0 0 15px 0;
+}
+
+.task-info-placeholder {
+    color: #666;
+}
+
+.task-info-item {
+    margin-bottom: 10px;
+}
+
+.task-info-item-extended {
+    margin-bottom: 10px;
+}
+
+.task-id-text {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* Headers and Labels */
+.section-header {
+    margin: 15px 0 5px 0;
+}
+
+/* Lists */
+.callback-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.callback-item {
+    font-size: 11px;
+    font-family: monospace;
+}
+
+/* Code blocks */
+.code-block {
+    background-color: #f0f0f0;
+    padding: 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    overflow: auto;
+    max-height: 100px;
+}
+
+.code-block-compact {
+    background-color: #f0f0f0;
+    padding: 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    overflow: auto;
+    max-height: 80px;
+}
+
+/* Tabs */
+.tab-style {
+    height: 40px;
+    width: 120px;
+    line-height: 40px;
+    padding: 0 10px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+}
+
+.tab-selected {
+    height: 40px;
+    width: auto;
+    min-width: 120px;
+    max-width: 300px;
+    line-height: 40px;
+    padding: 0 10px;
+    text-align: center;
+    overflow: visible;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tabs-container {
+    height: 40px;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 0;
+}
+
+/* Layout */
+.main-layout {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+}
+
+.graph-container {
+    flex: 1;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.info-window {
+    width: 28%;
+    height: 100%;
+    display: flex;
+    vertical-align: top;
+    flex-shrink: 0;
+    margin-left: 2%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+/* Cytoscape graph */
+.cytoscape-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Root container */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Main app container */
+#react-entry-point {
+    height: 100vh;
+}
+
+._dash-container {
+    height: 100vh;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the app wrapper takes full height */
+._dash-container > div {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
