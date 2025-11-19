@@ -85,16 +85,13 @@ class EmptyBuilder(Builder):
         if self.success_tasks:
             components.extend(
                 [
-                    html.H5("Success Tasks:", style={"margin": "15px 0 5px 0"}),
+                    html.H5("Success Tasks:", className="section-header"),
                     html.Ul(
                         [
-                            html.Li(
-                                task_id,
-                                style={"fontSize": "11px", "fontFamily": "monospace"},
-                            )
+                            html.Li(task_id, className="callback-item")
                             for task_id in self.success_tasks
                         ],
-                        style={"margin": "0", "paddingLeft": "20px"},
+                        className="callback-list",
                     ),
                 ]
             )
