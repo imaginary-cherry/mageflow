@@ -236,9 +236,8 @@ def find_unmentioned_tasks(ctx: dict[str, TaskBuilder]) -> list[str]:
     return list(ctx.keys() - mentioned_tasks)
 
 
-def build_graph(tasks: list[TaskSignature]) -> list[dict]:
+def create_builders(tasks: list[TaskSignature]) -> dict[str, TaskBuilder]:
     ctx = {task.id: task_mapping.get(type(task))(task) for task in tasks}
-    base_tasks_keys = find_unmentioned_tasks(ctx)
 
     # Initialize tasks
     for task_id in ctx.keys():
@@ -248,12 +247,13 @@ def build_graph(tasks: list[TaskSignature]) -> list[dict]:
         # Remove internal tasks
         task_builder.remove_errors_internal_tasks()
         task_builder.remove_success_internal_tasks()
+    return ctx
 
+
+def build_graph(initial_id: str, ctx: dict[str, TaskBuilder]) -> list[dict]:
     tasks_to_draw = Queue()
+    tasks_to_draw.put(initial_id)
     drawn_tasks = []
-    for task_id in base_tasks_keys:
-        tasks_to_draw.put(task_id)
-
     elements = []
 
     while tasks_to_draw.qsize() > 0:

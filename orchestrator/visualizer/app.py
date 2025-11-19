@@ -1,7 +1,11 @@
 import dash_cytoscape as cyto
 from dash import Dash, html
 
-from orchestrator.visualizer.builder import build_graph
+from orchestrator.visualizer.builder import (
+    build_graph,
+    create_builders,
+    find_unmentioned_tasks,
+)
 from orchestrator.visualizer.data import extract_signatures, create
 
 # Load extra layouts
@@ -58,7 +62,9 @@ async def create_app():
     tasks = await extract_signatures()
 
     # Build the graph
-    elements = build_graph(tasks)
+    ctx = create_builders(tasks)
+    start_tasks = find_unmentioned_tasks(ctx)
+    elements = build_graph(start_tasks[0], ctx)
 
     app.layout = html.Div(
         [
