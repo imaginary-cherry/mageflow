@@ -149,7 +149,7 @@ class TaskBuilder(Builder, Generic[T]):
             next_tasks=self.task.success_callbacks + self.task.error_callbacks,
         )
 
-    def drawn_tasks(self):
+    def drawn_tasks(self) -> list[str]:
         return [self.task.id]
 
     def mentioned_tasks(self) -> list[str]:
@@ -269,20 +269,29 @@ class ChainTaskBuilder(TaskBuilder[ChainTaskSignature]):
 
         return base_node
 
-    def mentioned_tasks(self) -> list[str]:
-        sub_tasks = [
+    @property
+    def sub_builders(self):
+        return [
             self.ctx.get(task_id) for task_id in self.task.tasks if task_id in self.ctx
         ]
+
+    def mentioned_tasks(self) -> list[str]:
         sub_task_mentions = [
             task_id
-            for builder in sub_tasks
+            for builder in self.sub_builders
             for task_id in builder.mentioned_tasks()
-            if task_id not in self.task.tasks
         ]
-        return super().mentioned_tasks() + sub_task_mentions
+        return list(
+            set(super().mentioned_tasks() + sub_task_mentions + self.task.tasks)
+        )
 
     def drawn_tasks(self):
-        return super().drawn_tasks() + self.task.tasks
+        sub_tasks_drawn = [
+            task_id
+            for builder in self.sub_builders
+            for task_id in builder.drawn_tasks()
+        ]
+        return super().drawn_tasks() + self.task.tasks + sub_tasks_drawn
 
 
 class BatchItemTaskBuilder(TaskBuilder[BatchItemTaskSignature]):
@@ -293,12 +302,17 @@ class BatchItemTaskBuilder(TaskBuilder[BatchItemTaskSignature]):
         return super().draw()
 
     def drawn_tasks(self):
-        return super().drawn_tasks() + [self.task.original_task_id]
+        drawn = super().drawn_tasks()
+        if self.task.original_task_id in self.ctx:
+            drawn += self.ctx.get(self.task.original_task_id).drawn_tasks()
+
+        return drawn
 
     def mentioned_tasks(self) -> list[str]:
+        mentions = super().mentioned_tasks() + [self.task.original_task_id]
         if self.task.original_task_id in self.ctx:
-            return self.ctx.get(self.task.original_task_id).mentioned_tasks()
-        return []
+            mentions += self.ctx.get(self.task.original_task_id).mentioned_tasks()
+        return mentions
 
     def present_info(self) -> list:
         if self.task.original_task_id in self.ctx:
@@ -321,20 +335,30 @@ class SwarmTaskBuilder(TaskBuilder[SwarmTaskSignature]):
 
         return base_node
 
-    def drawn_tasks(self):
-        return super().drawn_tasks() + self.task.tasks
-
-    def mentioned_tasks(self) -> list[str]:
-        sub_tasks = [
+    @property
+    def sub_builders(self):
+        return [
             self.ctx.get(task_id) for task_id in self.task.tasks if task_id in self.ctx
         ]
+
+    def drawn_tasks(self):
+        sub_tasks_drawn = [
+            task_id
+            for builder in self.sub_builders
+            for task_id in builder.drawn_tasks()
+        ]
+        return super().drawn_tasks() + self.task.tasks + sub_tasks_drawn
+
+    def mentioned_tasks(self) -> list[str]:
         sub_task_mentions = [
             task_id
-            for builder in sub_tasks
+            for builder in self.sub_builders
             for task_id in builder.mentioned_tasks()
-            if task_id not in self.task.tasks
         ]
-        return super().mentioned_tasks() + sub_task_mentions
+        all_tasks = (
+            super().mentioned_tasks() + list(set(sub_task_mentions)) + self.task.tasks
+        )
+        return list(set(all_tasks))
 
 
 task_mapping = {
@@ -383,7 +407,8 @@ def build_graph(initial_id: str, ctx: dict[str, TaskBuilder]) -> list[dict]:
             continue
 
         task_builder = ctx.get(task_id)
-        drawn_tasks.extend(task_builder.drawn_tasks())
+        drawn_tasks = task_builder.drawn_tasks()
+        drawn_tasks.extend(drawn_tasks)
         if not task_builder:
             continue
         graph_data = task_builder.draw()
@@ -392,7 +417,10 @@ def build_graph(initial_id: str, ctx: dict[str, TaskBuilder]) -> list[dict]:
         elements.extend(graph_data.nodes)
         elements.extend(graph_data.edges)
 
-        for new_task_id in task_builder.mentioned_tasks():
+        mentioned_tasks = task_builder.mentioned_tasks()
+        undrawn_task = set(mentioned_tasks) - set(drawn_tasks)
+
+        for new_task_id in undrawn_task:
             if new_task_id in ctx:
                 tasks_to_draw.put(new_task_id)
 
