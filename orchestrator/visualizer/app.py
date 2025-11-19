@@ -101,7 +101,7 @@ async def create_app():
                         ],
                     ),
                 ],
-                style={"display": "flex", "width": "100%"},
+                className="main-layout",
             ),
         ]
     )
