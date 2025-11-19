@@ -14,7 +14,7 @@ cyto.load_extra_layouts()
 
 async def create_app():
     # await create()
-    app = Dash(__name__, assets_folder="assets")
+    app = Dash(__name__)
     stylesheet = [
         # Default node style (leaf + parents)
         {
