@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from rapyer.base import REDIS_MODELS
 from redis.asyncio.client import Redis
 
-from orchestrator.invokers.base import BaseInvoker
 from orchestrator.task.model import HatchetTaskModel
 
 REGISTERED_TASKS: list[tuple] = []
@@ -18,7 +17,6 @@ class ConfigModel(BaseModel):
 class OrchestratorConfigModel(ConfigModel):
     hatchet_client: Hatchet | None = None
     redis_client: Redis | None = None
-    invoker: BaseInvoker | None = None
 
 
 orchestrator_config = OrchestratorConfigModel()
