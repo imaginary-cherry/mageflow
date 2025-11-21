@@ -129,8 +129,7 @@ class TaskSignature(AtomicRedisModel):
             if return_value_fields:
                 return_field = return_value_fields[0][1]
 
-        hatchet = orchestrator_config.hatchet_client
-        workflow = hatchet.workflow(
+        workflow = orchestrator_config.hatchet_client.workflow(
             name=task, input_validator=input_validators, **self.workflow_params
         )
         orchestrator_workflow = OrchestratorWorkflow(
