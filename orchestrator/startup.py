@@ -1,11 +1,10 @@
 import rapyer
-import redis
-from hatchet_sdk import Hatchet, ClientConfig
+from hatchet_sdk import Hatchet
 from pydantic import BaseModel
 from rapyer.base import REDIS_MODELS
 from redis.asyncio.client import Redis
 
-from config import settings
+from orchestrator.invokers.base import BaseInvoker
 from orchestrator.task.model import HatchetTaskModel
 
 REGISTERED_TASKS: list[tuple] = []
@@ -19,22 +18,10 @@ class ConfigModel(BaseModel):
 class OrchestratorConfigModel(ConfigModel):
     hatchet_client: Hatchet | None = None
     redis_client: Redis | None = None
-
-    def set_from_dynaconf(self):
-        if settings.redis and settings.hatchet:
-            self.redis_client = redis.asyncio.from_url(settings.redis.url)
-            token = settings.hatchet.api_key
-
-            config_obj = ClientConfig(token=token, **settings.hatchet.to_dict())
-            self.hatchet_client = Hatchet(debug=True, config=config_obj)
+    invoker: BaseInvoker | None = None
 
 
 orchestrator_config = OrchestratorConfigModel()
-
-
-async def init_from_dynaconf():
-    orchestrator_config.set_from_dynaconf()
-    await init_orchestrator()
 
 
 async def init_orchestrator():
@@ -68,8 +55,8 @@ async def register_workflows():
 
 
 async def lifespan_initialize():
-    await init_from_dynaconf()
-    # yield makes the function usable as a Hatchet lifespan context manager (can alos be used for FastAPI):
+    await init_orchestrator()
+    # yield makes the function usable as a Hatchet lifespan context manager (can also be used for FastAPI):
     # - code before yield runs at startup (init config, register workers, etc.)
     # - code after yield would run at shutdown
     yield

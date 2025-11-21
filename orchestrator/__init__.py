@@ -11,7 +11,6 @@ from orchestrator.signature.creator import (
     pause,
 )
 from orchestrator.signature.status import TaskStatus
-from orchestrator.startup import init_from_dynaconf
 from orchestrator.swarm.creator import swarm
 
 
@@ -22,7 +21,6 @@ __all__ = [
     "resume",
     "pause",
     "sign",
-    "init_from_dynaconf",
     "init_orchestrator_hatchet_tasks",
     "register_task",
     "handle_task_callback",
