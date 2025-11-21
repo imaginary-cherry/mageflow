@@ -50,10 +50,17 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature: ..
 
 
 async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
+    model_fields = list(TaskSignature.model_fields.keys())
+    kwargs = {
+        field_name: options.pop(field_name)
+        for field_name in model_fields
+        if field_name in options
+    }
+
     if isinstance(task, str):
-        return await TaskSignature.from_task_name(task, **options)
+        return await TaskSignature.from_task_name(task, kwargs=options, **kwargs)
     else:
-        return await TaskSignature.from_task(task, **options)
+        return await TaskSignature.from_task(task, kwargs=options, **kwargs)
 
 
 load_signature = TaskSignature.from_id_safe

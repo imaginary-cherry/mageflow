@@ -68,11 +68,11 @@ class TaskSignature(AtomicRedisModel):
     ) -> Self:
         signature = cls(
             task_name=task.name,
-            kwargs=kwargs,
             model_validators=task.input_validator,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
             workflow_params=workflow_params or {},
+            **kwargs,
         )
         await signature.save()
         return signature
@@ -97,18 +97,7 @@ class TaskSignature(AtomicRedisModel):
             task_def = await HatchetTaskModel.safe_get(task_name)
             input_validator = task_def.input_validator if task_def else None
 
-        model_fields = list(cls.__pydantic_fields__)
-        optional_task_params = {
-            field_name: kwargs.pop(field_name)
-            for field_name in model_fields
-            if field_name in kwargs
-        }
-        signature = cls(
-            task_name=task_name,
-            kwargs=kwargs,
-            model_validators=input_validator,
-            **optional_task_params,
-        )
+        signature = cls(task_name=task_name, model_validators=input_validator, **kwargs)
         await signature.save()
         return signature
 
