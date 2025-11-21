@@ -75,7 +75,6 @@ async def init_settings(hatchet_client_init: HatchetInitData):
 async def hatchet_worker_deploy() -> AsyncGenerator[subprocess.Popen[bytes], None]:
     redis_client = redis.asyncio.from_url(settings.redis.url)
     await redis_client.flushall()
-    await orchestrator.init_from_dynaconf()
     current_file = Path(__file__).absolute()
     test_worker_path = current_file.parent / "worker.py"
     command = ["python", str(test_worker_path)]
