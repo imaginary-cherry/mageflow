@@ -108,7 +108,7 @@ async def test_signature_from_registered_task_name_execution_and_redis_cleanup_s
 
     # Act
     signature = await orchestrator.sign(
-        task1_test_reg_name, input_validator=ContextMessage
+        task1_test_reg_name, model_validators=ContextMessage
     )
     await signature.aio_run_no_wait(message, options=trigger_options)
 
