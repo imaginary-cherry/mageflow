@@ -7,9 +7,13 @@ from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel
 
-from orchestrator.utils.pythonic import deep_merge, create_dynamic_model
+from orchestrator.utils.pythonic import deep_merge
 
 TASK_DATA_PARAM_NAME = "task_data"
+
+
+class ModelToDump(BaseModel):
+    value: Any
 
 
 class OrchestratorWorkflow(Workflow):
@@ -31,15 +35,16 @@ class OrchestratorWorkflow(Workflow):
 
         # Force model dump
         kwargs = self._orchestrator_workflow_params
-        results_model = create_dynamic_model(kwargs)
-
+        results_model = ModelToDump(value=kwargs)
         extra_params = super(OrchestratorWorkflow, self)._serialize_input(results_model)
+        dumped_kwargs = extra_params["value"]
+
         if self._return_value_field:
             return_field = {self._return_value_field: input}
         else:
             return_field = input
 
-        return deep_merge(return_field, extra_params)
+        return deep_merge(return_field, dumped_kwargs)
 
     def _update_options(self, options: TriggerWorkflowOptions):
         if self._task_ctx:
