@@ -7,7 +7,6 @@ from hatchet_sdk.config import HealthcheckConfig
 
 import orchestrator
 from orchestrator.signature.consts import TASK_ID_PARAM_NAME
-from orchestrator.startup import lifespan_initialize
 from tests.integration.hatchet.models import (
     ContextMessage,
     CommandMessageWithResult,
@@ -21,12 +20,11 @@ settings = Dynaconf(
 config_obj = ClientConfig(
     token=settings.hatchet.api_key,
     **settings.hatchet.to_dict(),
-    # tls_config_strategy="none",
     healthcheck=HealthcheckConfig(enabled=True),
 )
 
 hatchet = Hatchet(debug=True, config=config_obj)
-orch = orchestrator.Orchestrator(hatchet)
+hatchet = orchestrator.Orchestrator(hatchet)
 
 # > Default priority
 DEFAULT_PRIORITY = 1
@@ -35,52 +33,48 @@ SLEEP_TIME = 0.25
 task1_test_reg_name = "task1-test"
 
 
-@orch.task(name=task1_test_reg_name, input_validator=ContextMessage)
+@hatchet.task(name=task1_test_reg_name, input_validator=ContextMessage)
 def task1(msg):
     return f"msg"
 
 
-@orch.durable_task(name="task1_callback", input_validator=CommandMessageWithResult)
+@hatchet.durable_task(name="task1_callback", input_validator=CommandMessageWithResult)
 def task1_callback(msg):
     return msg
 
 
-@orch.task(name="error_callback", input_validator=ContextMessage)
+@hatchet.task(name="error_callback", input_validator=ContextMessage)
 def error_callback(msg):
     print(msg)
 
 
-@orch.task(name="task2", input_validator=ContextMessage)
+@hatchet.task(name="task2", input_validator=ContextMessage)
 def task2(msg):
     return msg
 
 
-@orchestrator.register_task("task3-test")
 @hatchet.task(name="task3", input_validator=ContextMessage)
-@orchestrator.handle_task_callback()
 def task3(msg):
     return 2
 
 
-@orch.task(name="chain_callback", input_validator=ContextMessage)
+@hatchet.task(name="chain_callback", input_validator=ContextMessage)
 def chain_callback(msg):
     return msg
 
 
-@orch.task(name="fail_task", input_validator=ContextMessage)
+@hatchet.task(name="fail_task", input_validator=ContextMessage)
 def fail_task(msg):
     raise ValueError("Test exception")
 
 
-@orchestrator.register_task("sleep-task")
 @hatchet.durable_task(name="sleep_task", input_validator=SleepTaskMessage)
-@orchestrator.handle_task_callback()
 async def sleep_task(msg: SleepTaskMessage):
     await asyncio.sleep(msg.sleep_time)
     return msg
 
 
-@orch.task(name="callback_with_redis", input_validator=CommandMessageWithResult)
+@hatchet.task(name="callback_with_redis", input_validator=CommandMessageWithResult)
 async def callback_with_redis(msg: CommandMessageWithResult, ctx: Context):
     task_id = ctx.additional_metadata[TASK_ID_PARAM_NAME]
 
@@ -90,7 +84,6 @@ async def callback_with_redis(msg: CommandMessageWithResult, ctx: Context):
     return msg
 
 
-dono_tasks = orchestrator.init_orchestrator_hatchet_tasks(hatchet)
 workflows = [
     task1,
     task2,
@@ -101,11 +94,16 @@ workflows = [
     error_callback,
     sleep_task,
     callback_with_redis,
-] + dono_tasks
+]
+
+
+async def lifespan():
+    print("HI")
+    yield
 
 
 def main() -> None:
-    worker = hatchet.worker("tests", workflows=workflows, lifespan=lifespan_initialize)
+    worker = hatchet.worker("tests", workflows=workflows, lifespan=lifespan)
 
     worker.start()
 
