@@ -1891,14 +1891,14 @@ dev = ["black", "build", "mypy", "pytest", "pytest-cov", "setuptools", "tox", "t
 
 [[package]]
 name = "rapyer"
-version = "1.0.3"
+version = "1.0.4"
 description = "Pydantic models with Redis as the backend"
 optional = false
 python-versions = "<3.13,>=3.11"
 groups = ["main"]
 files = [
-    {file = "rapyer-1.0.3-py3-none-any.whl", hash = "sha256:cad600f52f44d012697616d7fda228b6cce82f6cfefe3778b83f671c23cb945b"},
-    {file = "rapyer-1.0.3.tar.gz", hash = "sha256:d0faa0f7b923be20f847c42e0d7f14177febb59efb9d118462a990552385c205"},
+    {file = "rapyer-1.0.4-py3-none-any.whl", hash = "sha256:ccc0df7628581dae54ef710587e3b4c07ee2d692831b67540ed7d664bbd82a28"},
+    {file = "rapyer-1.0.4.tar.gz", hash = "sha256:a1fc097dcb9b4581cacb80df9bc2c0bf4cf805728f105c34d27895428ed7de2d"},
 ]
 
 [package.dependencies]
@@ -2262,4 +2262,4 @@ hatchet = ["hatchet-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <3.13"
-content-hash = "c7861bb7d46123efa579a841cddb0f44f4e389ffb70e73cc0943e23a336974c8"
+content-hash = "75cef45ff58957b1c3d5b44bcc3ec94df762e03cc5c77e987c344770557e9fc9"
