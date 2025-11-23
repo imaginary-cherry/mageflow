@@ -243,8 +243,10 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
     # Assert
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_task_done(runs, return_multiple_values_sign, results=message.model_dump())
-    assert_task_done(
+    assert_signature_done(
+        runs, return_multiple_values_sign, results=message.model_dump()
+    )
+    assert_signature_done(
         runs,
         callback_sign,
         results=[message.model_dump(), message.model_dump(), message.model_dump()],
