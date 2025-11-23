@@ -105,12 +105,13 @@ def _assert_task_done(
             task_workflow.status == V1TaskStatus.COMPLETED
         ), f"{task_workflow.workflow_name} didn't finish"
     if input_params is not None:
+        task_input = task_workflow.input["input"]
         assert (
-            input_params.keys() <= task_workflow.input["input"].keys()
+            input_params.keys() <= task_input.keys()
         ), f"missing params {input_params.keys() - task_workflow.input['input'].keys()}"
         assert (
-            input_params.items() <= task_workflow.input["input"].items()
-        ), f"{task_workflow.workflow_name} has some missing parameters - {input_params.items() - task_workflow.input['input'].items()}"
+            input_params.items() <= task_input.items()
+        ), f"{task_workflow.workflow_name} has some missing parameters - {[f'{k}:{input_params[k]}!={task_input[k]}' for k in input_params if input_params[k] != task_input[k]]}"
     if results is not None:
         task_res = task_workflow.output["hatchet_results"]
         assert (
