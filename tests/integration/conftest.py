@@ -10,7 +10,9 @@ settings = Dynaconf(
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 def redis_client():
-    redis_client = redis.asyncio.from_url(settings.redis.url, max_connections=10)
+    redis_client = redis.asyncio.from_url(
+        settings.redis.url, max_connections=10, decode_responses=True
+    )
 
     yield redis_client
 
