@@ -31,8 +31,6 @@ async def init_orchestrator():
 async def update_register_signature_models():
     from orchestrator.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
 
-    await rapyer.init_rapyer(orchestrator_config.redis_client)
-
     signature_classes = [cls for cls in REDIS_MODELS if issubclass(cls, TaskSignature)]
     SIGNATURES_NAME_MAPPING.update(
         {
