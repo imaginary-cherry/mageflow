@@ -8,6 +8,7 @@ from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_signature_done,
     get_runs,
+    assert_signature_not_called,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.worker import (
@@ -55,19 +56,32 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
     )
     message = ContextMessage(base_data=test_ctx)
 
-    callback_signature = await orchestrator.sign(task1_callback)
+    error_callback_signature = await orchestrator.sign(error_callback)
+    callback_signature1 = await orchestrator.sign(
+        task1_callback, base_data={"callback_data": 1}
+    )
+    callback_signature2 = await orchestrator.sign(task1_callback)
+    success_callbacks = [callback_signature1, callback_signature2]
     main_signature = await orchestrator.sign(
-        task2, success_callbacks=[callback_signature]
+        task2,
+        success_callbacks=success_callbacks,
+        error_callbacks=[error_callback_signature],
     )
 
     # Act
     await main_signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(5)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
+    success_tasks = {task.id: task for task in success_callbacks}
     for success_id in main_signature.success_callbacks:
-        assert_signature_done(runs, success_id)
+        task = success_tasks[success_id]
+        input_values = {task.return_value_field(): message.model_dump(mode="json")}
+        input_values.update(task.kwargs)
+        assert_signature_done(runs, success_id, **input_values)
+    for error_id in main_signature.error_callbacks:
+        assert_signature_not_called(runs, error_id)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
     await assert_redis_is_clean(redis_client)
 
@@ -83,15 +97,28 @@ async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity
     )
     message = ContextMessage(base_data=test_ctx)
 
-    error_callback_signature = await orchestrator.sign(error_callback)
+    error_callback_signature1 = await orchestrator.sign(
+        error_callback, base_data={1: 2}
+    )
+    error_callback_signature2 = await orchestrator.sign(error_callback)
+    callback_signature = await orchestrator.sign(task1_callback)
+    error_callbacks = [error_callback_signature1, error_callback_signature2]
+    error_sign = await orchestrator.sign(
+        fail_task, error_callbacks=error_callbacks, success_callbacks=callback_signature
+    )
 
     # Act
-    await error_callback_signature.aio_run_no_wait(message, options=trigger_options)
+    await error_sign.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(5)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_signature_done(runs, error_callback_signature, base_data=test_ctx)
+    error_tasks = {task.id: task for task in error_callbacks}
+    for success_id in error_sign.error_callbacks:
+        task = error_tasks[success_id]
+        assert_signature_done(runs, success_id, **task.kwargs)
+    for error_id in error_sign.success_callbacks:
+        assert_signature_not_called(runs, error_id)
     await assert_redis_is_clean(redis_client)
 
 
