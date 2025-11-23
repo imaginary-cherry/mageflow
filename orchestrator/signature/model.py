@@ -93,7 +93,9 @@ class TaskSignature(AtomicRedisModel):
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
 
-        signature = cls(task_name=task_name, model_validators=model_validators, **kwargs)
+        signature = cls(
+            task_name=task_name, model_validators=model_validators, **kwargs
+        )
         await signature.save()
         return signature
 
@@ -113,20 +115,18 @@ class TaskSignature(AtomicRedisModel):
             await signature.success_callbacks.aextend(success)
             await signature.error_callbacks.aextend(errors)
 
+    def return_value_field(self) -> Optional[str]:
+        return_field_name = get_marked_fields(self.model_validators, ReturnValue)[0][1]
+        return return_field_name or "results"
+
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
-        input_validators = self.model_validators
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
-
-        return_field = "results" if use_return_field else None
-        if input_validators and return_field:
-            return_value_fields = get_marked_fields(input_validators, ReturnValue)
-            if return_value_fields:
-                return_field = return_value_fields[0][1]
+        return_field = self.return_value_field() if use_return_field else None
 
         workflow = orchestrator_config.hatchet_client.workflow(
-            name=task, input_validator=input_validators, **self.workflow_params
+            name=task, input_validator=self.model_validators, **self.workflow_params
         )
         orchestrator_workflow = OrchestratorWorkflow(
             workflow,
@@ -206,10 +206,7 @@ class TaskSignature(AtomicRedisModel):
             )
 
         signatures_to_delete = await asyncio.gather(
-            *[
-                TaskSignature.from_id(task_id)
-                for task_id in addition_tasks_to_delete
-            ]
+            *[TaskSignature.from_id(task_id) for task_id in addition_tasks_to_delete]
         )
 
         delete_tasks = [self.delete()]
