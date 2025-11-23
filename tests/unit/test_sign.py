@@ -11,7 +11,6 @@ from orchestrator.signature.types import TaskIdentifierType
 
 class SignParamOptions(BaseModel):
     kwargs: Optional[dict[str, Any]] = None
-    workflow_params: Optional[dict[str, Any]] = None
     creation_time: Optional[datetime] = None
     success_callbacks: Optional[list[TaskIdentifierType]] = None
     error_callbacks: Optional[list[TaskIdentifierType]] = None
@@ -51,19 +50,13 @@ def task(request):
 @pytest.mark.parametrize(
     ["sign_options", "expected_signature"],
     [
-        # [
-        #     SignParamOptions(),
-        #     TaskSignature(task_name="test_task"),
-        # ],
         [
             SignParamOptions(kwargs={"param1": "value1"}),
             TaskSignature(task_name="test_task", kwargs={"param1": "value1"}),
         ],
         [
-            SignParamOptions(workflow_params={"workflow_param": "value"}),
-            TaskSignature(
-                task_name="test_task", workflow_params={"workflow_param": "value"}
-            ),
+            SignParamOptions(),
+            TaskSignature(task_name="test_task"),
         ],
         [
             SignParamOptions(creation_time=datetime(2023, 1, 1)),
@@ -108,7 +101,6 @@ def task(request):
         [
             SignParamOptions(
                 kwargs={"param1": "value1", "param2": 42},
-                workflow_params={"wp1": "val1", "wp2": True},
                 creation_time=datetime(2023, 6, 15),
                 task_identifiers={"id1": "test", "id2": "another"},
                 success_callbacks=["TaskSignature:complex_success"],
@@ -120,7 +112,6 @@ def task(request):
             TaskSignature(
                 task_name="test_task",
                 kwargs={"param1": "value1", "param2": 42},
-                workflow_params={"wp1": "val1", "wp2": True},
                 creation_time=datetime(2023, 6, 15),
                 success_callbacks=["TaskSignature:complex_success"],
                 error_callbacks=[

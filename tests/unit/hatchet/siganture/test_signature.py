@@ -24,13 +24,10 @@ async def test__signature_create_save_load__input_output_same__sanity(hatchet_mo
     def test_task(msg):
         return msg
 
-    workflow_params = {"param1": "value1", "param2": "value2"}
     kwargs = {"arg1": "test", "arg2": 123}
 
     # Act
-    original_signature = await TaskSignature.from_task(
-        test_task, workflow_params=workflow_params, **kwargs
-    )
+    original_signature = await TaskSignature.from_task(test_task, **kwargs)
     loaded_signature = await TaskSignature.from_id(original_signature.id)
 
     # Assert
@@ -46,14 +43,12 @@ async def test__from_signature__create_signature_from_existing__all_data_same_ex
     def test_task(msg):
         return msg
 
-    workflow_params = {"param1": "value1", "param2": "value2"}
     kwargs = {"arg1": "test", "arg2": 123}
     success_callbacks = ["callback1", "callback2"]
     error_callbacks = ["error_callback1"]
 
     original_signature = await TaskSignature.from_task(
         test_task,
-        workflow_params=workflow_params,
         success_callbacks=success_callbacks,
         error_callbacks=error_callbacks,
         **kwargs,

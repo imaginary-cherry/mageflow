@@ -24,7 +24,6 @@ async def test__chain_signature_create_save_load__input_output_same__sanity(
     task1_signature = await TaskSignature.from_task(test_task_1, arg1="value1")
     task2_signature = await TaskSignature.from_task(test_task_2, arg2="value2")
 
-    workflow_params = {"param1": "value1", "param2": "value2"}
     kwargs = {"arg1": "test", "arg2": 123}
     tasks = [task1_signature.id, task2_signature.id]
 
@@ -32,7 +31,6 @@ async def test__chain_signature_create_save_load__input_output_same__sanity(
     original_chain_signature = ChainTaskSignature(
         task_name="test_chain_task",
         kwargs=kwargs,
-        workflow_params=workflow_params,
         tasks=tasks,
     )
     await original_chain_signature.save()

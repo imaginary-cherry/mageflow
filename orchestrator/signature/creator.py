@@ -32,7 +32,6 @@ except ImportError:
 
 class TaskSignatureOptions(TypedDict, total=False):
     kwargs: dict
-    workflow_params: dict
     creation_time: datetime
     model_validators: Any
     success_callbacks: list[TaskIdentifierType]

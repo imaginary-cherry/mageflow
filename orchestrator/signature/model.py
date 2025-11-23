@@ -27,7 +27,6 @@ from orchestrator.workflows import OrchestratorWorkflow
 class TaskSignature(AtomicRedisModel):
     task_name: str
     kwargs: RedisDictType = Field(default_factory=dict)
-    workflow_params: RedisDictType = Field(default_factory=dict)
     creation_time: RedisDatetimeType = Field(default_factory=datetime.now)
     model_validators: Optional[Any] = None
     success_callbacks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
@@ -61,7 +60,6 @@ class TaskSignature(AtomicRedisModel):
     async def from_task(
         cls,
         task: HatchetTaskType,
-        workflow_params: dict = None,
         success_callbacks: list[TaskIdentifierType | Self] = None,
         error_callbacks: list[TaskIdentifierType | Self] = None,
         **kwargs,
@@ -71,7 +69,6 @@ class TaskSignature(AtomicRedisModel):
             model_validators=task.input_validator,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
-            workflow_params=workflow_params or {},
             **kwargs,
         )
         await signature.save()
@@ -130,7 +127,7 @@ class TaskSignature(AtomicRedisModel):
         return_field = self.return_value_field() if use_return_field else None
 
         workflow = orchestrator_config.hatchet_client.workflow(
-            name=task, input_validator=self.model_validators, **self.workflow_params
+            name=task, input_validator=self.model_validators
         )
         orchestrator_workflow = OrchestratorWorkflow(
             workflow,
