@@ -63,7 +63,7 @@ def assert_task_done(runs: HatchetRuns, task, input_params=None, results=None):
 def assert_signature_done(
     runs: HatchetRuns,
     task_sign: TaskSignature | TaskIdentifierType,
-    results=None,
+    hatchet_task_results=None,
     check_called_once=True,
     check_finished_once=True,
     allow_fails=False,
@@ -87,7 +87,7 @@ def assert_signature_done(
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
     return _assert_task_done(
-        task_sign, wf_by_task_id, input_params, results, allow_fails
+        task_sign, wf_by_task_id, input_params, hatchet_task_results, allow_fails
     )
 
 

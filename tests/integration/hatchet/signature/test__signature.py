@@ -11,6 +11,7 @@ from tests.integration.hatchet.assertions import (
     assert_signature_not_called,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
+from tests.integration.hatchet.models import MessageWithResult
 from tests.integration.hatchet.worker import (
     task1,
     task1_callback,
@@ -230,7 +231,7 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
 ):
     # Arrange
     hatchet = hatchet_client_init.hatchet
-    message = CommandMessageWithResult(task_result=test_ctx)
+    message = MessageWithResult(results=CommandMessageWithResult(task_result=test_ctx))
 
     callback_sign = await orchestrator.sign(task1_callback)
     return_multiple_values_sign = await orchestrator.sign(
@@ -243,11 +244,9 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
     # Assert
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_signature_done(
-        runs, return_multiple_values_sign, results=message.model_dump()
-    )
+    assert_signature_done(runs, return_multiple_values_sign, **message.model_dump())
     assert_signature_done(
         runs,
         callback_sign,
-        results=[message.model_dump(), message.model_dump(), message.model_dump()],
+        task_result=[message.model_dump(), message.model_dump(), message.model_dump()],
     )
