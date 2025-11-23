@@ -36,7 +36,7 @@ def hatchet_mock():
 
 @pytest.fixture()
 def orch(hatchet_mock, redis_client):
-    yield orchestrator.Orchestrator(hatchet_mock)
+    yield orchestrator.Orchestrator(hatchet_mock, redis_client)
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
