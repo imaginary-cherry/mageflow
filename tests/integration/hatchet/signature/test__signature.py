@@ -20,6 +20,7 @@ from tests.integration.hatchet.worker import (
     CommandMessageWithResult,
     ContextMessage,
     task1_test_reg_name,
+    return_multiple_values,
 )
 
 

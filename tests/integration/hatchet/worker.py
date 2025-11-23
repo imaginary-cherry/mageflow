@@ -59,7 +59,7 @@ def task2(msg):
     return msg
 
 
-@hatchet.task(name="task2", input_validator=MesageWithResult)
+@hatchet.task(name="task2-with-res", input_validator=MesageWithResult)
 def task2_with_result(msg):
     return msg.results
 
