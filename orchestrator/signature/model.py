@@ -116,7 +116,11 @@ class TaskSignature(AtomicRedisModel):
             await signature.error_callbacks.aextend(errors)
 
     def return_value_field(self) -> Optional[str]:
-        return_field_name = get_marked_fields(self.model_validators, ReturnValue)[0][1]
+        marked_field = get_marked_fields(self.model_validators, ReturnValue)
+        try:
+            return_field_name = marked_field[0][1]
+        except IndexError:
+            return_field_name = None
         return return_field_name or "results"
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
