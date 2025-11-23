@@ -212,11 +212,20 @@ def assert_chain_done(
 ):
     wf_by_signature = map_wf_by_id(runs)
     assert_tasks_in_order(wf_by_signature, chain_tasks)
+    task_map = {task.id: task for task in chain_tasks}
+    output_value = None
+    input_params = {}
     for chain_task_id in chain_signature.tasks:
-        _assert_task_done(chain_task_id, wf_by_signature, None)
+        task = task_map[chain_task_id]
+        if output_value:
+            input_params = {task.return_value_field(): output_value}
+        task_wf = _assert_task_done(chain_task_id, wf_by_signature, **input_params)
+        output_value = task_wf.input["input"]
 
     for chain_success in chain_signature.success_callbacks:
-        _assert_task_done(chain_success, wf_by_signature, None)
+        task = task_map[chain_success]
+        input_params = {task.return_value_field(): output_value}
+        _assert_task_done(chain_success, wf_by_signature, **input_params)
 
 
 def assert_paused(runs: HatchetRuns, start_time: datetime, end_time: datetime):
