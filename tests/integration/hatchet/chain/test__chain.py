@@ -60,7 +60,7 @@ async def test_chain_integration(
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_chain_done(runs, chain_signature, chain_tasks)
+    assert_chain_done(runs, chain_signature, chain_tasks + [success_chain_signature])
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
