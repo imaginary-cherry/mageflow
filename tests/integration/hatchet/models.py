@@ -9,7 +9,7 @@ class ContextMessage(BaseModel):
     base_data: dict = Field(default_factory=dict)
 
 
-class MesageWithResult(BaseModel):
+class MessageWithResult(BaseModel):
     results: Any
 
 

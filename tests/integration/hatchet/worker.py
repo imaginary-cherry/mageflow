@@ -11,7 +11,7 @@ from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.startup import orchestrator_config
 from tests.integration.hatchet.models import (
     ContextMessage,
-    MesageWithResult,
+    MessageWithResult,
     CommandMessageWithResult,
     SleepTaskMessage,
 )
@@ -59,7 +59,7 @@ def task2(msg):
     return msg
 
 
-@hatchet.task(name="task2-with-res", input_validator=MesageWithResult)
+@hatchet.task(name="task2-with-res", input_validator=MessageWithResult)
 def task2_with_result(msg):
     return msg.results
 
@@ -95,7 +95,7 @@ async def callback_with_redis(msg: CommandMessageWithResult, ctx: Context):
     return msg
 
 
-@hatchet.task(name="return-multiple-values", input_validator=MesageWithResult)
+@hatchet.task(name="return-multiple-values", input_validator=MessageWithResult)
 def return_multiple_values(msg):
     return [msg, msg, msg]
 
