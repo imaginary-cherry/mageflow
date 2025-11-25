@@ -2,9 +2,6 @@ import asyncio
 from typing import Self, Any, Optional
 
 from hatchet_sdk.runnables.types import EmptyModel
-from pydantic import Field, field_validator, BaseModel
-from rapyer.types import RedisListType, RedisIntType, RedisDictType
-
 from orchestrator.errors import MissingSignatureError, MissingSwarmItemError
 from orchestrator.signature.creator import (
     TaskSignatureConvertible,
@@ -23,6 +20,8 @@ from orchestrator.swarm.consts import (
 )
 from orchestrator.swarm.messages import SwarmResultsMessage
 from orchestrator.utils.pythonic import deep_merge
+from pydantic import Field, field_validator, BaseModel
+from rapyer.types import RedisListType, RedisIntType
 
 
 class BatchItemTaskSignature(TaskSignature):
@@ -43,7 +42,7 @@ class BatchItemTaskSignature(TaskSignature):
                 )
             can_run_task = await swarm_task.add_to_running_tasks(self)
             kwargs = deep_merge(self.kwargs.clone(), original_task.kwargs.clone())
-            kwargs = deep_merge(kwargs, swarm_task.task_kwargs.clone())
+            kwargs = deep_merge(kwargs, swarm_task.kwargs.clone())
             if not can_run_task:
                 kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
             await original_task.kwargs.aupdate(**kwargs)
@@ -91,9 +90,6 @@ class SwarmTaskSignature(TaskSignature):
     current_running_tasks: RedisIntType = 0
     config: SwarmConfig = Field(default_factory=SwarmConfig)
 
-    # Specific task kwargs
-    task_kwargs: RedisDictType = Field(default_factory=dict)
-
     @field_validator(
         "tasks", "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
     )
@@ -106,7 +102,7 @@ class SwarmTaskSignature(TaskSignature):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
-        await self.task_kwargs.aupdate(**msg.model_dump(mode="json"))
+        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
         workflow = await self.workflow(use_return_field=False)
         return await workflow.aio_run_no_wait(msg, **kwargs)
 
@@ -216,15 +212,14 @@ class SwarmTaskSignature(TaskSignature):
         return self.is_swarm_closed and finished_all_tasks
 
     async def activate_error(self, msg, **kwargs):
-        full_kwargs = self.task_kwargs | self.kwargs | kwargs
+        full_kwargs = self.kwargs | kwargs
         return await super().activate_error(msg, **full_kwargs)
 
     async def activate_success(self, msg, **kwargs):
         await self.tasks_results.load()
         tasks_results = [res for res in self.tasks_results]
 
-        full_kwargs = self.task_kwargs | self.kwargs | kwargs
-        await super().activate_success(tasks_results, **full_kwargs)
+        await super().activate_success(tasks_results, **kwargs)
         await self.remove(with_success=False)
 
     async def suspend(self):
