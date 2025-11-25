@@ -1,33 +1,31 @@
 import functools
 import os
-from typing import TypeVar, Any, Protocol, overload
+from typing import TypeVar, Any, overload, Unpack
 
 import redis
 from hatchet_sdk import Hatchet, Worker
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
+from redis.asyncio import Redis
+
 from orchestrator.callbacks import AcceptParams, register_task, handle_task_callback
 from orchestrator.chain.creator import chain
 from orchestrator.init import init_orchestrator_hatchet_tasks
-from orchestrator.signature.creator import sign
+from orchestrator.signature.creator import sign, TaskSignatureConvertible
+from orchestrator.signature.model import TaskSignature, TaskInputType
+from orchestrator.signature.types import HatchetTaskType
 from orchestrator.startup import (
     lifespan_initialize,
     orchestrator_config,
     init_orchestrator,
 )
-from orchestrator.swarm.creator import swarm
-from redis.asyncio import Redis
+from orchestrator.swarm.creator import swarm, SignatureOptions
 
 
 async def merge_lifespan(original_lifespan: LifespanFn):
     await init_orchestrator()
     async for res in original_lifespan():
         yield res
-
-
-class OrchestratorProtocol(Protocol):
-    async def chain(self): ...
-    async def swarm(self): ...
 
 
 class HatchetOrchestrator(Hatchet):
