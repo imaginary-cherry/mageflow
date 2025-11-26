@@ -9,6 +9,7 @@ from orchestrator.visualizer.builder import (
     find_unmentioned_tasks,
 )
 from orchestrator.visualizer.data import extract_signatures, create
+from orchestrator.visualizer.assets.cytoscape_styles import EDGE_STYLES, GRAPH_STYLES
 
 # Load extra layouts
 cyto.load_extra_layouts()
@@ -17,62 +18,7 @@ cyto.load_extra_layouts()
 async def create_app(redis_url: str):
     await rapyer.init_rapyer(redis_url)
     app = Dash(__name__)
-    stylesheet = [
-        # Default node style (leaf + parents)
-        {
-            "selector": "node",
-            "style": {
-                "shape": "round-rectangle",
-                "content": "data(label)",
-                "text-valign": "center",
-                "text-halign": "center",
-                "font-size": "11px",
-                "padding": "6px",
-                "width": "label",
-                "height": "label",
-                "background-color": "#E0F2FF",
-                "border-width": 1,
-                "border-color": "#555",
-            },
-        },
-        # Compound / parent nodes (containers)
-        {
-            "selector": ":parent",
-            "style": {
-                "background-color": "#F5F5F5",
-                "border-color": "#333",
-                "border-width": 2,
-                "padding": "20px",  # space around children
-                "text-valign": "top",  # label at top of group
-                "font-weight": "bold",
-            },
-        },
-        {
-            "selector": "edge",
-            "style": {
-                "curve-style": "bezier",
-                "target-arrow-shape": "triangle",
-                "arrow-scale": 1.2,
-                "line-color": "#888",
-                "target-arrow-color": "#888",
-                "width": 2,
-            },
-        },
-        {
-            "selector": ".success-edge",
-            "style": {
-                "line-color": "#28a745",
-                "target-arrow-color": "#28a745",
-            },
-        },
-        {
-            "selector": ".error-edge",
-            "style": {
-                "line-color": "#dc3545",
-                "target-arrow-color": "#dc3545",
-            },
-        },
-    ]
+    stylesheet = GRAPH_STYLES + EDGE_STYLES
 
     # Get the complex scenario data
     tasks = await extract_signatures()

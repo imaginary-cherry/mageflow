@@ -71,11 +71,17 @@ class EmptyBuilder(Builder):
     def draw(self) -> GraphData:
         task_node = {"data": {"id": self.task_id, "label": self.task_id}}
         success_edges = [
-            {"data": {"source": self.task_id, "target": task_id}}
+            {
+                "data": {"source": self.task_id, "target": task_id},
+                "classes": "success-edge",
+            }
             for task_id in self.success_tasks
         ]
         error_edges = [
-            {"data": {"source": self.task_id, "target": task_id}}
+            {
+                "data": {"source": self.task_id, "target": task_id},
+                "classes": "error-edge",
+            }
             for task_id in self.error_tasks
         ]
         return GraphData(
@@ -136,11 +142,17 @@ class TaskBuilder(Builder, Generic[T]):
         task_node = {"data": {"id": self.task.id, "label": self.task.task_name}}
 
         success_edges = [
-            {"data": {"source": self.task.id, "target": task_id}}
+            {
+                "data": {"source": self.task.id, "target": task_id},
+                "classes": "success-edge",
+            }
             for task_id in self.task.success_callbacks
         ]
         error_edges = [
-            {"data": {"source": self.task.id, "target": task_id}}
+            {
+                "data": {"source": self.task.id, "target": task_id},
+                "classes": "error-edge",
+            }
             for task_id in self.task.error_callbacks
         ]
 
