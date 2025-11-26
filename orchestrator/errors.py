@@ -8,3 +8,15 @@ class MissingSignatureError(OrchestratorError):
 
 class MissingSwarmItemError(MissingSignatureError):
     pass
+
+
+class SwarmError(OrchestratorError):
+    pass
+
+
+class TooManyTasksError(SwarmError, RuntimeError):
+    pass
+
+
+class SwarmIsCanceledError(SwarmError, RuntimeError):
+    pass

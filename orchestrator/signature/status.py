@@ -21,5 +21,5 @@ class TaskStatus(BaseModel):
     last_status: SignatureStatus = SignatureStatus.PENDING
     worker_task_id: str = ""
 
-    def is_done(self):
+    def is_canceled(self):
         return self.status in [SignatureStatus.CANCELED]

@@ -2,7 +2,12 @@ import asyncio
 from typing import Self, Any, Optional
 
 from hatchet_sdk.runnables.types import EmptyModel
-from orchestrator.errors import MissingSignatureError, MissingSwarmItemError
+from orchestrator.errors import (
+    MissingSignatureError,
+    MissingSwarmItemError,
+    TooManyTasksError,
+    SwarmIsCanceledError,
+)
 from orchestrator.signature.creator import (
     TaskSignatureConvertible,
     resolve_signature_id,
@@ -76,6 +81,12 @@ class BatchItemTaskSignature(TaskSignature):
 class SwarmConfig(BaseModel):
     max_concurrency: int = 30
     stop_after_n_failures: Optional[int] = None
+    max_task_allowed: Optional[int] = None
+
+    def can_add_task(self, swarm: "SwarmTaskSignature") -> bool:
+        if self.max_task_allowed is None:
+            return True
+        return len(swarm.tasks) < self.max_task_allowed
 
 
 class SwarmTaskSignature(TaskSignature):
@@ -148,8 +159,12 @@ class SwarmTaskSignature(TaskSignature):
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
     async def add_task(self, task: TaskSignatureConvertible) -> BatchItemTaskSignature:
-        if self.task_status.is_done():
-            raise RuntimeError(
+        if not self.config.can_add_task(self):
+            raise TooManyTasksError(
+                f"Swarm {self.task_name} has reached max tasks limit"
+            )
+        if self.task_status.is_canceled():
+            raise SwarmIsCanceledError(
                 f"Swarm {self.task_name} is {self.task_status} - can't add task"
             )
         task = await resolve_signature_id(task)
