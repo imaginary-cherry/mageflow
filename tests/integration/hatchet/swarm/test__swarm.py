@@ -241,3 +241,38 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
 
     assert_swarm_task_done(runs, swarm, batch_items, tasks)
     await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_swarm_run_concurrently(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    sign_task2,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    swarm_tasks = await sign_task2.duplicate_many(8)
+    max_concurrency = 4
+    swarm = await orchestrator.swarm(
+        tasks=swarm_tasks,
+        config=SwarmConfig(max_concurrency=max_concurrency),
+        is_swarm_closed=True,
+    )
+
+    # Act
+    regular_message = ContextMessage(base_data=test_ctx)
+    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
+    await asyncio.sleep(60)
+
+    # Assert
+    runs = await get_runs(hatchet, ctx_metadata)
+    wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
+
+    # Check concurrency of the swarm
+    swarm_wf = [wf_by_task_id[task.id] for task in swarm_tasks]
+    assert_overlaps_leq_k_workflows(swarm_wf, max_concurrency)

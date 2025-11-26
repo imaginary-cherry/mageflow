@@ -265,3 +265,25 @@ def assert_task_did_not_repeat(runs: HatchetRuns):
     ]
 
     assert len(task_done) == len(set(task_done)), "Task repeated"
+
+
+def assert_overlaps_leq_k_workflows(
+    workflows: list[V1TaskSummary], max_concurrency: int = 4
+):
+    """
+    Check that at no time more than k intervals overlap.
+    """
+    events = []
+    for wf in workflows:
+        s = wf.started_at
+        e = wf.finished_at
+        events.append((s, +1))
+        events.append((e, -1))
+
+    # Tie-breaking:
+    events.sort(key=lambda x: (x[0], -x[1]))
+
+    active = 0
+    for t, delta in events:
+        active += delta
+        assert max_concurrency > active, f"Too many active tasks: {active}"
