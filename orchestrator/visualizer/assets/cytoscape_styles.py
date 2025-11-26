@@ -4,15 +4,15 @@ EDGE_STYLES = [
     {
         "selector": ".success-edge",
         "style": {
-            "line-color": "#28a745",
-            "target-arrow-color": "#28a745",
+            "line-color": "#40E0D0",
+            "target-arrow-color": "#40E0D0",
         },
     },
     {
         "selector": ".error-edge",
         "style": {
-            "line-color": "#dc3545",
-            "target-arrow-color": "#dc3545",
+            "line-color": "#FF6B9D",
+            "target-arrow-color": "#FF6B9D",
         },
     },
 ]
