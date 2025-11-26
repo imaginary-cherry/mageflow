@@ -1,0 +1,80 @@
+site_name: Orchestrator
+site_description: A Python package that provides Pydantic models with Redis as the backend storage
+site_url: https://yedidyakfir.github.io/orchestrator/
+repo_url: https://github.com/yedidyakfir/orchestrator
+repo_name: yedidyakfir/task-orchestrator
+
+theme:
+  name: material
+  logo: icon.png
+  favicon: icon.png
+  palette:
+    - scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+nav:
+  - Overview: index.md
+  - Installation: installation.md
+  - Setup: setup.md
+  - Documentation:
+    - Call With Callback: documentation/callbacks.md
+    - Chain: documentation/chain.md
+    - Swarm: documentation/swarm.md
+  - API Reference:
+    - AtomicRedisModel: api/atomic-redis-model.md
+    - Redis Types: api/redis-types.md
+    - Rapyer: api/rapyer-functions.md
+  - Roadmap: roadmap.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: .
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yedidyakfir/orchestrator
