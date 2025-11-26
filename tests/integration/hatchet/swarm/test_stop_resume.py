@@ -4,6 +4,7 @@ from datetime import datetime
 import pytest
 
 import orchestrator
+from orchestrator.signature.model import TaskSignature
 from orchestrator.swarm.model import SwarmConfig
 
 from tests.integration.hatchet.assertions import (
@@ -50,6 +51,7 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
         *[orchestrator.load_signature(batch_id) for batch_id in swarm_signature.tasks]
     )
     message = ContextMessage(base_data=test_ctx)
+    tasks = await TaskSignature.afind()
 
     # Act
     await swarm_signature.aio_run_no_wait(message, options=trigger_options)
@@ -76,5 +78,5 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     assert_paused(runs, pause_time, resume_time)
     assert_task_did_not_repeat(runs)
 
-    assert_swarm_task_done(runs, swarm_signature, batch_tasks)
+    assert_swarm_task_done(runs, swarm_signature, batch_tasks, tasks)
     await assert_redis_is_clean(redis_client)

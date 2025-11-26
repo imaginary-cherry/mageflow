@@ -10,6 +10,8 @@ from tests.integration.hatchet.assertions import (
     assert_swarm_task_done,
     get_runs,
     assert_signature_done,
+    map_wf_by_id,
+    assert_overlaps_leq_k_workflows,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -18,6 +20,7 @@ from tests.integration.hatchet.worker import (
     fail_task,
     error_callback,
     task1_callback,
+    task_with_data,
 )
 
 
@@ -29,7 +32,6 @@ async def test_swarm_with_three_tasks_integration_sanity(
     trigger_options,
     sign_callback1,
     sign_task1,
-    sign_task2,
     sign_task3,
 ):
     # Arrange
@@ -38,16 +40,21 @@ async def test_swarm_with_three_tasks_integration_sanity(
         hatchet_client_init.hatchet,
     )
 
-    swarm_tasks = [sign_task1, sign_task2, sign_task3]
+    sign_task_with_data = await orchestrator.sign(
+        task_with_data, data="Hello", field_list=[5, 3]
+    )
+    await sign_callback1.kwargs.aupdate(base_data={"1": 2})
+    swarm_tasks = [sign_task1, sign_task_with_data, sign_task3]
     swarm = await orchestrator.swarm(
         tasks=swarm_tasks,
         success_callbacks=[sign_callback1],
-        kwargs={"param1": "nice", "param2": ["test", 2]},
+        kwargs=dict(base_data={"param1": "nice", "param2": ["test", 2]}),
     )
     batch_tasks = await asyncio.gather(
         *[orchestrator.load_signature(batch_id) for batch_id in swarm.tasks]
     )
     await swarm.close_swarm()
+    tasks = await TaskSignature.afind()
 
     # Act
     # Test individual tasks directly to verify they work with the message format
@@ -61,7 +68,7 @@ async def test_swarm_with_three_tasks_integration_sanity(
     # Check that all subtasks were called by checking Hatchet runs
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_swarm_task_done(runs, swarm, batch_tasks)
+    assert_swarm_task_done(runs, swarm, batch_tasks, tasks, allow_fails=False)
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
 
@@ -167,6 +174,7 @@ async def test_swarm_mixed_task_all_done_before_closing_task(
     add_metadata = ctx_additional_metadata.get() or {}
     add_metadata.update(ctx_metadata)
     ctx_additional_metadata.set(add_metadata)
+    tasks = await TaskSignature.afind()
 
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
@@ -187,7 +195,7 @@ async def test_swarm_mixed_task_all_done_before_closing_task(
     # Assert
     # Get all workflow runs for this test
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_swarm_task_done(runs, swarm, batch_tasks)
+    assert_swarm_task_done(runs, swarm, batch_tasks, tasks)
     await assert_redis_is_clean(redis_client)
 
 
@@ -220,6 +228,7 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
     batch_items = await asyncio.gather(
         *[TaskSignature.from_id(batch_id) for batch_id in swarm.tasks]
     )
+    tasks = await TaskSignature.afind()
 
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
@@ -230,5 +239,5 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
     # Get all workflow runs for this test
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_swarm_task_done(runs, swarm, batch_items)
+    assert_swarm_task_done(runs, swarm, batch_items, tasks)
     await assert_redis_is_clean(redis_client)

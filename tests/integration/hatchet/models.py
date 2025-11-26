@@ -9,6 +9,13 @@ class ContextMessage(BaseModel):
     base_data: dict = Field(default_factory=dict)
 
 
+class MessageWithData(ContextMessage):
+    data: Annotated[Any, ReturnValue()]
+    field_int: int = 1
+    field_str: str = "test"
+    field_list: list[int]
+
+
 class MessageWithResult(BaseModel):
     results: Any
 

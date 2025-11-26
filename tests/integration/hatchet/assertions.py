@@ -108,7 +108,7 @@ def _assert_task_done(
         task_input = task_workflow.input["input"]
         assert (
             input_params.keys() <= task_input.keys()
-        ), f"missing params {input_params.keys() - task_workflow.input['input'].keys()}"
+        ), f"missing params {input_params.keys() - task_workflow.input['input'].keys()} for {task_workflow.workflow_name}"
         assert (
             input_params.items() <= task_input.items()
         ), f"{task_workflow.workflow_name} has some missing parameters - {[f'{k}:{input_params[k]}!={task_input[k]}' for k in input_params if input_params[k] != task_input[k]]}"
@@ -173,20 +173,27 @@ def assert_swarm_task_done(
     runs: HatchetRuns,
     swarm_task: SwarmTaskSignature,
     batch_items: list[BatchItemTaskSignature],
+    tasks: list[TaskSignature],
+    allow_fails: bool = True,
 ):
+    task_map = {task.id: task for task in tasks}
     batch_map = {batch_item.id: batch_item for batch_item in batch_items}
 
     # Assert for a batch task done as well as extract the wf
-    swarm_runs = [
-        assert_signature_done(
+    swarm_runs = []
+    for batch_id in swarm_task.tasks:
+        batch_task = batch_map[batch_id]
+        task = task_map[batch_task.original_task_id]
+        wf = assert_signature_done(
             runs,
             batch_map[batch_id].original_task_id,
             check_called_once=False,
             check_finished_once=True,
-            allow_fails=True,
+            allow_fails=allow_fails,
+            **task.kwargs,
+            **swarm_task.kwargs,
         )
-        for batch_id in swarm_task.tasks
-    ]
+        swarm_runs.append(wf)
 
     expected_output = [
         task_output.get("hatchet_results")
@@ -196,7 +203,10 @@ def assert_swarm_task_done(
         if "hatchet_results" in task_output
     ]
     for callback_sign in swarm_task.success_callbacks:
-        callback_wf = assert_signature_done(runs, callback_sign, check_called_once=True)
+        task = task_map[callback_sign]
+        callback_wf = assert_signature_done(
+            runs, callback_sign, check_called_once=True, **task.kwargs
+        )
         for result in callback_wf.input["input"]["task_result"]:
             assert (
                 result in expected_output

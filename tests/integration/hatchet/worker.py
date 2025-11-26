@@ -11,6 +11,7 @@ from orchestrator.signature.consts import TASK_ID_PARAM_NAME
 from orchestrator.startup import orchestrator_config
 from tests.integration.hatchet.models import (
     ContextMessage,
+    MessageWithData,
     MessageWithResult,
     CommandMessageWithResult,
     SleepTaskMessage,
@@ -59,6 +60,11 @@ def task2(msg):
     return msg
 
 
+@hatchet.task(name="task-with-data", input_validator=MessageWithData)
+def task_with_data(msg):
+    return msg.data
+
+
 @hatchet.task(name="task2-with-res", input_validator=MessageWithResult)
 def task2_with_result(msg):
     return msg.results
@@ -103,6 +109,7 @@ def return_multiple_values(msg):
 workflows = [
     task1,
     task2,
+    task_with_data,
     task2_with_result,
     task3,
     chain_callback,
