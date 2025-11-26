@@ -41,7 +41,6 @@ theme:
 
 nav:
   - Overview: index.md
-  - Installation: installation.md
   - Setup: setup.md
   - Documentation:
     - Call With Callback: documentation/callbacks.md
