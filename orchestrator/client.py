@@ -18,6 +18,7 @@ from orchestrator.startup import (
     lifespan_initialize,
     orchestrator_config,
     init_orchestrator,
+    teardown_orchestrator,
 )
 from orchestrator.swarm.creator import swarm, SignatureOptions
 
@@ -26,6 +27,7 @@ async def merge_lifespan(original_lifespan: LifespanFn):
     await init_orchestrator()
     async for res in original_lifespan():
         yield res
+    await teardown_orchestrator()
 
 
 class HatchetOrchestrator(Hatchet):

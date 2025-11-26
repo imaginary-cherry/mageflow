@@ -28,6 +28,10 @@ async def init_orchestrator():
     await update_register_signature_models()
 
 
+async def teardown_orchestrator():
+    await rapyer.teardown_rapyer()
+
+
 async def update_register_signature_models():
     from orchestrator.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
 
@@ -57,3 +61,4 @@ async def lifespan_initialize():
     # - code before yield runs at startup (init config, register workers, etc.)
     # - code after yield would run at shutdown
     yield
+    await teardown_orchestrator()
