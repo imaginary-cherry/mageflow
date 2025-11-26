@@ -2,10 +2,10 @@ import abc
 import dataclasses
 from abc import ABC
 from queue import Queue
-from typing import Generic, TypeVar, TypeAlias, Any, get_args
+from typing import Generic, TypeVar, TypeAlias, Any
 
 from dash import html
-from pydantic import GetCoreSchemaHandler
+from pydantic import GetCoreSchemaHandler, BaseModel, PrivateAttr
 from pydantic_core import core_schema
 
 from orchestrator.chain.consts import ON_CHAIN_ERROR, ON_CHAIN_END
@@ -14,6 +14,7 @@ from orchestrator.signature.consts import ORCHESTRATOR_TASK_INITIALS
 from orchestrator.signature.model import TaskSignature
 from orchestrator.swarm.consts import ON_SWARM_ERROR, ON_SWARM_START, ON_SWARM_END
 from orchestrator.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from orchestrator.typing_support import Self
 
 T = TypeVar("T", bound=TaskSignature)
 INTERNAL_TASKS = [
@@ -168,16 +169,23 @@ class EmptyBuilder(Builder):
         )
 
 
-class TaskBuilder(Builder, Generic[T]):
-    def __init__(self, task: T):
-        self.task = task
-        self.ctx: dict[str, "TaskBuilder"] = {}
+class TaskBuilder(BaseModel, Builder, Generic[T]):
+    task: T
+    _ctx: dict[str, Self] = PrivateAttr(default_factory=dict)
 
     @property
     def id(self):
         return self.task.id
 
-    def set_ctx(self, ctx: dict[str, "TaskBuilder"]):
+    @property
+    def ctx(self):
+        return self._ctx
+
+    @ctx.setter
+    def ctx(self, value: dict[str, Self]):
+        self._ctx = value
+
+    def set_ctx(self, ctx: dict[str, Self]):
         self.ctx = ctx
 
     def draw(self) -> GraphData:
@@ -285,30 +293,6 @@ class TaskBuilder(Builder, Generic[T]):
         ]
 
         return components
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        # Try to infer the generic task type (TaskBuilder[SomeTask]) if available.
-        args = get_args(source_type) or get_args(cls)
-        task_type = args[0] if args else TaskSignature
-
-        task_schema = handler(task_type)
-
-        def _build_from_task(task: Any) -> "TaskBuilder":
-            return cls(task)
-
-        def _serialize(builder: "TaskBuilder") -> Any:
-            return builder.task
-
-        return core_schema.no_info_after_validator_function(
-            _build_from_task,
-            task_schema,
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                _serialize, info_arg=False, return_schema=task_schema
-            ),
-        )
 
 
 class ChainTaskBuilder(TaskBuilder[ChainTaskSignature]):
@@ -449,7 +433,7 @@ def find_unmentioned_tasks(ctx: CTXType) -> list[str]:
 
 
 def create_builders(tasks: list[TaskSignature]) -> CTXType:
-    ctx = {task.id: task_mapping.get(type(task))(task) for task in tasks}
+    ctx = {task.id: task_mapping.get(type(task))(task=task) for task in tasks}
 
     # Initialize tasks
     for task_id in ctx.keys():
