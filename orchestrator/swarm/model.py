@@ -26,7 +26,7 @@ from orchestrator.swarm.consts import (
 from orchestrator.swarm.messages import SwarmResultsMessage
 from orchestrator.utils.pythonic import deep_merge
 from pydantic import Field, field_validator, BaseModel
-from rapyer.types import RedisListType, RedisIntType
+from rapyer.types import RedisList, RedisInt
 
 
 class BatchItemTaskSignature(TaskSignature):
@@ -90,15 +90,15 @@ class SwarmConfig(BaseModel):
 
 
 class SwarmTaskSignature(TaskSignature):
-    tasks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
-    tasks_left_to_run: RedisListType[TaskIdentifierType] = Field(default_factory=list)
-    finished_tasks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
-    failed_tasks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
-    tasks_results: RedisListType[Any] = Field(default_factory=list)
+    tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    tasks_left_to_run: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    finished_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    failed_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    tasks_results: RedisList[Any] = Field(default_factory=list)
     # This flag is raised when no more tasks can be added to the swarm
     is_swarm_closed: bool = False
     # How many tasks can be added to the swarm at a time
-    current_running_tasks: RedisIntType = 0
+    current_running_tasks: RedisInt = 0
     config: SwarmConfig = Field(default_factory=SwarmConfig)
 
     @field_validator(
