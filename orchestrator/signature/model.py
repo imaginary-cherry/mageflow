@@ -11,7 +11,7 @@ from pydantic import (
 )
 from rapyer import AtomicRedisModel
 from rapyer.errors.base import KeyNotFound
-from rapyer.types import RedisDictType, RedisListType, RedisDatetimeType
+from rapyer.types import RedisDict, RedisList, RedisDatetime
 
 from orchestrator.errors import MissingSignatureError
 from orchestrator.models.message import ReturnValue
@@ -26,13 +26,13 @@ from orchestrator.workflows import OrchestratorWorkflow
 
 class TaskSignature(AtomicRedisModel):
     task_name: str
-    kwargs: RedisDictType = Field(default_factory=dict)
-    creation_time: RedisDatetimeType = Field(default_factory=datetime.now)
+    kwargs: RedisDict = Field(default_factory=dict)
+    creation_time: RedisDatetime = Field(default_factory=datetime.now)
     model_validators: Optional[Any] = None
-    success_callbacks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
-    error_callbacks: RedisListType[TaskIdentifierType] = Field(default_factory=list)
+    success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
-    task_identifiers: RedisDictType = Field(default_factory=dict)
+    task_identifiers: RedisDict = Field(default_factory=dict)
 
     @property
     def id(self) -> str:
