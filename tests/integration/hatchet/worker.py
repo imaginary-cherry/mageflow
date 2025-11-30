@@ -106,6 +106,11 @@ def return_multiple_values(msg):
     return [msg, msg, msg]
 
 
+@hatchet.task(execution_timeout=1)
+async def timeout_task(msg):
+    await asyncio.sleep(10)
+
+
 workflows = [
     task1,
     task2,
@@ -119,6 +124,7 @@ workflows = [
     sleep_task,
     callback_with_redis,
     return_multiple_values,
+    timeout_task,
 ]
 
 
