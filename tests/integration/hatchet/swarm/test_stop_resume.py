@@ -21,12 +21,7 @@ from tests.integration.hatchet.worker import sleep_task, task3, task2, task1
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_finish(
-    hatchet_client_init: HatchetInitData,
-    test_ctx,
-    ctx_metadata,
-    trigger_options,
-    # sign_callback1,
-    # sign_chain_callback,
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
 ):
     # Arrange
     redis_client, hatchet = (
@@ -35,12 +30,6 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     )
     sleep_time = 4
     swarm_sleep_task_sign = await orchestrator.sign(sleep_task, sleep_time=sleep_time)
-    # sleep_task_sign = await orchestrator.sign(sleep_task, sleep_time=sleep_time)
-    # chain_signature = await orchestrator.chain(
-    #     tasks=[task1, sleep_task_sign, task2, task3],
-    #     success=sign_callback1,
-    #     error=sign_chain_callback,
-    # )
     sleep_tasks = await swarm_sleep_task_sign.duplicate_many(3)
     swarm_signature = await orchestrator.swarm(
         tasks=[task1, swarm_sleep_task_sign, *sleep_tasks, task1, task2, task3],
