@@ -133,12 +133,8 @@ def Orchestrator(
 
     if redis_client is None:
         redis_url = os.getenv("REDIS_URL")
-        redis_client = redis.asyncio.from_url(
-            redis_url, max_connections=10, decode_responses=True
-        )
+        redis_client = redis.asyncio.from_url(redis_url, decode_responses=True)
     if isinstance(redis_client, str):
-        redis_client = redis.asyncio.from_url(
-            redis_client, max_connections=10, decode_responses=True
-        )
+        redis_client = redis.asyncio.from_url(redis_client, decode_responses=True)
     orchestrator_config.redis_client = redis_client
     return HatchetOrchestrator(hatchet_client, redis_client, param_config)

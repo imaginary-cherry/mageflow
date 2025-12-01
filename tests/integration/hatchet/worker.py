@@ -27,9 +27,7 @@ config_obj = ClientConfig(
     healthcheck=HealthcheckConfig(enabled=True),
 )
 
-redis = redis.asyncio.from_url(
-    settings.redis.url, max_connections=10, decode_responses=True
-)
+redis = redis.asyncio.from_url(settings.redis.url, decode_responses=True)
 hatchet = Hatchet(debug=True, config=config_obj)
 hatchet = orchestrator.Orchestrator(hatchet, redis_client=redis)
 
