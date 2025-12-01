@@ -17,7 +17,7 @@ from orchestrator.swarm.messages import SwarmResultsMessage
 from orchestrator.swarm.model import SwarmTaskSignature
 
 
-async def swarm_start_tasks(msg: EmptyModel, ctx: Context) -> None:
+async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
     try:
         ctx.log(f"Swarm task started {msg}")
         task_data = HatchetInvoker(msg, ctx).task_ctx
@@ -41,7 +41,7 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context) -> None:
         raise
 
 
-async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context) -> None:
+async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
     task_data = HatchetInvoker(msg, ctx).task_ctx
     task_id = task_data[TASK_ID_PARAM_NAME]
     try:
@@ -62,7 +62,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context) -> None:
         await TaskSignature.try_remove(task_id)
 
 
-async def swarm_item_failed(msg: EmptyModel, ctx: Context) -> None:
+async def swarm_item_failed(msg: EmptyModel, ctx: Context):
     task_data = HatchetInvoker(msg, ctx).task_ctx
     task_id = task_data[TASK_ID_PARAM_NAME]
     try:
