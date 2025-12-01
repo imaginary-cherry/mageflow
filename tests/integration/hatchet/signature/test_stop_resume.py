@@ -3,12 +3,12 @@ import asyncio
 import pytest
 
 import orchestrator
-from orchestrator.signature.status import SignatureStatus
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_task_was_paused,
     get_runs,
     assert_signature_done,
+    assert_signature_not_called,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.worker import (
@@ -16,11 +16,12 @@ from tests.integration.hatchet.worker import (
     sleep_task,
     callback_with_redis,
     ContextMessage,
+    task1_callback,
 )
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test__set_result_in_return_value(
+async def test__paused_signature_dont_trigger_callbacks(
     hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
 ):
     # Arrange
@@ -31,22 +32,24 @@ async def test__set_result_in_return_value(
 
     callback_signature = await orchestrator.sign(callback_with_redis)
     second_callback_signature = await orchestrator.sign(callback_with_redis)
+    error_callback = await orchestrator.sign(task1_callback)
     main_signature = await orchestrator.sign(
-        sleep_task, success_callbacks=[callback_signature, second_callback_signature]
+        sleep_task,
+        success_callbacks=[callback_signature, second_callback_signature],
+        error_callbacks=[error_callback],
     )
     message = ContextMessage(base_data=test_ctx)
 
     # Act
-    await callback_signature.change_status(SignatureStatus.SUSPENDED)
+    await main_signature.suspend()
     await main_signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
     await asyncio.sleep(5)
-    runs = await hatchet.runs.aio_list(additional_metadata=ctx_metadata)
-    runs_with_callback = [
-        wf for wf in runs.rows if wf.workflow_name == callback_with_redis.name
-    ]
-    assert len(runs_with_callback) == 2, "Callback workflow was not executed"
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_not_called(runs, callback_signature)
+    assert_signature_not_called(runs, second_callback_signature)
+    assert_signature_not_called(runs, error_callback)
 
 
 @pytest.mark.asyncio(loop_scope="session")
