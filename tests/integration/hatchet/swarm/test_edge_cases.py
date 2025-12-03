@@ -4,7 +4,7 @@ import pytest
 
 import orchestrator
 from orchestrator.signature.model import TaskSignature
-from orchestrator.swarm.model import BatchItemTaskSignature
+from orchestrator.swarm.model import BatchItemTaskSignature, SwarmConfig
 from tests.integration.hatchet.assertions import get_runs, assert_swarm_task_done
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -24,19 +24,21 @@ async def test__task_is_cancelled__swarm_still_finish(
         hatchet_client_init.hatchet,
     )
     swarm_tasks = [timeout_task]
-    swarm = await orchestrator.swarm(tasks=swarm_tasks)
+    swarm = await orchestrator.swarm(
+        tasks=swarm_tasks, config=SwarmConfig(max_concurrency=1)
+    )
     swarm_items = await BatchItemTaskSignature.afind()
     tasks = await TaskSignature.afind()
 
     # Act
     regular_message = ContextMessage()
-    await swarm.aio_run_no_wait(regular_message, options=trigger_options)
     await asyncio.sleep(10)
     for i in range(2):
         swarm_item = await swarm.add_task(task1)
         swarm_items.append(swarm_item)
         tasks.append(await TaskSignature.from_id(swarm_item.original_task_id))
-        await swarm_item.aio_run_no_wait(regular_message, options=trigger_options)
+    for item in swarm_items:
+        await item.aio_run_no_wait(regular_message, options=trigger_options)
     await swarm.close_swarm()
     await asyncio.sleep(30)
 
