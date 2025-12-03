@@ -162,9 +162,12 @@ def assert_tasks_in_order(wf_by_signature: WF_MAPPING_TYPE, tasks: list[TaskSign
 def assert_signature_not_called(runs: HatchetRuns, task_sign: TaskSignature | str):
     wf_by_signature = map_wf_by_id(runs, also_not_done=True)
     if isinstance(task_sign, TaskSignature):
+        task_alias = task_sign.task_name
         task_sign = task_sign.id
+    else:
+        task_alias = task_sign
 
-    assert task_sign not in wf_by_signature
+    assert task_sign not in wf_by_signature, f"{task_alias} was called"
 
 
 def assert_swarm_task_done(
