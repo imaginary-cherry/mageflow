@@ -23,4 +23,4 @@ async def real_redis(redis_client):
     delete_keys = [key for key in all_keys if key not in current_keys]
     if delete_keys:
         await redis_client.delete(*delete_keys)
-    await redis_client.close()
+    await redis_client.aclose()

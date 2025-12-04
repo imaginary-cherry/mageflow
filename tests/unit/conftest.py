@@ -20,7 +20,7 @@ async def redis_client():
         yield client
     finally:
         await client.flushall()
-        await client.close()
+        await client.aclose()
 
 
 @pytest.fixture(autouse=True, scope="function")
