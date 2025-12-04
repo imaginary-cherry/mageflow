@@ -47,9 +47,8 @@ nav:
     - Chain: documentation/chain.md
     - Swarm: documentation/swarm.md
   - API Reference:
-    - AtomicRedisModel: api/atomic-redis-model.md
-    - Redis Types: api/redis-types.md
-    - Rapyer: api/rapyer-functions.md
+      - Chain: api/chain.md
+      - Swarm: api/swarm.md
   - Roadmap: roadmap.md
   - Changelog: changelog.md
 

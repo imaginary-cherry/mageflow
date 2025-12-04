@@ -96,6 +96,24 @@ async def success_callback(msg: SuccessMessage):
     result = msg.task_result
 ```
 
+!!! info "ReturnValue Annotation"
+    ReturnValue is an annotation that tells the task orchestrator that the return value of the function should be injected into the parameter marked with ReturnValue.
+    ```python {title="Creating model with ReturnValue annotation"}
+    from pydantic import BaseModel
+    from orchestrator.models.message import ReturnValue
+    
+    class SuccessMessage(BaseModel):
+        task_result: Annotated[Any, ReturnValue()]
+        field_int: int
+    ```
+
+    When no field is marked with ReturnValue, the return value of the function will be sent to the field named results.
+    ```python
+    class SuccessMessage(BaseModel):
+        results: str  # The return value of the function will be sent here
+        field_int: int
+    ```
+
 
 ### Setting Error Callbacks
 
