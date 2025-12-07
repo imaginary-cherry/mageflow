@@ -29,12 +29,12 @@ def handle_task_callback(
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             invoker = HatchetInvoker(message, ctx)
+            if not await invoker.should_run_task():
+                await ctx.aio_cancel()
+                await asyncio.sleep(10)
+                # NOTE: This should not run, the task should cancel, but just in case
+                return {"Error": "Task should have been canceled"}
             try:
-                if not await invoker.should_run_task():
-                    await ctx.aio_cancel()
-                    await asyncio.sleep(10)
-                    # NOTE: This should not run, the task should cancel, but just in case
-                    return {"Error": "Task should have been canceled"}
                 await invoker.start_task()
                 if expected_params == AcceptParams.JUST_MESSAGE:
                     result = await flexible_call(func, message)
@@ -42,7 +42,7 @@ def handle_task_callback(
                     result = await flexible_call(func, message, *args, **kwargs)
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
-            except Exception:
+            except (Exception, asyncio.CancelledError) as e:
                 await invoker.run_error()
                 await invoker.remove_task(with_error=False)
                 raise
