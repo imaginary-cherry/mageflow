@@ -71,10 +71,15 @@ Implement task cancellation that completely removes the signature, unlike interr
 - 📊 **Audit Trail** - Log cancellation events for debugging and compliance
 
 **Key Differences from Interrupt:**
-| Operation | Execution | Signature | Recovery |
-|-----------|-----------|-----------|----------|
-| **Interrupt** | ⏹️ Stops | ✅ Preserved | 🔄 Possible |
-| **Cancel** | ⏹️ Stops | ❌ Deleted | ❌ Impossible |
+
+```
+┌─────────────┬───────────┬─────────────┬──────────────┐
+│  Operation  │ Execution │  Signature  │   Recovery   │
+├─────────────┼───────────┼─────────────┼──────────────┤
+│ Interrupt   │ ⏹️ Stops   │ ✅ Preserved │ 🔄 Possible  │
+│ Cancel      │ ⏹️ Stops   │ ❌ Deleted   │ ❌ Impossible │
+└─────────────┴───────────┴─────────────┴──────────────┘
+```
 
 **Use Cases:**
 - Permanent removal of erroneous task submissions
@@ -106,12 +111,17 @@ Automatically restart all unfinished tasks when the worker restarts after shutdo
 - 🔧 **Maintenance** - Planned restarts during maintenance windows
 
 **Task State Handling:**
-| Status | Action | Behavior |
-|--------|--------|----------|
-| `RUNNING` | ▶️ Resume | Continue from last checkpoint |
-| `PENDING` | 🚀 Start | Begin execution normally |
-| `SUSPENDED` | ⏸️ Keep | Maintain suspended state |
-| `FAILED` | ❌ Skip | Don't auto-resume failed tasks |
+
+```
+┌───────────┬──────────┬─────────────────────────────────┐
+│  Status   │  Action  │            Behavior             │
+├───────────┼──────────┼─────────────────────────────────┤
+│ RUNNING   │ ▶️ Resume │ Continue from last checkpoint   │
+│ PENDING   │ 🚀 Start  │ Begin execution normally        │
+│ SUSPENDED │ ⏸️ Keep   │ Maintain suspended state        │
+│ FAILED    │ ❌ Skip   │ Don't auto-resume failed tasks  │
+└───────────┴──────────┴─────────────────────────────────┘
+```
 
 **Configuration:**
 - 🎛️ **Global toggle** for auto-resume functionality
