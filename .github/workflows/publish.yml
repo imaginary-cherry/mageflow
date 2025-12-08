@@ -74,12 +74,9 @@ jobs:
         run: tox -e coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          fail_ci_if_error: true
-          verbose: true
 
       - name: Clean up credentials
         if: always()
