@@ -25,67 +25,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
-  coverage:
-    needs: check-tests
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: 'pip'
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Install tox
-        run: pip install tox
-
-      - name: Install dependencies
-        run: poetry install --with dev --extras hatchet
-
-      - name: Deploy Hatch Lite
-        run: |
-          docker compose -f tests/integration/hatchet/docker-compose.hatchet.yml up -d
-
-      - name: Generate Env File
-        env:
-          SERVER_AUTH_COOKIE_INSECURE: "t"
-        working-directory: .
-        run: |
-          sleep 10
-          HATCHET_API_KEY=$(docker compose -f tests/integration/hatchet/docker-compose.hatchet.yml exec hatchet-lite /hatchet-admin token create --config /config --tenant-id 707d0855-80ab-4e1f-a156-f1c4546cbf52)
-          echo "HATCHET_API_KEY=$HATCHET_API_KEY" >> $GITHUB_ENV
-          echo "DYNACONF_hatchet__api_key=$HATCHET_API_KEY" >> $GITHUB_ENV
-          echo "DYNACONF_hatchet__tls_config__strategy=none" >> $GITHUB_ENV
-          echo "DYNACONF_REDIS__URL=redis://localhost:6379/" >> $GITHUB_ENV
-          echo "HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED=True" >> $GITHUB_ENV
-
-      - name: Run coverage with tox
-        env:
-          PYTHONHASHSEED: 0
-        run: tox -e coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Clean up credentials
-        if: always()
-        run: |
-          rm -f ~/.git-credentials
-          docker stop hatchet-lite || true
-          docker rm hatchet-lite || true
-
-
   create-github-release:
     needs: coverage
     runs-on: ubuntu-22.04
