@@ -44,6 +44,7 @@ disply-tasks = "visualizer.app:main"
 source = ["mageflow"]
 concurrency = ["multiprocessing"]
 parallel = true
+omit = ["mageflow/visualizer/*"]
 
 [tool.coverage.report]
 skip_covered = false
