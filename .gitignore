@@ -215,3 +215,4 @@ future-features
 # Ignore dynaconf secret files
 .secrets.*
 .claude
+/junit.xml

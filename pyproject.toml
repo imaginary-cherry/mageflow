@@ -9,7 +9,8 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11, <3.14"
 dependencies = [
-    "rapyer (>=1.1.0,<2.0.0)"
+    "rapyer (>=1.1.0,<2.0.0)",
+    "tox (>=4.32.0,<5.0.0)"
 ]
 
 [project.optional-dependencies]
@@ -30,6 +31,7 @@ requests = "^2.32.5"
 fakeredis = {version = "^2.32.1", extras = ["json"]}
 dynaconf = ">=3.2.12,<4.0.0"
 pytest = "^9.0.2"
+tox = "^4.32.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import os
 import subprocess
+import sys
 import time
 import uuid
 from contextlib import contextmanager
@@ -14,7 +15,6 @@ from typing import Generator, Callable, AsyncGenerator
 import psutil
 import pytest
 import pytest_asyncio
-import redis
 import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -25,7 +25,6 @@ from mageflow.startup import mageflow_config, init_mageflow
 from mageflow.task.model import HatchetTaskModel
 from tests.integration.hatchet.worker import (
     config_obj,
-    settings,
     task1,
     task2,
     task3,
@@ -80,7 +79,7 @@ async def hatchet_worker_deploy(
     await redis_client.flushall()
     current_file = Path(__file__).absolute()
     test_worker_path = current_file.parent / "worker.py"
-    command = ["python", str(test_worker_path)]
+    command = [sys.executable, str(test_worker_path)]
 
     with hatchet_worker(command) as proc:
         await asyncio.sleep(10)
@@ -125,14 +124,34 @@ def hatchet_worker(
 
     os.environ["HATCHET_CLIENT_WORKER_HEALTHCHECK_PORT"] = str(healthcheck_port)
     env = os.environ.copy()
-    magelfow_path = Path(__file__).absolute().parent.parent.parent.parent
+    # Find the project root by looking for pyproject.toml
+    current_path = Path(__file__).absolute()
+    project_root = current_path
+    while project_root.parent != project_root:
+        if (project_root / "pyproject.toml").exists():
+            break
+        project_root = project_root.parent
+    
+    if not (project_root / "pyproject.toml").exists():
+        raise RuntimeError(f"Could not find project root with pyproject.toml starting from {current_path}")
+    
+    logging.info(f"Project root found: {project_root}")
+    logging.info(f"Settings file exists: {(project_root / '.secrets.toml').exists()}")
+    
+    # Make sure we have the correct Python path in tox
+    python_path = env.get("PYTHONPATH", "")
+    if str(project_root) not in python_path:
+        if python_path:
+            env["PYTHONPATH"] = f"{project_root}:{python_path}"
+        else:
+            env["PYTHONPATH"] = str(project_root)
 
     proc = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
-        cwd=magelfow_path,
+        cwd=project_root,
     )
 
     # Check if the process is still running
