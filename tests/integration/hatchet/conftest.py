@@ -110,9 +110,11 @@ def wait_for_worker_health(healthcheck_port: int) -> bool:
         worker_healthcheck_attempts += 1
 
 
-def log_output(pipe: BytesIO, log_func: Callable[[str], None]) -> None:
+def log_output(pipe: BytesIO, log_func: Callable[[str], None], prefix: str = "") -> None:
     for line in iter(pipe.readline, b""):
-        print(line.decode().strip())
+        decoded_line = line.decode().strip()
+        if decoded_line:  # Only log non-empty lines
+            log_func(f"[WORKER{prefix}] {decoded_line}")
 
 
 @contextmanager
@@ -120,6 +122,15 @@ def hatchet_worker(
     command: list[str],
     healthcheck_port: int = 8001,
 ) -> Generator[subprocess.Popen[bytes], None, None]:
+    # Configure logging to capture worker output
+    logger = logging.getLogger()
+    if not logger.handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            force=True
+        )
+    
     logging.info(f"Starting background worker: {' '.join(command)}")
 
     os.environ["HATCHET_CLIENT_WORKER_HEALTHCHECK_PORT"] = str(healthcheck_port)
@@ -161,8 +172,8 @@ def hatchet_worker(
     if proc.poll() is not None:
         raise Exception(f"Worker failed to start with return code {proc.returncode}")
 
-    Thread(target=log_output, args=(proc.stdout, logging.info), daemon=True).start()
-    Thread(target=log_output, args=(proc.stderr, logging.error), daemon=True).start()
+    Thread(target=log_output, args=(proc.stdout, logging.info, "-STDOUT"), daemon=True).start()
+    Thread(target=log_output, args=(proc.stderr, logging.error, "-STDERR"), daemon=True).start()
 
     wait_for_worker_health(healthcheck_port=healthcheck_port)
 
