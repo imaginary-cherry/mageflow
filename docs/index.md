@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="../logo.png" alt="MageFlow Logo" width="200"/>
+  <img src="logo.png" alt="MageFlow Logo" width="200"/>
 </div>
 
 # MageFlow
 
-**Ma**ngae **G**raph **E**xecution Flow - This package's purpose is to help users of task managers (like hatchet/taskiq etc) to orchestrate their tasks in an easy way from a single point. This way, it is much easier to flow and change, rather than spreading the flow logic all over your projects.
+<strong>Ma</strong>nage <strong>G</strong>raph <strong>E</strong>xecution <strong>Flow</strong> - This package's purpose is to help users of task managers (like hatchet/taskiq etc) to orchestrate their tasks in an easy way from a single point. This way, it is much easier to flow and change, rather than spreading the flow logic all over your projects.
 MageFlow provides a unify interface across different task managers that is fully compatible with the task manager api to execute tasks in chain/parallel/conditional tasks that can be calculated in runtime.
 
 ## What is Mageflow?
