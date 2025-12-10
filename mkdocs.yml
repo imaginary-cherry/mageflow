@@ -3,11 +3,12 @@ site_description: A Python package that provides Pydantic models with Redis as t
 site_url: https://yedidyakfir.github.io/mageflow/
 repo_url: https://github.com/yedidyakfir/mageflow
 repo_name: yedidyakfir/mageflow
+docs_dir: docs
 
 theme:
   name: material
-  logo: ../logo.png
-  favicon: ../logo.png
+  logo: logo.png
+  favicon: logo.png
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
