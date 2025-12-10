@@ -28,7 +28,6 @@ jobs:
           wait-interval: 10
 
   create-github-release:
-    needs: coverage
     runs-on: ubuntu-22.04
     permissions:
       contents: write  # Required for creating releases
