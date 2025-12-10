@@ -3,9 +3,14 @@ import json
 import os
 
 # Start coverage if COVERAGE_PROCESS_START is set
-# if os.environ.get('COVERAGE_PROCESS_START'):
-#     import coverage
-#     coverage.process_startup()
+if os.environ.get("COVERAGE_PROCESS_START"):
+    try:
+        import coverage
+
+        coverage.process_startup()
+    except ImportError:
+        # Coverage not installed, skip subprocess coverage
+        pass
 
 import redis
 from dynaconf import Dynaconf
