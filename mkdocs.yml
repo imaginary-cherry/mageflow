@@ -59,8 +59,9 @@ theme:
     code: JetBrains Mono
 
 nav:
-  - Overview: index.md
-  - Setup: setup.md
+  - Overview:
+      - What is MageFlow?: index.md
+      - Setup: setup.md
   - Documentation:
     - Callbacks: documentation/callbacks.md
     - Chain: documentation/chain.md
