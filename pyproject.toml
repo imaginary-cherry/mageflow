@@ -1,6 +1,6 @@
 [project]
 name = "mageflow"
-version = "0.1.0"
+version = "0.0.1"
 description = "Manage Graph Execution Flow - A unified interface for task orchestration across different task managers"
 authors = [
     {name = "yedidyakfir", email = "yedidyakfir@gmail.com"}
@@ -30,6 +30,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
