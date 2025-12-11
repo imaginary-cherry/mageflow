@@ -23,7 +23,7 @@ async def test__timeout_task__call_error_callback(
     message = ContextMessage(base_data=test_ctx)
 
     # Act
-    await timeout_sign.aio_run_no_wait(message)
+    await timeout_sign.aio_run_no_wait(message, options=trigger_options)
     await asyncio.sleep(10)
 
     # Assert
