@@ -48,7 +48,7 @@ class Builder(ABC):
 
     @property
     @abc.abstractmethod
-    def id(self):
+    def key(self):
         pass
 
     @abc.abstractmethod
@@ -68,7 +68,7 @@ class EmptyBuilder(Builder):
         self.error_tasks = error_tasks or []
 
     @property
-    def id(self):
+    def key(self):
         return self.task_id
 
     def draw(self) -> GraphData:
@@ -175,8 +175,8 @@ class TaskBuilder(BaseModel, Builder, Generic[T]):
     _ctx: dict[str, Self] = PrivateAttr(default_factory=dict)
 
     @property
-    def id(self):
-        return self.task.id
+    def key(self):
+        return self.task.key
 
     @property
     def ctx(self):
@@ -190,18 +190,18 @@ class TaskBuilder(BaseModel, Builder, Generic[T]):
         self.ctx = ctx
 
     def draw(self) -> GraphData:
-        task_node = {"data": {"id": self.task.id, "label": self.task.task_name}}
+        task_node = {"data": {"id": self.task.key, "label": self.task.task_name}}
 
         success_edges = [
             {
-                "data": {"source": self.task.id, "target": task_id},
+                "data": {"source": self.task.key, "target": task_id},
                 "classes": "success-edge",
             }
             for task_id in self.task.success_callbacks
         ]
         error_edges = [
             {
-                "data": {"source": self.task.id, "target": task_id},
+                "data": {"source": self.task.key, "target": task_id},
                 "classes": "error-edge",
             }
             for task_id in self.task.error_callbacks
@@ -214,7 +214,7 @@ class TaskBuilder(BaseModel, Builder, Generic[T]):
         )
 
     def drawn_tasks(self) -> list[str]:
-        return [self.task.id]
+        return [self.task.key]
 
     def mentioned_tasks(self) -> list[str]:
         return self.task.success_callbacks + self.task.error_callbacks
@@ -448,7 +448,7 @@ def find_unmentioned_tasks(ctx: CTXType) -> list[str]:
 
 
 def create_builders(tasks: list[TaskSignature]) -> CTXType:
-    ctx = {task.id: task_mapping.get(type(task))(task=task) for task in tasks}
+    ctx = {task.key: task_mapping.get(type(task))(task=task) for task in tasks}
 
     # Initialize tasks
     for task_id in ctx.keys():
@@ -464,7 +464,7 @@ def create_builders(tasks: list[TaskSignature]) -> CTXType:
 def build_graph(initial_id: str, ctx: CTXType) -> list[dict]:
     for task_id in ctx:
         ctx[task_id].set_ctx(ctx)
-        ctx[task_id].task.id = task_id
+        ctx[task_id].task.key = task_id
 
     tasks_to_draw = Queue()
     tasks_to_draw.put(initial_id)

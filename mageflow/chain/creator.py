@@ -5,7 +5,7 @@ from mageflow.chain.messages import ChainSuccessTaskCommandMessage
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
-    resolve_signature_id,
+    resolve_signature_key,
 )
 from mageflow.signature.model import (
     TaskIdentifierType,
@@ -20,7 +20,7 @@ async def chain(
     error: TaskInputType = None,
     success: TaskInputType = None,
 ) -> ChainTaskSignature:
-    tasks = [await resolve_signature_id(task) for task in tasks]
+    tasks = [await resolve_signature_key(task) for task in tasks]
 
     # Create a chain task that will be deleted only at the end of the chain
     first_task = tasks[0]
@@ -32,7 +32,7 @@ async def chain(
     )
     await chain_task_signature.save()
 
-    callback_kwargs = dict(chain_task_id=chain_task_signature.id)
+    callback_kwargs = dict(chain_task_id=chain_task_signature.key)
     on_chain_error = TaskSignature(
         task_name=ON_CHAIN_ERROR,
         task_identifiers=callback_kwargs,

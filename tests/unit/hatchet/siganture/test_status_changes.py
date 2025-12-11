@@ -15,7 +15,7 @@ async def test__safe_change_status__signature_deleted_from_redis__raises_error__
         return msg
 
     signature = await TaskSignature.from_task(test_task)
-    task_id = signature.id
+    task_id = signature.key
 
     # Delete signature from Redis directly
     await redis_client.delete(signature.key)
@@ -61,4 +61,4 @@ async def test_signature_resume_with_various_statuses_sanity(
         last_status = SignatureStatus.PENDING
     else:
         mock_aio_run_no_wait.assert_not_called()
-    await assert_tasks_changed_status([signature.id], last_status, initial_status)
+    await assert_tasks_changed_status([signature.key], last_status, initial_status)

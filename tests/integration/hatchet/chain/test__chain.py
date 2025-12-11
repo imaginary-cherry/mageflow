@@ -1,12 +1,12 @@
 import asyncio
 
-import mageflow
 import pytest
+
+import mageflow
 from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_chain_done,
-    map_wf_by_id,
     get_runs,
     assert_signature_done,
 )
@@ -45,7 +45,7 @@ async def test_chain_integration(
 
     # Act
     chain_signature = await mageflow.chain(
-        [sign_task1, signature2.id, task3],
+        [sign_task1, signature2.key, task3],
         success=success_chain_signature,
     )
     chain_tasks = await TaskSignature.afind()

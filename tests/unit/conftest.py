@@ -5,8 +5,6 @@ import rapyer
 from hatchet_sdk import Hatchet, ClientConfig
 
 import mageflow
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
 from mageflow.startup import update_register_signature_models, mageflow_config
 
 

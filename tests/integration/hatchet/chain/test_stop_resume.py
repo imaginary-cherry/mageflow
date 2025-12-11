@@ -56,7 +56,7 @@ async def test__chain_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_not_called(runs, sign_chain_callback)
     assert_signature_not_called(runs, sign_callback1)
-    updated_task_res = await TaskSignature.from_id(task_res_sign.id)
+    updated_task_res = await TaskSignature.get_safe(task_res_sign.key)
     assert_task_was_paused(runs, updated_task_res)
 
     # Act - stage 2

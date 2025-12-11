@@ -183,7 +183,7 @@ async def test_swarm_mixed_task_all_done_before_closing_task(
     new_task = await swarm.add_task(sign_task2)
     await new_task.aio_run_no_wait(regular_message, options=trigger_options)
     batch_tasks = await asyncio.gather(
-        *[TaskSignature.from_id(batch_id) for batch_id in swarm.tasks]
+        *[TaskSignature.get_safe(batch_id) for batch_id in swarm.tasks]
     )
     # Wait for tasks to complete
     await asyncio.sleep(15)
@@ -226,7 +226,7 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
         is_swarm_closed=True,
     )
     batch_items = await asyncio.gather(
-        *[TaskSignature.from_id(batch_id) for batch_id in swarm.tasks]
+        *[TaskSignature.get_safe(batch_id) for batch_id in swarm.tasks]
     )
     tasks = await TaskSignature.afind()
 
@@ -274,7 +274,7 @@ async def test_swarm_run_concurrently(
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
 
     # Check concurrency of the swarm
-    swarm_wf = [wf_by_task_id[task.id] for task in swarm_tasks]
+    swarm_wf = [wf_by_task_id[task.key] for task in swarm_tasks]
     assert_overlaps_leq_k_workflows(swarm_wf, max_concurrency)
 
 

@@ -26,12 +26,12 @@ async def test_chain_safe_change_status_on_unsaved_signature_does_not_create_red
 
     # Act
     result = await ChainTaskSignature.safe_change_status(
-        chain_signature.id, SignatureStatus.SUSPENDED
+        chain_signature.key, SignatureStatus.SUSPENDED
     )
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.from_id(chain_signature.id)
+    reloaded_signature = await TaskSignature.get_safe(chain_signature.key)
     assert reloaded_signature is None
 
 
@@ -81,20 +81,20 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
         task_signatures.append(task_signature)
 
     # Create a chain
-    chain_signature = await mageflow.chain([task.id for task in task_signatures])
+    chain_signature = await mageflow.chain([task.key for task in task_signatures])
 
     # Delete specified subtasks from Redis (simulate they were removed)
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
         await task_signatures[idx].remove()
-        deleted_task_ids.append(task_signatures[idx].id)
+        deleted_task_ids.append(task_signatures[idx].key)
 
     # Act
-    await chain_signature.safe_change_status(chain_signature.id, new_status)
+    await chain_signature.safe_change_status(chain_signature.key, new_status)
 
     # Assert
     # Verify chain signature status changed to new status
-    reloaded_chain = await TaskSignature.from_id(chain_signature.id)
+    reloaded_chain = await TaskSignature.get_safe(chain_signature.key)
     assert reloaded_chain.task_status.status == new_status
     assert reloaded_chain.task_status.last_status == SignatureStatus.PENDING
 
@@ -103,7 +103,7 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
 
     # Verify non-deleted subtasks changed status to new status
     non_deleted_indices = [
-        task_signatures[i].id
+        task_signatures[i].key
         for i in range(len(task_signatures))
         if i not in tasks_to_delete_indices
     ]
@@ -207,13 +207,13 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
         last_status = task_signature.task_status.last_status
         expected_statuses.append(last_status)
 
-    chain_signature = await mageflow.chain([task.id for task in task_signatures])
+    chain_signature = await mageflow.chain([task.key for task in task_signatures])
     chain_signature.task_status.status = SignatureStatus.SUSPENDED
 
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
         await task_signatures[idx].remove()
-        deleted_task_ids.append(task_signatures[idx].id)
+        deleted_task_ids.append(task_signatures[idx].key)
 
     # Act
     await chain_signature.resume()
@@ -229,11 +229,11 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
             new_status = SignatureStatus.PENDING
             num_of_aio_run += 1
         await assert_tasks_changed_status(
-            [task.id], new_status, SignatureStatus.SUSPENDED
+            [task.key], new_status, SignatureStatus.SUSPENDED
         )
 
     await assert_tasks_changed_status(
-        [chain_signature.id], SignatureStatus.PENDING, SignatureStatus.SUSPENDED
+        [chain_signature.key], SignatureStatus.PENDING, SignatureStatus.SUSPENDED
     )
 
     await assert_tasks_not_exists(deleted_task_ids)
@@ -251,8 +251,8 @@ async def test_chain_suspend_sanity(chain_with_tasks):
     # Assert
     # Verify all tasks changed status to suspend
     await assert_tasks_changed_status(
-        [chain_data.chain_signature.id], SignatureStatus.SUSPENDED
+        [chain_data.chain_signature.key], SignatureStatus.SUSPENDED
     )
     await assert_tasks_changed_status(
-        [task.id for task in chain_data.task_signatures], SignatureStatus.SUSPENDED
+        [task.key for task in chain_data.task_signatures], SignatureStatus.SUSPENDED
     )

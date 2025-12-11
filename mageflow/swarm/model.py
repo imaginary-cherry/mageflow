@@ -10,7 +10,7 @@ from mageflow.errors import (
 )
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
-    resolve_signature_id,
+    resolve_signature_key,
 )
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
@@ -35,8 +35,8 @@ class BatchItemTaskSignature(TaskSignature):
 
     async def aio_run_no_wait(self, msg: BaseModel, **orig_task_kwargs):
         async with self.lock() as swarm_item:
-            swarm_task = await SwarmTaskSignature.from_id(self.swarm_id)
-            original_task = await TaskSignature.from_id(self.original_task_id)
+            swarm_task = await SwarmTaskSignature.get_safe(self.swarm_id)
+            original_task = await TaskSignature.get_safe(self.original_task_id)
             if swarm_task is None:
                 raise MissingSignatureError(
                     f"Swarm {self.swarm_id} was deleted before finish"
@@ -65,16 +65,16 @@ class BatchItemTaskSignature(TaskSignature):
         return await TaskSignature.safe_change_status(self.original_task_id, status)
 
     async def resume(self):
-        async with TaskSignature.lock_from_id(self.original_task_id) as task:
+        async with TaskSignature.lock_from_key(self.original_task_id) as task:
             await task.resume()
             return await super().change_status(task.task_status.last_status)
 
     async def suspend(self):
-        await TaskSignature.suspend_from_id(self.original_task_id)
+        await TaskSignature.suspend_from_key(self.original_task_id)
         return await super().change_status(SignatureStatus.SUSPENDED)
 
     async def interrupt(self):
-        await TaskSignature.interrupt_from_id(self.original_task_id)
+        await TaskSignature.interrupt_from_key(self.original_task_id)
         return await super().change_status(SignatureStatus.INTERRUPTED)
 
 
@@ -106,7 +106,7 @@ class SwarmTaskSignature(TaskSignature):
     )
     @classmethod
     def validate_tasks(cls, v):
-        return [cls.validate_task_id(item) for item in v]
+        return [cls.validate_task_key(item) for item in v]
 
     @property
     def has_swarm_started(self):
@@ -129,14 +129,14 @@ class SwarmTaskSignature(TaskSignature):
 
     def task_ctx(self) -> dict:
         original_ctx = super().task_ctx()
-        swarm_ctx = {SWARM_TASK_ID_PARAM_NAME: self.id}
+        swarm_ctx = {SWARM_TASK_ID_PARAM_NAME: self.key}
         return original_ctx | swarm_ctx
 
     async def try_delete_sub_tasks(
         self, with_error: bool = True, with_success: bool = True
     ):
         tasks = await asyncio.gather(
-            *[TaskSignature.from_id(task_id) for task_id in self.tasks],
+            *[TaskSignature.get_safe(task_id) for task_id in self.tasks],
             return_exceptions=True,
         )
         tasks = [task for task in tasks if isinstance(task, TaskSignature)]
@@ -167,19 +167,19 @@ class SwarmTaskSignature(TaskSignature):
             raise SwarmIsCanceledError(
                 f"Swarm {self.task_name} is {self.task_status} - can't add task"
             )
-        task = await resolve_signature_id(task)
+        task = await resolve_signature_key(task)
         dump = task.model_dump(exclude={"task_name"})
         batch_task_name = f"{BATCH_TASK_NAME_INITIALS}{task.task_name}"
         batch_task = BatchItemTaskSignature(
             **dump,
             task_name=batch_task_name,
-            swarm_id=self.id,
-            original_task_id=task.id,
+            swarm_id=self.key,
+            original_task_id=task.key,
         )
 
         swarm_identifiers = {
-            SWARM_TASK_ID_PARAM_NAME: self.id,
-            SWARM_ITEM_TASK_ID_PARAM_NAME: batch_task.id,
+            SWARM_TASK_ID_PARAM_NAME: self.key,
+            SWARM_ITEM_TASK_ID_PARAM_NAME: batch_task.key,
         }
         on_success_swarm_item = await TaskSignature.from_task_name(
             task_name=ON_SWARM_END,
@@ -189,22 +189,22 @@ class SwarmTaskSignature(TaskSignature):
         on_error_swarm_item = await TaskSignature.from_task_name(
             task_name=ON_SWARM_ERROR, task_identifiers=swarm_identifiers
         )
-        task.success_callbacks.append(on_success_swarm_item.id)
-        task.error_callbacks.append(on_error_swarm_item.id)
+        task.success_callbacks.append(on_success_swarm_item.key)
+        task.error_callbacks.append(on_error_swarm_item.key)
         await task.save()
         await batch_task.save()
-        await self.tasks.aappend(batch_task.id)
+        await self.tasks.aappend(batch_task.key)
         return batch_task
 
     async def add_to_running_tasks(self, task: TaskSignatureConvertible) -> bool:
         async with self.lock() as swarm_task:
-            task = await resolve_signature_id(task)
+            task = await resolve_signature_key(task)
             if self.current_running_tasks < self.config.max_concurrency:
                 await self.current_running_tasks.increase()
                 self.current_running_tasks += 1
                 return True
             else:
-                await self.tasks_left_to_run.aappend(task.id)
+                await self.tasks_left_to_run.aappend(task.key)
                 return False
 
     async def decrease_running_tasks_count(self):
@@ -239,14 +239,14 @@ class SwarmTaskSignature(TaskSignature):
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_id(swarm_id) for swarm_id in self.tasks],
+            *[TaskSignature.suspend_from_key(swarm_id) for swarm_id in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_id(task_id) for task_id in self.tasks],
+            *[TaskSignature.resume_from_key(task_id) for task_id in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

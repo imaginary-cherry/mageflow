@@ -76,7 +76,7 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
     # Assert
     await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
-    success_tasks = {task.id: task for task in success_callbacks}
+    success_tasks = {task.key: task for task in success_callbacks}
     for success_id in main_signature.success_callbacks:
         task = success_tasks[success_id]
         input_values = {task.return_value_field(): message.model_dump(mode="json")}
@@ -116,7 +116,7 @@ async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity
     # Assert
     await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
-    error_tasks = {task.id: task for task in error_callbacks}
+    error_tasks = {task.key: task for task in error_callbacks}
     for success_id in error_sign.error_callbacks:
         task = error_tasks[success_id]
         assert_signature_done(runs, success_id, **task.kwargs)
@@ -162,7 +162,7 @@ async def test_task_with_success_callback_execution_and_redis_cleanup_sanity(
     success_callback_signature = await mageflow.sign(task1_callback, base_data=test_ctx)
     message = ContextMessage(base_data=test_ctx)
     task = await mageflow.sign(
-        task2, success_callbacks=[success_callback_signature.id], base_data=test_ctx
+        task2, success_callbacks=[success_callback_signature.key], base_data=test_ctx
     )
 
     # Act
@@ -233,7 +233,7 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
 
     callback_sign = await mageflow.sign(task1_callback)
     return_multiple_values_sign = await mageflow.sign(
-        return_multiple_values, success_callbacks=[callback_sign.id]
+        return_multiple_values, success_callbacks=[callback_sign.key]
     )
 
     # Act

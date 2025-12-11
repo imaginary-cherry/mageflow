@@ -30,19 +30,19 @@ async def test_chain_with_swarm_task_creates_callbacks_correctly_edge_case(
     await simple_task.save()
 
     # Act
-    chain_signature = await mageflow.chain([swarm_task.id, simple_task.id])
+    chain_signature = await mageflow.chain([swarm_task.key, simple_task.key])
 
     # Assert
     # Verify swarm task was loaded and updated correctly
-    reloaded_swarm = await TaskSignature.from_id(swarm_task.id)
+    reloaded_swarm = await TaskSignature.get_safe(swarm_task.key)
     assert isinstance(reloaded_swarm, SwarmTaskSignature)
 
     # Verify callbacks were added correctly
     assert len(reloaded_swarm.success_callbacks) == 1
-    assert reloaded_swarm.success_callbacks[0] == simple_task.id
+    assert reloaded_swarm.success_callbacks[0] == simple_task.key
 
     assert len(reloaded_swarm.error_callbacks) == 1
-    error_task = await TaskSignature.from_id(reloaded_swarm.error_callbacks[0])
+    error_task = await TaskSignature.get_safe(reloaded_swarm.error_callbacks[0])
     assert error_task.task_name == ON_CHAIN_ERROR
 
 
@@ -73,8 +73,8 @@ async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
     batch_item_task = BatchItemTaskSignature(
         task_name="batch_item_task",
         kwargs={"batch_arg": "batch_value"},
-        swarm_id=parent_swarm.id,
-        original_task_id=original_task.id,
+        swarm_id=parent_swarm.key,
+        original_task_id=original_task.key,
         model_validators=ContextMessage,
     )
     await batch_item_task.save()
@@ -87,18 +87,18 @@ async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
     await simple_task.save()
 
     # Act
-    chain_signature = await mageflow.chain([batch_item_task.id, simple_task.id])
+    chain_signature = await mageflow.chain([batch_item_task.key, simple_task.key])
 
     # Assert
-    reloaded_batch_item = await TaskSignature.from_id(batch_item_task.id)
+    reloaded_batch_item = await TaskSignature.get_safe(batch_item_task.key)
     assert isinstance(reloaded_batch_item, BatchItemTaskSignature)
 
     # Verify callbacks were added correctly
     assert len(reloaded_batch_item.success_callbacks) == 1
-    assert reloaded_batch_item.success_callbacks[0] == simple_task.id
+    assert reloaded_batch_item.success_callbacks[0] == simple_task.key
 
     assert len(reloaded_batch_item.error_callbacks) == 1
-    error_task = await TaskSignature.from_id(reloaded_batch_item.error_callbacks[0])
+    error_task = await TaskSignature.get_safe(reloaded_batch_item.error_callbacks[0])
     assert error_task.task_name == ON_CHAIN_ERROR
 
 
@@ -135,25 +135,25 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
 
     # Act
     chain_signature = await mageflow.chain(
-        [simple_task.id, swarm_task.id, final_task.id]
+        [simple_task.key, swarm_task.key, final_task.key]
     )
 
     # Assert
     # Verify all tasks can be loaded from Redis
-    loaded_simple = await TaskSignature.from_id(simple_task.id)
-    loaded_swarm = await TaskSignature.from_id(swarm_task.id)
-    loaded_final = await TaskSignature.from_id(final_task.id)
+    loaded_simple = await TaskSignature.get_safe(simple_task.key)
+    loaded_swarm = await TaskSignature.get_safe(swarm_task.key)
+    loaded_final = await TaskSignature.get_safe(final_task.key)
 
     assert isinstance(loaded_simple, TaskSignature)
     assert isinstance(loaded_swarm, SwarmTaskSignature)
     assert isinstance(loaded_final, TaskSignature)
 
     # Verify chain structure
-    assert loaded_simple.success_callbacks[0] == swarm_task.id
-    assert loaded_swarm.success_callbacks[0] == final_task.id
+    assert loaded_simple.success_callbacks[0] == swarm_task.key
+    assert loaded_swarm.success_callbacks[0] == final_task.key
 
     # Verify the final task connects to the chain end
-    chain_end_task = await TaskSignature.from_id(loaded_final.success_callbacks[0])
+    chain_end_task = await TaskSignature.get_safe(loaded_final.success_callbacks[0])
     assert chain_end_task.task_name == ON_CHAIN_END
 
     # Verify all tasks have unique error callbacks
@@ -166,7 +166,7 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
 
     # Verify all error tasks are chain error tasks
     for error_id in error_task_ids:
-        error_task = await TaskSignature.from_id(error_id)
+        error_task = await TaskSignature.get_safe(error_id)
         assert error_task.task_name == ON_CHAIN_ERROR
 
 
@@ -205,15 +205,15 @@ async def test_chain_creation_with_custom_name_and_callbacks_sanity(hatchet_mock
 
     # Act
     chain_signature = await mageflow.chain(
-        [task1.id, task2.id],
+        [task1.key, task2.key],
         name="custom_chain_name",
-        success=custom_success.id,
-        error=custom_error.id,
+        success=custom_success.key,
+        error=custom_error.key,
     )
 
     # Assert
     # Verify chain has custom name and callbacks
-    loaded_chain = await TaskSignature.from_id(chain_signature.id)
+    loaded_chain = await TaskSignature.get_safe(chain_signature.key)
     assert loaded_chain.task_name == "chain-task:custom_chain_name"
-    assert custom_success.id in loaded_chain.success_callbacks
-    assert custom_error.id in loaded_chain.error_callbacks
+    assert custom_success.key in loaded_chain.success_callbacks
+    assert custom_error.key in loaded_chain.error_callbacks

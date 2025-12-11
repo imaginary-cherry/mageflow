@@ -36,9 +36,9 @@ async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to
         task_name="test_swarm",
         model_validators=ContextMessage,
         tasks=[
-            chain_signature.id,
-            swarm_task_signature_1.id,
-            swarm_task_signature_2.id,
+            chain_signature.key,
+            swarm_task_signature_1.key,
+            swarm_task_signature_2.key,
         ],
     )
     await swarm_signature.save()
@@ -56,10 +56,10 @@ async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to
     # Assert
     # Verify swarm signature status changed to paused
     for task in expected_paused_tasks:
-        updated_signature = await TaskSignature.from_id(task.id)
+        updated_signature = await TaskSignature.get_safe(task.key)
         assert (
             updated_signature.task_status.status == SignatureStatus.SUSPENDED
-        ), f"{task.id} not paused - {task.task_name}"
+        ), f"{task.key} not paused - {task.task_name}"
 
 
 @pytest.mark.asyncio
@@ -110,21 +110,21 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     # Create a swarm with task signatures
     swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
-        tasks=[task.id for task in task_signatures],
+        tasks=[task.key for task in task_signatures],
     )
 
     # Delete specified subtasks from Redis (simulate they were removed)
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
         await task_signatures[idx].remove()
-        deleted_task_ids.append(task_signatures[idx].id)
+        deleted_task_ids.append(task_signatures[idx].key)
 
     # Act
-    await swarm_signature.safe_change_status(swarm_signature.id, new_status)
+    await swarm_signature.safe_change_status(swarm_signature.key, new_status)
 
     # Assert
     # Verify swarm signature status changed to new status
-    reloaded_swarm = await TaskSignature.from_id(swarm_signature.id)
+    reloaded_swarm = await TaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.task_status.status == new_status
     assert reloaded_swarm.task_status.last_status == SignatureStatus.PENDING
 
@@ -133,7 +133,7 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
 
     # Verify non-deleted subtasks changed status to new status
     non_deleted_indices = [
-        task_signatures[i].id
+        task_signatures[i].key
         for i in range(len(task_signatures))
         if i not in tasks_to_delete_indices
     ]
@@ -194,12 +194,12 @@ async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_red
 
     # Act
     result = await SwarmTaskSignature.safe_change_status(
-        swarm_signature.id, SignatureStatus.SUSPENDED
+        swarm_signature.key, SignatureStatus.SUSPENDED
     )
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.from_id(swarm_signature.id)
+    reloaded_signature = await TaskSignature.get_safe(swarm_signature.key)
     assert reloaded_signature is None
 
 
@@ -233,10 +233,10 @@ async def test_swarm_resume_with_status_changes_sanity(
     await swarm_data.swarm_signature.resume()
 
     # Assert
-    await assert_tasks_changed_status([swarm_data.swarm_signature.id], last_status)
+    await assert_tasks_changed_status([swarm_data.swarm_signature.key], last_status)
 
     # Check that original tasks' status changed
-    task_ids = [task.id for task in swarm_data.task_signatures]
+    task_ids = [task.key for task in swarm_data.task_signatures]
     task_status = (
         last_status
         if last_status != SignatureStatus.ACTIVE

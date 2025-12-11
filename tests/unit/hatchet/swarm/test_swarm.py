@@ -25,7 +25,7 @@ async def test_add_to_finished_tasks_sanity(task_ids):
         await swarm_signature.add_to_finished_tasks(task_id)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.from_id(swarm_signature.id)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     finished_tasks = original_finished_tasks + task_ids
     assert reloaded_swarm.finished_tasks == finished_tasks
     assert swarm_signature.finished_tasks == finished_tasks
@@ -51,7 +51,7 @@ async def test_add_to_failed_tasks_sanity(task_ids):
         await swarm_signature.add_to_failed_tasks(task_id)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.from_id(swarm_signature.id)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     failed_tasks = original_failed_tasks + task_ids
     assert reloaded_swarm.failed_tasks == failed_tasks
     assert swarm_signature.failed_tasks == failed_tasks
@@ -73,7 +73,7 @@ async def test_decrease_running_tasks_count_sanity(initial_count):
     await swarm_signature.decrease_running_tasks_count()
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.from_id(swarm_signature.id)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     final_count = initial_count - 1
     assert reloaded_swarm.current_running_tasks == final_count
     assert swarm_signature.current_running_tasks == final_count
@@ -107,7 +107,7 @@ async def test_add_to_running_tasks_sanity(
 
     # Assert
     assert can_run == expected_can_run
-    reloaded_swarm = await SwarmTaskSignature.from_id(swarm_signature.id)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
 
     if expected_can_run:
         assert (
@@ -126,7 +126,7 @@ async def test_add_to_running_tasks_sanity(
             == current_running
             == swarm_signature.current_running_tasks
         )
-        new_tasks_left = original_tasks_left_to_run + [task_signature.id]
+        new_tasks_left = original_tasks_left_to_run + [task_signature.key]
         assert (
             reloaded_swarm.tasks_left_to_run
             == new_tasks_left

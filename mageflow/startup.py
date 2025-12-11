@@ -1,7 +1,6 @@
 import rapyer
 from hatchet_sdk import Hatchet
 from pydantic import BaseModel
-from rapyer.base import REDIS_MODELS
 from redis.asyncio.client import Redis
 
 from mageflow.task.model import HatchetTaskModel
@@ -35,7 +34,9 @@ async def teardown_mageflow():
 async def update_register_signature_models():
     from mageflow.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
 
-    signature_classes = [cls for cls in REDIS_MODELS if issubclass(cls, TaskSignature)]
+    signature_classes = [
+        cls for cls in rapyer.find_redis_models() if issubclass(cls, TaskSignature)
+    ]
     SIGNATURES_NAME_MAPPING.update(
         {
             signature_class.__name__: signature_class

@@ -45,7 +45,7 @@ async def swarm_with_tasks():
     swarm_signature = SwarmTaskSignature(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        tasks=[task.id for task in task_signatures],
+        tasks=[task.key for task in task_signatures],
     )
     await swarm_signature.save()
 
@@ -92,7 +92,7 @@ async def chain_with_tasks():
         chain_task_signature_3,
     ]
 
-    chain_signature = await mageflow.chain([task.id for task in task_signatures])
+    chain_signature = await mageflow.chain([task.key for task in task_signatures])
 
     return ChainTestData(
         task_signatures=task_signatures, chain_signature=chain_signature

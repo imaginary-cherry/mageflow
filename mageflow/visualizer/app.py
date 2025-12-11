@@ -172,7 +172,7 @@ async def create_app(redis_url: str):
                 [
                     html.Strong("Task ID: "),
                     html.Span(
-                        task_builder.id,
+                        task_builder.key,
                         className="task-id-text",
                     ),
                 ],

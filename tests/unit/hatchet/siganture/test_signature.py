@@ -28,7 +28,7 @@ async def test__signature_create_save_load__input_output_same__sanity(hatchet_mo
 
     # Act
     original_signature = await TaskSignature.from_task(test_task, **kwargs)
-    loaded_signature = await TaskSignature.from_id(original_signature.id)
+    loaded_signature = await TaskSignature.get_safe(original_signature.key)
 
     # Assert
     assert original_signature == loaded_signature

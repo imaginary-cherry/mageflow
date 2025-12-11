@@ -71,7 +71,7 @@ def assert_signature_done(
     **input_params,
 ) -> V1TaskSummary:
     if isinstance(task_sign, TaskSignature):
-        task_sign = task_sign.id
+        task_sign = task_sign.key
 
     if check_called_once or check_finished_once:
         task_id_calls = [
@@ -131,7 +131,7 @@ async def assert_redis_is_clean(redis_client):
 
 def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=False):
     __tracebackhide__ = False  # force pytest to show this frame
-    task_id = task.id
+    task_id = task.key
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
 
     # Check kwargs were stored
@@ -149,11 +149,11 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
 def assert_tasks_in_order(wf_by_signature: WF_MAPPING_TYPE, tasks: list[TaskSignature]):
     # Check the task in a chain were called in order
     for i in range(len(tasks) - 1):
-        curr_wf = wf_by_signature[tasks[i].id]
+        curr_wf = wf_by_signature[tasks[i].key]
         assert (
             curr_wf.status == V1TaskStatus.COMPLETED
         ), f"Task {curr_wf.workflow_name} - {curr_wf.status}"
-        next_wf = wf_by_signature[tasks[i + 1].id]
+        next_wf = wf_by_signature[tasks[i + 1].key]
         assert (
             curr_wf.started_at < next_wf.started_at
         ), f"Task {curr_wf.workflow_name} started after {next_wf.workflow_name}"
@@ -163,7 +163,7 @@ def assert_signature_not_called(runs: HatchetRuns, task_sign: TaskSignature | st
     wf_by_signature = map_wf_by_id(runs, also_not_done=True)
     if isinstance(task_sign, TaskSignature):
         task_alias = task_sign.task_name
-        task_sign = task_sign.id
+        task_sign = task_sign.key
     else:
         task_alias = task_sign
 
@@ -177,8 +177,8 @@ def assert_swarm_task_done(
     tasks: list[TaskSignature],
     allow_fails: bool = True,
 ):
-    task_map = {task.id: task for task in tasks}
-    batch_map = {batch_item.id: batch_item for batch_item in batch_items}
+    task_map = {task.key: task for task in tasks}
+    batch_map = {batch_item.key: batch_item for batch_item in batch_items}
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
@@ -222,7 +222,7 @@ def assert_chain_done(
     full_tasks: list[TaskSignature],
 ):
     wf_by_signature = map_wf_by_id(runs)
-    task_map = {task.id: task for task in full_tasks}
+    task_map = {task.key: task for task in full_tasks}
     chain_tasks = [task_map[task_id] for task_id in chain_signature.tasks]
     assert_tasks_in_order(wf_by_signature, chain_tasks)
     output_value = None
@@ -247,7 +247,7 @@ def assert_paused(
     end_time: datetime,
 ):
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
-    tasks_map = {task.id: task for task in tasks}
+    tasks_map = {task.key: task for task in tasks}
     for task_id, wf in wf_by_task_id.items():
         if task_id not in tasks_map:
             continue

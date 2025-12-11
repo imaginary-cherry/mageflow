@@ -28,7 +28,7 @@ class HatchetInvoker(BaseInvoker):
     async def start_task(self):
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            async with TaskSignature.lock_from_id(task_id) as signature:
+            async with TaskSignature.lock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
 
@@ -36,7 +36,7 @@ class HatchetInvoker(BaseInvoker):
         success_publish_tasks = []
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            current_task = await TaskSignature.from_id(task_id)
+            current_task = await TaskSignature.get_safe(task_id)
             task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
@@ -49,7 +49,7 @@ class HatchetInvoker(BaseInvoker):
         error_publish_tasks = []
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            current_task = await TaskSignature.from_id(task_id)
+            current_task = await TaskSignature.get_safe(task_id)
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
@@ -63,14 +63,14 @@ class HatchetInvoker(BaseInvoker):
     ) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            signature = await TaskSignature.from_id(task_id)
+            signature = await TaskSignature.get_safe(task_id)
             if signature:
                 await signature.remove(with_error, with_success)
 
     async def should_run_task(self) -> bool:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            signature = await TaskSignature.from_id(task_id)
+            signature = await TaskSignature.get_safe(task_id)
             if signature is None:
                 return False
             should_task_run = await signature.should_run()

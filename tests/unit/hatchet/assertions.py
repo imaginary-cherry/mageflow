@@ -3,7 +3,7 @@ from mageflow.signature.model import TaskSignature
 
 async def assert_tasks_not_exists(tasks_ids: list[str]):
     for task_id in tasks_ids:
-        reloaded_signature = await TaskSignature.from_id(task_id)
+        reloaded_signature = await TaskSignature.get_safe(task_id)
         assert reloaded_signature is None
 
 
@@ -12,9 +12,9 @@ async def assert_tasks_changed_status(
 ):
     tasks_ids = tasks_ids if isinstance(tasks_ids, list) else [tasks_ids]
     all_tasks = []
-    for task_id in tasks_ids:
-        task_id = task_id.id if isinstance(task_id, TaskSignature) else task_id
-        reloaded_signature = await TaskSignature.from_id(task_id)
+    for task_key in tasks_ids:
+        task_key = task_key.key if isinstance(task_key, TaskSignature) else task_key
+        reloaded_signature = await TaskSignature.get_safe(task_key)
         all_tasks.append(reloaded_signature)
         assert reloaded_signature.task_status.status == status
         if old_status:

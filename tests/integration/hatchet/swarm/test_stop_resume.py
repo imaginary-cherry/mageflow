@@ -61,7 +61,7 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     # TODO - check that at least one task was stopped....
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_map = {task.id: task for task in tasks}
+    tasks_map = {task.key: task for task in tasks}
     signature_tasks = [tasks_map[batch.original_task_id] for batch in batch_tasks]
     assert_paused(runs, signature_tasks, pause_time, resume_time)
     assert_task_did_not_repeat(runs)
