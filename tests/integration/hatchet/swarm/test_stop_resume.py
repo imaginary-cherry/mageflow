@@ -37,13 +37,11 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     await swarm_signature.close_swarm()
     batch_tasks = await BatchItemTaskSignature.afind()
     message = ContextMessage(base_data=test_ctx)
-    tasks = await TaskSignature.afind()
 
     # Act
+    await swarm_signature.pause_task()
     await swarm_signature.aio_run_no_wait(message, options=trigger_options)
     # await asyncio.sleep(1000)
-    await asyncio.sleep(3)
-    await swarm_signature.pause_task()
     pause_time = datetime.now()
     await asyncio.sleep(10)
     # await asyncio.sleep(1000)
@@ -54,6 +52,7 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     add_metadata.update(ctx_metadata)
     ctx_additional_metadata.set(add_metadata)
 
+    tasks = await TaskSignature.afind()
     resume_time = datetime.now()
     await swarm_signature.resume()
     await asyncio.sleep(70)
@@ -64,7 +63,7 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
 
     tasks_map = {task.id: task for task in tasks}
     signature_tasks = [tasks_map[batch.original_task_id] for batch in batch_tasks]
-    await assert_paused(runs, signature_tasks, pause_time, resume_time)
+    assert_paused(runs, signature_tasks, pause_time, resume_time)
     assert_task_did_not_repeat(runs)
 
     assert_swarm_task_done(runs, swarm_signature, batch_tasks, tasks)

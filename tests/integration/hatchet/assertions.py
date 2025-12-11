@@ -28,12 +28,15 @@ async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     return wf_tasks
 
 
-def map_wf_by_id(runs: HatchetRuns, also_not_done: bool = False) -> WF_MAPPING_TYPE:
+def map_wf_by_id(
+    runs: HatchetRuns, also_not_done: bool = False, ignore_cancel: bool = False
+) -> WF_MAPPING_TYPE:
     return {
         task_id: wf
         for wf in runs
         if (task_id := get_task_param(wf, TASK_ID_PARAM_NAME))
         if also_not_done or is_wf_done(wf)
+        if not ignore_cancel or not is_task_paused(wf)
     }
 
 
@@ -83,7 +86,7 @@ def assert_signature_done(
             len(task_id_calls) == 1
         ), f"Task {task_sign} was called more than once or not at all: {task_id_calls}"
 
-    wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
+    wf_by_task_id = map_wf_by_id(runs, also_not_done=True, ignore_cancel=True)
     return _assert_task_done(
         task_sign, wf_by_task_id, input_params, hatchet_task_results, allow_fails
     )
@@ -126,20 +129,17 @@ async def assert_redis_is_clean(redis_client):
     ), f"Not all redis keys were cleaned: {non_persistent_keys}"
 
 
-async def assert_task_was_paused(
-    runs: HatchetRuns, task: TaskSignature, with_resume=False
-):
+def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=False):
     __tracebackhide__ = False  # force pytest to show this frame
-    task_id = task.id if isinstance(task, TaskSignature) else task
+    task_id = task.id
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
 
     # Check kwargs were stored
     hatchet_call = wf_by_task_id[task_id]
     assert hatchet_call.status == V1TaskStatus.CANCELLED
     expected_dump = task.model_validators.validate(hatchet_call.input["input"])
-    updated_callback_signature = await TaskSignature.from_id(task_id)
     for key, value in expected_dump.model_dump().items():
-        assert updated_callback_signature.kwargs[key] == value, f"{key} != {value}"
+        assert task.kwargs[key] == value, f"{key} != {value}"
 
     if with_resume:
         wf_by_task_id = map_wf_by_id(runs)
@@ -191,8 +191,7 @@ def assert_swarm_task_done(
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **task.kwargs,
-            **swarm_task.kwargs,
+            **(swarm_task.kwargs | task.kwargs),
         )
         swarm_runs.append(wf)
 
@@ -241,7 +240,7 @@ def assert_chain_done(
         _assert_task_done(chain_success, wf_by_signature, input_params)
 
 
-async def assert_paused(
+def assert_paused(
     runs: HatchetRuns,
     tasks: list[TaskSignature],
     start_time: datetime,
@@ -266,7 +265,7 @@ async def assert_paused(
     for paused_wf in paused_tasks:
         task_id = get_task_param(paused_wf, TASK_ID_PARAM_NAME)
         task = tasks_map[task_id]
-        await assert_task_was_paused(runs, task)
+        assert_task_was_paused(runs, task)
 
 
 def assert_task_did_not_repeat(runs: HatchetRuns):
