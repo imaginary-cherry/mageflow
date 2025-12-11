@@ -9,7 +9,7 @@
   [![Documentation](https://img.shields.io/badge/docs-github.io-blue)](https://yedidyakfir.github.io/mageflow/)
 
   
-  📚 **[Full Documentation](https://yedidyakfir.github.io/rapyer/)** | [Installation](https://yedidyakfir.github.io/rapyer/installation/) | [Examples](https://yedidyakfir.github.io/rapyer/examples/) | [API Reference](https://yedidyakfir.github.io/rapyer/api/)
+  📚 **[Full Documentation](https://yedidyakfir.github.io/mageflow/)** | [Installation](https://yedidyakfir.github.io/mageflow/setup/) | [API Reference](https://yedidyakfir.github.io/mageflow/api/)
 
 </div>
 
