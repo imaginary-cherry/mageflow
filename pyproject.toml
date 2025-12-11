@@ -1,16 +1,47 @@
 [project]
 name = "mageflow"
-version = "0.0.1"
-description = ""
+version = "0.1.0"
+description = "Manage Graph Execution Flow - A unified interface for task orchestration across different task managers"
 authors = [
-    {name = "yedidyakfir",email = "yedidyakfir@gmail.com"}
+    {name = "yedidyakfir", email = "yedidyakfir@gmail.com"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.11, <3.14"
+requires-python = ">=3.10,<3.14"
+keywords = [
+    "task-orchestration",
+    "workflow",
+    "task-manager",
+    "hatchet",
+    "async",
+    "redis",
+    "task-chain",
+    "task-swarm",
+    "distributed",
+    "microservices",
+    "pipeline",
+    "graph-execution",
+    "workflow-engine",
+    "task-queue",
+    "python"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: AsyncIO",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+    "Operating System :: OS Independent",
+]
 dependencies = [
-    "rapyer (>=1.1.0,<2.0.0)",
-    "tox (>=4.32.0,<5.0.0)"
+    "rapyer>=1.1.0,<2.0.0"
 ]
 
 [project.optional-dependencies]
@@ -22,6 +53,17 @@ display = [
     "dash-cytoscape (>=1.0.2,<2.0.0)",
     "dash-bootstrap-components (>=2.0.4,<3.0.0)"
 ]
+
+[project.urls]
+Homepage = "https://yedidyakfir.github.io/mageflow/"
+Documentation = "https://yedidyakfir.github.io/mageflow/"
+Repository = "https://github.com/yedidyakfir/mageflow"
+"Source Code" = "https://github.com/yedidyakfir/mageflow"
+"Bug Tracker" = "https://github.com/yedidyakfir/mageflow/issues"
+"Changelog" = "https://github.com/yedidyakfir/mageflow/releases"
+
+[tool.poetry]
+packages = [{include = "mageflow"}]
 
 [tool.poetry.group.dev.dependencies]
 black = ">=25.9.0,<26.0.0"
@@ -38,17 +80,30 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
-disply-tasks = "visualizer.app:main"
+display-tasks = "mageflow.visualizer.app:main"
 
 [tool.coverage.run]
 source = ["mageflow"]
 concurrency = ["multiprocessing"]
 parallel = true
-omit = ["mageflow/visualizer/*"]
+omit = [
+    "*/tests/*", 
+    "*/test_*",
+    "mageflow/visualizer/*"
+]
 
 [tool.coverage.report]
 skip_covered = false
 show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@overload"
+]
 
 [tool.coverage.html]
 directory = "htmlcov"
