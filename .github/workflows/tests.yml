@@ -83,7 +83,7 @@ jobs:
     steps:
       - name: Check test results
         run: |
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
+          if [[ "${{ needs.tests.result }}" != "success" ]]; then
             echo "Test job failed"
             exit 1
           fi
