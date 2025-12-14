@@ -52,6 +52,10 @@ async def test__paused_signature_dont_trigger_callbacks(
     assert_signature_not_called(runs, second_callback_signature)
     assert_signature_not_called(runs, error_callback)
 
+    # Remove to check all beside this
+    await callback_signature.remove()
+    await assert_redis_is_clean(redis_client)
+
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_signature_pause_with_callback_redis_cleanup_sanity(
@@ -67,16 +71,23 @@ async def test_signature_pause_with_callback_redis_cleanup_sanity(
     callback_signature = await mageflow.sign(callback_with_redis)
     main_signature = await mageflow.sign(task1, success_callbacks=[callback_signature])
 
-    # Act
+    # Act - 1
     await callback_signature.pause_task()
     await main_signature.aio_run_no_wait(message, options=trigger_options)
 
-    # Assert
+    # Assert - 1
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
     loaded_callback_signature = await TaskSignature.get_safe(callback_signature.key)
     assert_task_was_paused(runs, loaded_callback_signature)
-    # Remove to check all beside this
-    await callback_signature.remove()
+
+    # Act - 2
+    await callback_signature.resume()
+    await asyncio.sleep(10)
+
+    # Assert - 2
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(runs, callback_signature, base_data=test_ctx)
+
     await assert_redis_is_clean(redis_client)
