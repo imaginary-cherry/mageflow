@@ -23,7 +23,7 @@ keywords = [
     "graph-execution",
     "workflow-engine",
     "task-queue",
-    "python"
+    "python",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
