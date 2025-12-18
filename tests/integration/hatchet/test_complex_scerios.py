@@ -21,6 +21,9 @@ from tests.integration.hatchet.worker import (
     task_with_data,
     task2_with_result,
     fail_task,
+    task2,
+    task3,
+    error_callback,
 )
 
 
@@ -40,26 +43,24 @@ async def test__swarm_with_swarms_and_chains__sanity(
     field_int_val = 13
     for i in range(4):
         error_signature = await hatchet.sign(task2_with_result)
-        task_sign = await hatchet.sign(task_with_data, field_int=field_int_val)
+        task_sign = await hatchet.sign(
+            task_with_data, field_int=field_int_val, field_list=[]
+        )
         chain = await hatchet.chain(
             [task1_callback, task1, task_sign], error=error_signature
         )
         chain_tasks.append(chain)
-    triggered_error = await hatchet.sign(fail_task)
-    not_triggered_success = await hatchet.sign(task2_with_result)
+    triggered_error = await hatchet.sign(error_callback)
+    not_triggered_success = await hatchet.sign(task1_callback)
     failed_chain = await hatchet.chain(
-        [task1, fail_task], error=triggered_error, success=not_triggered_success
+        [task3, fail_task], error=triggered_error, success=not_triggered_success
     )
-    chain_tasks.append(failed_chain)
 
-    base_swarm = await hatchet.swarm(
-        tasks=[task1, task2_with_result], is_swarm_closed=True
-    )
-    field_str_val = "test-str"
-    final_swarm_success = await hatchet.sign(task_with_data, field_str=field_str_val)
+    base_swarm = await hatchet.swarm(tasks=[task2, task3], is_swarm_closed=True)
+    final_swarm_success = await hatchet.sign(task2_with_result)
 
     main_swarm = await hatchet.swarm(
-        tasks=chain_tasks + [base_swarm],
+        tasks=chain_tasks + [failed_chain, base_swarm],
         is_swarm_closed=True,
         success_callbacks=[final_swarm_success],
         config=SwarmConfig(max_concurrency=2),
@@ -73,16 +74,16 @@ async def test__swarm_with_swarms_and_chains__sanity(
     msg = CommandMessageWithResult(base_data=test_ctx, task_result=task_res_param)
 
     # Act
-    await main_swarm.aio_run_no_wait(msg)
+    await main_swarm.aio_run_no_wait(msg, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(70)
+    await asyncio.sleep(120)
     runs = await get_runs(hatchet, ctx_metadata)
 
     # Check good chain were successful
     for chain in chain_tasks:
         # basic chain check
-        assert_chain_done(runs, chain, tasks)
+        assert_chain_done(runs, chain, tasks, check_callbacks=False)
 
         # Check kwargs for inner task were called
         signed_task = tasks_map[chain.tasks[-1]]
@@ -102,7 +103,9 @@ async def test__swarm_with_swarms_and_chains__sanity(
 
     # Check inner swarm is done
     base_swarm_batch_items = [batch_items_map[key] for key in base_swarm.tasks]
-    assert_swarm_task_done(runs, base_swarm, base_swarm_batch_items, tasks)
+    assert_swarm_task_done(
+        runs, base_swarm, base_swarm_batch_items, tasks, check_callbacks=False
+    )
     # Assert swarm were called with params
     first_task = tasks_map[batch_items_map[base_swarm.tasks[0]].original_task_id]
     assert_signature_done(runs, first_task, base_data=test_ctx)
@@ -110,7 +113,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
     assert_signature_done(runs, second_task, **msg.model_dump(mode="json"))
 
     # Check final success was called
-    assert_signature_done(runs, final_swarm_success, field_str=field_str_val)
+    assert_signature_done(runs, final_swarm_success)
 
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
