@@ -52,6 +52,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
         res = msg.results
         async with swarm_task.lock(save_at_end=False) as swarm_task:
+            ctx.log(f"Swarm item done {swarm_item_id} - saving results")
             await swarm_task.finished_tasks.aappend(swarm_item_id)
             await swarm_task.tasks_results.aappend(res)
             await handle_finish_tasks(swarm_task, ctx, msg)

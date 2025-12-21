@@ -176,6 +176,7 @@ def assert_swarm_task_done(
     batch_items: list[BatchItemTaskSignature],
     tasks: list[TaskSignature],
     allow_fails: bool = True,
+    check_callbacks: bool = True,
 ):
     task_map = {task.key: task for task in tasks}
     batch_map = {batch_item.key: batch_item for batch_item in batch_items}
@@ -202,24 +203,28 @@ def assert_swarm_task_done(
         if (task_output := wf.output)
         if "hatchet_results" in task_output
     ]
-    for callback_sign in swarm_task.success_callbacks:
-        task = task_map[callback_sign]
-        callback_wf = assert_signature_done(
-            runs, callback_sign, check_called_once=True, **task.kwargs
-        )
-        for result in callback_wf.input["input"]["task_result"]:
-            assert (
-                result in expected_output
-            ), f"{result} not found in {expected_output} for callback {callback_wf.workflow_name}"
 
-    for error_callback_sign in swarm_task.error_callbacks:
-        assert_signature_not_called(runs, error_callback_sign)
+    # TODO - remove this once we move to invoke chain task via invoker_register
+    if check_callbacks:
+        for callback_sign in swarm_task.success_callbacks:
+            task = task_map[callback_sign]
+            callback_wf = assert_signature_done(
+                runs, callback_sign, check_called_once=True, **task.kwargs
+            )
+            for result in callback_wf.input["input"]["task_result"]:
+                assert (
+                    result in expected_output
+                ), f"{result} not found in {expected_output} for callback {callback_wf.workflow_name}"
+
+        for error_callback_sign in swarm_task.error_callbacks:
+            assert_signature_not_called(runs, error_callback_sign)
 
 
 def assert_chain_done(
     runs: HatchetRuns,
     chain_signature: ChainTaskSignature,
     full_tasks: list[TaskSignature],
+    check_callbacks: bool = True,
 ):
     wf_by_signature = map_wf_by_id(runs)
     task_map = {task.key: task for task in full_tasks}
@@ -234,10 +239,12 @@ def assert_chain_done(
         task_wf = _assert_task_done(chain_task_id, wf_by_signature, input_params)
         output_value = task_wf.output["hatchet_results"]
 
-    for chain_success in chain_signature.success_callbacks:
-        task = task_map[chain_success]
-        input_params = {task.return_value_field(): output_value}
-        _assert_task_done(chain_success, wf_by_signature, input_params)
+    # TODO - remove this once we move to invoke chain task via invoker_register
+    if check_callbacks:
+        for chain_success in chain_signature.success_callbacks:
+            task = task_map[chain_success]
+            input_params = {task.return_value_field(): output_value}
+            _assert_task_done(chain_success, wf_by_signature, input_params)
 
 
 def assert_paused(

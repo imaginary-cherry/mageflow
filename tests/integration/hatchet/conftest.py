@@ -21,6 +21,8 @@ from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from redis.asyncio.client import Redis
 
 import mageflow
+from mageflow import Mageflow
+from mageflow.client import HatchetMageflow
 from mageflow.startup import mageflow_config, init_mageflow
 from mageflow.task.model import HatchetTaskModel
 from tests.integration.hatchet.worker import (
@@ -41,20 +43,22 @@ pytest.register_assert_rewrite("tests.assertions")
 @dataclasses.dataclass
 class HatchetInitData:
     redis_client: Redis
-    hatchet: Hatchet
+    hatchet: HatchetMageflow
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def hatchet() -> AsyncGenerator[Hatchet, None]:
     empty_nameppace_config_obj = config_obj.model_copy(deep=True)
     empty_nameppace_config_obj.namespace = ""
-    yield Hatchet(debug=True, config=empty_nameppace_config_obj)
+    hatchet = Hatchet(debug=True, config=empty_nameppace_config_obj)
+    yield hatchet
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def hatchet_client_init(
     real_redis, hatchet
 ) -> AsyncGenerator[HatchetInitData, None]:
+    hatchet = Mageflow(hatchet, real_redis)
     worker_data = HatchetInitData(redis_client=real_redis, hatchet=hatchet)
 
     yield worker_data
@@ -110,7 +114,9 @@ def wait_for_worker_health(healthcheck_port: int) -> bool:
         worker_healthcheck_attempts += 1
 
 
-def log_output(pipe: BytesIO, log_func: Callable[[str], None], prefix: str = "") -> None:
+def log_output(
+    pipe: BytesIO, log_func: Callable[[str], None], prefix: str = ""
+) -> None:
     for line in iter(pipe.readline, b""):
         decoded_line = line.decode().strip()
         if decoded_line:  # Only log non-empty lines
@@ -127,10 +133,10 @@ def hatchet_worker(
     if not logger.handlers:
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            force=True
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            force=True,
         )
-    
+
     logging.info(f"Starting background worker: {' '.join(command)}")
 
     os.environ["HATCHET_CLIENT_WORKER_HEALTHCHECK_PORT"] = str(healthcheck_port)
@@ -142,13 +148,15 @@ def hatchet_worker(
         if (project_root / "pyproject.toml").exists():
             break
         project_root = project_root.parent
-    
+
     if not (project_root / "pyproject.toml").exists():
-        raise RuntimeError(f"Could not find project root with pyproject.toml starting from {current_path}")
-    
+        raise RuntimeError(
+            f"Could not find project root with pyproject.toml starting from {current_path}"
+        )
+
     logging.info(f"Project root found: {project_root}")
     logging.info(f"Settings file exists: {(project_root / '.secrets.toml').exists()}")
-    
+
     # Make sure we have the correct Python path in tox
     python_path = env.get("PYTHONPATH", "")
     if str(project_root) not in python_path:
@@ -159,7 +167,7 @@ def hatchet_worker(
 
     # Enable coverage for subprocess
     env["COVERAGE_PROCESS_START"] = str(project_root / "pyproject.toml")
-    
+
     proc = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
@@ -172,8 +180,12 @@ def hatchet_worker(
     if proc.poll() is not None:
         raise Exception(f"Worker failed to start with return code {proc.returncode}")
 
-    Thread(target=log_output, args=(proc.stdout, logging.info, "-STDOUT"), daemon=True).start()
-    Thread(target=log_output, args=(proc.stderr, logging.error, "-STDERR"), daemon=True).start()
+    Thread(
+        target=log_output, args=(proc.stdout, logging.info, "-STDOUT"), daemon=True
+    ).start()
+    Thread(
+        target=log_output, args=(proc.stderr, logging.error, "-STDERR"), daemon=True
+    ).start()
 
     wait_for_worker_health(healthcheck_port=healthcheck_port)
 

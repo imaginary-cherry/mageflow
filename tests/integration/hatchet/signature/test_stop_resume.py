@@ -18,6 +18,7 @@ from tests.integration.hatchet.worker import (
     callback_with_redis,
     ContextMessage,
     task1_callback,
+    task2_with_result,
 )
 
 
@@ -54,7 +55,7 @@ async def test__paused_signature_dont_trigger_callbacks(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signature_pause_with_callback_redis_cleanup_sanity(
+async def test_signature_pause_with_continue_with_params(
     hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
 ):
     # Arrange
@@ -64,19 +65,34 @@ async def test_signature_pause_with_callback_redis_cleanup_sanity(
     )
     message = ContextMessage(base_data=test_ctx)
 
-    callback_signature = await mageflow.sign(callback_with_redis)
+    callback_signature = await mageflow.sign(task2_with_result)
     main_signature = await mageflow.sign(task1, success_callbacks=[callback_signature])
 
-    # Act
+    # Act - 1
     await callback_signature.pause_task()
     await main_signature.aio_run_no_wait(message, options=trigger_options)
 
-    # Assert
+    # Assert - 1
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
     loaded_callback_signature = await TaskSignature.get_safe(callback_signature.key)
     assert_task_was_paused(runs, loaded_callback_signature)
-    # Remove to check all beside this
-    await callback_signature.remove()
+
+    # Act - 2
+    from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
+
+    add_metadata = ctx_additional_metadata.get() or {}
+    add_metadata.update(ctx_metadata)
+    ctx_additional_metadata.set(add_metadata)
+
+    await loaded_callback_signature.resume()
+    await asyncio.sleep(10)
+
+    # Assert - 2
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(
+        runs, callback_signature, check_called_once=False, results="msg"
+    )
+
     await assert_redis_is_clean(redis_client)
