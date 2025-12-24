@@ -53,6 +53,7 @@ async def register_workflows():
             mageflow_task_name=mageflow_task_name,
             task_name=workflow.name,
             input_validator=workflow.input_validator,
+            retries=workflow.tasks[0].retries,
         )
         await hatchet_task.save()
 

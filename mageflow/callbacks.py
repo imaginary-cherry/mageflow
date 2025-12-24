@@ -6,9 +6,11 @@ from typing import Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
+from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 
 from mageflow.invokers.hatchet import HatchetInvoker
+from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.pythonic import flexible_call
 
 
@@ -29,6 +31,7 @@ def handle_task_callback(
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             invoker = HatchetInvoker(message, ctx)
+            task_model = await HatchetTaskModel.get(ctx.action.job_name)
             if not await invoker.should_run_task():
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)
@@ -43,8 +46,9 @@ def handle_task_callback(
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except (Exception, asyncio.CancelledError) as e:
-                await invoker.run_error()
-                await invoker.remove_task(with_error=False)
+                if not task_model.should_retry(ctx.attempt_number):
+                    await invoker.run_error()
+                    await invoker.remove_task(with_error=False)
                 raise
             else:
                 task_results = HatchetResult(hatchet_results=result)
