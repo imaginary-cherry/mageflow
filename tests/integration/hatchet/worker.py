@@ -101,6 +101,7 @@ async def sleep_task(msg: SleepTaskMessage):
 
 
 @hatchet.task(name="callback_with_redis", input_validator=CommandMessageWithResult)
+@hatchet.with_ctx
 async def callback_with_redis(msg: CommandMessageWithResult, ctx: Context):
     task_id = ctx.additional_metadata[TASK_ID_PARAM_NAME]
 
@@ -120,6 +121,19 @@ async def timeout_task(msg):
     await asyncio.sleep(10)
 
 
+@hatchet.task(retries=3)
+@hatchet.with_ctx
+async def retry_once(msg, ctx: Context):
+    if ctx.attempt_number == 1:
+        raise ValueError("Test exception")
+    return "Nice"
+
+
+@hatchet.task(retries=3)
+async def retry_to_failure(msg):
+    raise ValueError("Test exception")
+
+
 workflows = [
     task1,
     task2,
@@ -134,6 +148,8 @@ workflows = [
     callback_with_redis,
     return_multiple_values,
     timeout_task,
+    retry_once,
+    retry_to_failure,
 ]
 
 

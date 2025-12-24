@@ -50,7 +50,12 @@ class HatchetMageflow(Hatchet):
         hatchet_task = super().task(name=name, **kwargs)
 
         def decorator(func):
-            handler_dec = handle_task_callback(self.param_config)
+            param_config = (
+                self.param_config
+                if getattr(func, "__user_ctx__", False)
+                else AcceptParams.ALL
+            )
+            handler_dec = handle_task_callback(param_config)
             func = handler_dec(func)
             wf = hatchet_task(func)
 
@@ -68,7 +73,12 @@ class HatchetMageflow(Hatchet):
         hatchet_task = super().durable_task(name=name, **kwargs)
 
         def decorator(func):
-            handler_dec = handle_task_callback(self.param_config)
+            param_config = (
+                self.param_config
+                if getattr(func, "__user_ctx__", False)
+                else AcceptParams.ALL
+            )
+            handler_dec = handle_task_callback(param_config)
             func = handler_dec(func)
             wf = hatchet_task(func)
             nonlocal name
@@ -113,6 +123,10 @@ class HatchetMageflow(Hatchet):
         **kwargs: Unpack[SignatureOptions],
     ):
         return await swarm(tasks, task_name, **kwargs)
+
+    def with_ctx(self, func):
+        func.__user_ctx__ = True
+        return func
 
 
 T = TypeVar("T")
