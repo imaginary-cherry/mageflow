@@ -227,7 +227,7 @@ class TaskSignature(AtomicRedisModel):
             await self.on_cancel_signature(msg)
 
     async def should_run(self):
-        return self.task_status.status == SignatureStatus.PENDING
+        return self.task_status.should_run()
 
     async def change_status(self, status: SignatureStatus) -> bool:
         await self.task_status.aupdate(

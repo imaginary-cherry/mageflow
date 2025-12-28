@@ -23,3 +23,6 @@ class TaskStatus(BaseModel):
 
     def is_canceled(self):
         return self.status in [SignatureStatus.CANCELED]
+
+    def should_run(self):
+        return self.status in [SignatureStatus.PENDING, SignatureStatus.ACTIVE]
