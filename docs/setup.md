@@ -95,6 +95,69 @@ async def send_notification(msg: YourModelB, ctx: Context):
     return {"status": "sent"}
 ```
 
+### Using with_ctx and with_signature Decorators
+
+MageFlow provides two special decorators that allow you to override the default behavior on a per-task basis:
+
+#### with_ctx
+
+The `with_ctx` decorator allows a specific task to receive the Hatchet context even when the client is configured with `NO_CTX`. This is useful when most of your tasks don't need the context, but specific tasks do:
+
+```python
+# Create MageFlow instance with NO_CTX (default behavior)
+hatchet = mageflow.Mageflow(hatchet, redis_client=redis_client, param_config=AcceptParams.NO_CTX)
+
+# Use with_ctx to override for this specific task
+@hatchet.task(name="context-aware-task", input_validator=YourModel)
+@hatchet.with_ctx
+async def context_aware_task(msg: YourModel, ctx: Context):
+    # This task receives context despite NO_CTX configuration
+    step_id = ctx.step_run_id
+    print(f"Running in step: {step_id}")
+    return {"processed": True}
+
+# Regular task without context
+@hatchet.task(name="regular-task", input_validator=YourModel)
+async def regular_task(msg: YourModel):
+    # This task doesn't receive context (follows NO_CTX)
+    return {"processed": True}
+```
+
+#### with_signature
+
+The `with_signature` decorator allows a task to receive its own task signature as a parameter. This is useful when a task needs to inspect or manipulate its own execution configuration:
+
+```python
+from mageflow import TaskSignature
+
+# Use with_signature to receive the task's signature
+@hatchet.task(name="self-aware-task", input_validator=YourModel)
+@hatchet.with_signature
+async def self_aware_task(msg: YourModel, signature: TaskSignature):
+    # Access task signature information
+    task_name = signature.task_name
+    task_id = signature.task_identifiers
+    
+    # Can inspect callbacks, kwargs, and other signature properties
+    print(f"Running task: {task_name} with ID: {task_id}")
+    
+    return {"task_name": task_name}
+
+# Combine both decorators for full access
+@hatchet.task(name="full-access-task", input_validator=YourModel)
+@hatchet.with_ctx
+@hatchet.with_signature
+async def full_access_task(msg: YourModel, ctx: Context, signature: TaskSignature):
+    # This task receives both context and signature
+    step_id = ctx.step_run_id
+    task_name = signature.task_name
+    
+    return {
+        "step_id": step_id,
+        "task_name": task_name
+    }
+```
+
 ## Worker Setup
 
 Create a worker to run your registered tasks:
