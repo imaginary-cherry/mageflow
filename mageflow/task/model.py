@@ -1,5 +1,6 @@
 from typing import Optional, Annotated, Self
 
+from hatchet_sdk import NonRetryableException
 from pydantic import BaseModel
 from rapyer import AtomicRedisModel
 from rapyer.errors.base import KeyNotFound
@@ -19,5 +20,6 @@ class HatchetTaskModel(AtomicRedisModel):
         except KeyNotFound:
             return None
 
-    def should_retry(self, attempt_num: int) -> bool:
-        return self.retries is not None and attempt_num < self.retries
+    def should_retry(self, attempt_num: int, e: Exception) -> bool:
+        finish_retry = self.retries is not None and attempt_num < self.retries
+        return finish_retry and not isinstance(e, NonRetryableException)

@@ -92,6 +92,19 @@ def assert_signature_done(
     )
 
 
+def assert_signature_failed(
+    runs: HatchetRuns, task_sign: TaskSignature
+) -> V1TaskSummary:
+    wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
+    assert task_sign.key in wf_by_task_id, f"{task_sign.key} was not called"
+    summary = wf_by_task_id[task_sign.key]
+    assert (
+        summary.status == V1TaskStatus.FAILED
+        or summary.status == V1TaskStatus.CANCELLED
+    ), f"{task_sign.key} was not failed"
+    return summary
+
+
 def _assert_task_done(
     task_id: str,
     wf_map: WF_MAPPING_TYPE,
