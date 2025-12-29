@@ -7,6 +7,7 @@ from hatchet_sdk import Hatchet, Worker
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
+from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, register_task, handle_task_callback
 from mageflow.chain.creator import chain
@@ -42,6 +43,7 @@ class HatchetMageflow(Hatchet):
         self.redis = redis_client
         self.param_config = param_config
 
+    @override
     def task(self, *, name: str | None = None, **kwargs):
         """
         This is a wrapper for task, if you want to see hatchet task go to parent class
@@ -56,6 +58,7 @@ class HatchetMageflow(Hatchet):
         )
         return decorator
 
+    @override
     def durable_task(self, *, name: str | None = None, **kwargs):
         """
         This is a wrapper for durable task, if you want to see hatchet durable task go to parent class
@@ -70,6 +73,7 @@ class HatchetMageflow(Hatchet):
 
         return decorator
 
+    @override
     def worker(
         self,
         *args,
