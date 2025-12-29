@@ -16,14 +16,14 @@ from tests.integration.hatchet.assertions import (
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import CommandMessageWithResult
 from tests.integration.hatchet.worker import (
-    task1,
     task1_callback,
     task_with_data,
     task2_with_result,
-    fail_task,
     task2,
     task3,
     error_callback,
+    retry_once,
+    cancel_retry,
 )
 
 
@@ -47,13 +47,13 @@ async def test__swarm_with_swarms_and_chains__sanity(
             task_with_data, field_int=field_int_val, field_list=[]
         )
         chain = await hatchet.chain(
-            [task1_callback, task1, task_sign], error=error_signature
+            [task1_callback, retry_once, task_sign], error=error_signature
         )
         chain_tasks.append(chain)
     triggered_error = await hatchet.sign(error_callback)
     not_triggered_success = await hatchet.sign(task1_callback)
     failed_chain = await hatchet.chain(
-        [task3, fail_task], error=triggered_error, success=not_triggered_success
+        [task3, cancel_retry], error=triggered_error, success=not_triggered_success
     )
 
     base_swarm = await hatchet.swarm(tasks=[task2, task3], is_swarm_closed=True)
@@ -80,20 +80,20 @@ async def test__swarm_with_swarms_and_chains__sanity(
     await asyncio.sleep(120)
     runs = await get_runs(hatchet, ctx_metadata)
 
-    # Check good chain were successful
+    # Check good chains were successful
     for chain in chain_tasks:
         # basic chain check
         assert_chain_done(runs, chain, tasks, check_callbacks=False)
 
-        # Check kwargs for inner task were called
+        # Check kwargs for an inner task was called
         signed_task = tasks_map[chain.tasks[-1]]
         assert_signature_done(runs, signed_task, field_int=field_int_val)
 
-        # Check first task is called with msg params
+        # Check the first task is called with msg params
         first_task = tasks_map[chain.tasks[0]]
         assert_signature_done(runs, first_task, **msg.model_dump(mode="json"))
 
-        # Check error were not called
+        # Check error was not called
         for error in chain.error_callbacks:
             assert_signature_not_called(runs, error)
 
@@ -101,12 +101,12 @@ async def test__swarm_with_swarms_and_chains__sanity(
     assert_signature_done(runs, triggered_error)
     assert_signature_not_called(runs, not_triggered_success)
 
-    # Check inner swarm is done
+    # Check the inner swarm is done
     base_swarm_batch_items = [batch_items_map[key] for key in base_swarm.tasks]
     assert_swarm_task_done(
         runs, base_swarm, base_swarm_batch_items, tasks, check_callbacks=False
     )
-    # Assert swarm were called with params
+    # Assert swarms were called with params
     first_task = tasks_map[batch_items_map[base_swarm.tasks[0]].original_task_id]
     assert_signature_done(runs, first_task, base_data=test_ctx)
     second_task = tasks_map[batch_items_map[base_swarm.tasks[1]].original_task_id]

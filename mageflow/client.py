@@ -1,12 +1,13 @@
 import functools
 import os
-from typing import TypeVar, Any, overload, Unpack
+from typing import TypeVar, Any, overload, Unpack, Callable
 
 import redis
 from hatchet_sdk import Hatchet, Worker
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
+from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, register_task, handle_task_callback
 from mageflow.chain.creator import chain
@@ -42,35 +43,37 @@ class HatchetMageflow(Hatchet):
         self.redis = redis_client
         self.param_config = param_config
 
+    @override
     def task(self, *, name: str | None = None, **kwargs):
+        """
+        This is a wrapper for task, if you want to see hatchet task go to parent class
+        """
+
         hatchet_task = super().task(name=name, **kwargs)
-
-        def decorator(func):
-            handler_dec = handle_task_callback(self.param_config)
-            func = handler_dec(func)
-            wf = hatchet_task(func)
-
-            nonlocal name
-            task_name = name or func.__name__
-            register = register_task(task_name)
-            return register(wf)
-
+        decorator = functools.partial(
+            task_decorator,
+            hatchet_task=hatchet_task,
+            mage_client=self,
+            hatchet_task_name=name,
+        )
         return decorator
 
+    @override
     def durable_task(self, *, name: str | None = None, **kwargs):
+        """
+        This is a wrapper for durable task, if you want to see hatchet durable task go to parent class
+        """
         hatchet_task = super().durable_task(name=name, **kwargs)
-
-        def decorator(func):
-            handler_dec = handle_task_callback(self.param_config)
-            func = handler_dec(func)
-            wf = hatchet_task(func)
-            nonlocal name
-            task_name = name or func.__name__
-            register = register_task(task_name)
-            return register(wf)
+        decorator = functools.partial(
+            task_decorator,
+            hatchet_task=hatchet_task,
+            mage_client=self,
+            hatchet_task_name=name,
+        )
 
         return decorator
 
+    @override
     def worker(
         self,
         *args,
@@ -106,6 +109,35 @@ class HatchetMageflow(Hatchet):
         **kwargs: Unpack[SignatureOptions],
     ):
         return await swarm(tasks, task_name, **kwargs)
+
+    def with_ctx(self, func):
+        func.__user_ctx__ = True
+        return func
+
+    def with_signature(self, func):
+        func.__send_signature__ = True
+        return func
+
+
+def task_decorator(
+    func: Callable,
+    hatchet_task,
+    mage_client: HatchetMageflow,
+    hatchet_task_name: str | None = None,
+):
+    param_config = (
+        AcceptParams.ALL
+        if getattr(func, "__user_ctx__", False)
+        else mage_client.param_config
+    )
+    send_signature = getattr(func, "__send_signature__", False)
+    handler_dec = handle_task_callback(param_config, send_signature=send_signature)
+    func = handler_dec(func)
+    wf = hatchet_task(func)
+
+    task_name = hatchet_task_name or func.__name__
+    register = register_task(task_name)
+    return register(wf)
 
 
 T = TypeVar("T")

@@ -6,9 +6,11 @@ from typing import Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
+from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 
 from mageflow.invokers.hatchet import HatchetInvoker
+from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.pythonic import flexible_call
 
 
@@ -23,19 +25,24 @@ class HatchetResult(BaseModel):
 
 
 def handle_task_callback(
-    expected_params: AcceptParams = AcceptParams.NO_CTX, wrap_res: bool = True
+    expected_params: AcceptParams = AcceptParams.NO_CTX,
+    wrap_res: bool = True,
+    send_signature: bool = False,
 ):
     def task_decorator(func):
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             invoker = HatchetInvoker(message, ctx)
+            task_model = await HatchetTaskModel.get(ctx.action.job_name)
             if not await invoker.should_run_task():
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
             try:
-                await invoker.start_task()
+                signature = await invoker.start_task()
+                if send_signature:
+                    kwargs["signature"] = signature
                 if expected_params == AcceptParams.JUST_MESSAGE:
                     result = await flexible_call(func, message)
                 elif expected_params == AcceptParams.NO_CTX:
@@ -43,8 +50,9 @@ def handle_task_callback(
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except (Exception, asyncio.CancelledError) as e:
-                await invoker.run_error()
-                await invoker.remove_task(with_error=False)
+                if not task_model.should_retry(ctx.attempt_number, e):
+                    await invoker.run_error()
+                    await invoker.remove_task(with_error=False)
                 raise
             else:
                 task_results = HatchetResult(hatchet_results=result)
@@ -65,7 +73,7 @@ def handle_task_callback(
 def register_task(register_name: str):
     from mageflow.startup import REGISTERED_TASKS
 
-    def decorator(func):
+    def decorator(func: Standalone):
         REGISTERED_TASKS.append((func, register_name))
         return func
 

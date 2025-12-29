@@ -1,11 +1,12 @@
 import rapyer
 from hatchet_sdk import Hatchet
+from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 from redis.asyncio.client import Redis
 
 from mageflow.task.model import HatchetTaskModel
 
-REGISTERED_TASKS: list[tuple] = []
+REGISTERED_TASKS: list[tuple[Standalone, str]] = []
 
 
 class ConfigModel(BaseModel):
@@ -52,6 +53,7 @@ async def register_workflows():
             mageflow_task_name=mageflow_task_name,
             task_name=workflow.name,
             input_validator=workflow.input_validator,
+            retries=workflow.tasks[0].retries,
         )
         await hatchet_task.save()
 

@@ -68,6 +68,7 @@ nav:
     - Swarm: documentation/swarm.md
     - Task Lifecycle: documentation/task-lifecycle.md
   - API Reference:
+      - Client: api/client.md
       - Chain: api/chain.md
       - Swarm: api/swarm.md
       - Signature: api/signature.md
