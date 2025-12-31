@@ -1,23 +1,14 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
-  check-tests:
-    if: github.event.base_ref == 'refs/heads/main'
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Wait for test matrix to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'test-results'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-
   publish:
     environment:
       name: publish-pip
