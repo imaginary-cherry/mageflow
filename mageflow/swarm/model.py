@@ -219,7 +219,7 @@ class SwarmTaskSignature(TaskSignature):
                 return False
 
     async def fill_running_tasks(self) -> bool:
-        resource_to_run = self.config.max_concurrency - len(self.current_running_tasks)
+        resource_to_run = self.config.max_concurrency - self.current_running_tasks
         if resource_to_run <= 0:
             return False
         task_ids = await asyncio.gather(
@@ -234,10 +234,8 @@ class SwarmTaskSignature(TaskSignature):
             if next_task is not None
         ]
         await asyncio.gather(*publish_coroutine)
-        if len(tasks) != publish_coroutine:
-            raise MissingSwarmItemError(
-                f"swarm item {next_task} was deleted before swarm is done"
-            )
+        if len(tasks) != len(publish_coroutine):
+            raise MissingSwarmItemError(f"swarm item was deleted before swarm is done")
         return True
 
     async def decrease_running_tasks_count(self):
