@@ -26,6 +26,7 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.utils.pythonic import deep_merge
 from pydantic import Field, field_validator, BaseModel
+from rapyer import AtomicRedisModel
 from rapyer.types import RedisList, RedisInt
 
 
@@ -78,7 +79,7 @@ class BatchItemTaskSignature(TaskSignature):
         return await super().change_status(SignatureStatus.INTERRUPTED)
 
 
-class SwarmConfig(BaseModel):
+class SwarmConfig(AtomicRedisModel):
     max_concurrency: int = 30
     stop_after_n_failures: Optional[int] = None
     max_task_allowed: Optional[int] = None
