@@ -158,7 +158,13 @@ class SwarmTaskSignature(TaskSignature):
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
-    async def add_task(self, task: TaskSignatureConvertible) -> BatchItemTaskSignature:
+    async def add_task(
+        self, task: TaskSignatureConvertible, close_on_max_task: bool = True
+    ) -> BatchItemTaskSignature:
+        """
+        task - task signature to add to swarm
+        close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capcity
+        """
         if not self.config.can_add_task(self):
             raise TooManyTasksError(
                 f"Swarm {self.task_name} has reached max tasks limit"
@@ -194,6 +200,10 @@ class SwarmTaskSignature(TaskSignature):
         await task.save()
         await batch_task.save()
         await self.tasks.aappend(batch_task.key)
+
+        if close_on_max_task and not self.config.can_add_task(self):
+            await self.close_swarm()
+
         return batch_task
 
     async def add_to_running_tasks(self, task: TaskSignatureConvertible) -> bool:
