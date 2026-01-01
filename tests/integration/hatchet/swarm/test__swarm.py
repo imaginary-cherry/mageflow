@@ -307,7 +307,6 @@ async def test_swarm_run_finish_at_fail__still_finish_successfully(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
 
     # Check swarm callback was called
     assert_signature_done(runs, task1_callback_sign, base_data=test_ctx)
