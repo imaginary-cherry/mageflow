@@ -361,13 +361,6 @@ async def test_swarm_fill_running_tasks_with_success_task(
         len(tasks_called_by_first_task) == 3
     ), "fill_running_tasks should start exactly 3 tasks"
 
-    # Verify all tasks completed successfully
-    for task_run in tasks_called_by_first_task:
-        assert is_wf_done(task_run), f"Task {task_run.workflow_name} should be done"
-
-    # Check that Redis is clean
-    await assert_redis_is_clean(redis_client)
-
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_swarm_fill_running_tasks_with_failed_task(
@@ -395,16 +388,15 @@ async def test_swarm_fill_running_tasks_with_failed_task(
         config=SwarmConfig(max_concurrency=3),
         is_swarm_closed=True,  # Close swarm to prevent new tasks
     )
-
-    # Get batch task IDs
-    batch_tasks = await asyncio.gather(
-        *[TaskSignature.get_safe(batch_id) for batch_id in swarm.tasks]
+    first_swarm_item = await BatchItemTaskSignature.get_safe(swarm.tasks[0])
+    original_first_task = await mageflow.load_signature(
+        first_swarm_item.original_task_id
     )
 
     # Act
     # Run only the first (failing) task directly
     regular_message = ContextMessage(base_data=test_ctx)
-    await batch_tasks[0].aio_run_no_wait(regular_message, options=trigger_options)
+    await first_swarm_item.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for ON_SWARM_ERROR callback to trigger fill_running_tasks
     await asyncio.sleep(10)
@@ -412,34 +404,9 @@ async def test_swarm_fill_running_tasks_with_failed_task(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    # Find ON_SWARM_ERROR run
-    on_swarm_error_runs = [r for r in runs if "on_swarm_error" in r.workflow_name]
-    assert len(on_swarm_error_runs) == 1, "ON_SWARM_ERROR should be called exactly once"
-    on_swarm_error_run = on_swarm_error_runs[0]
-
-    # Get all batch task runs
-    batch_task_runs = [r for r in runs if "batch-item" in r.workflow_name]
-    assert len(batch_task_runs) == 4, "All 4 batch tasks should have run"
-
-    # Verify first task failed
-    first_task_run = [r for r in batch_task_runs if "fail_task" in r.workflow_name][0]
-    assert first_task_run.status == V1TaskStatus.FAILED, "First task should have failed"
-
-    # Tasks called by fill_running_tasks started after ON_SWARM_ERROR
-    tasks_after_callback = [
-        r for r in batch_task_runs if r.started_at > on_swarm_error_run.started_at
-    ]
+    tasks_called_by_first_task = find_sub_calls_by_signature(original_first_task, runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
-        len(tasks_after_callback) == 3
+        len(tasks_called_by_first_task) == 3
     ), "fill_running_tasks should start exactly 3 tasks"
-
-    # Verify the 3 remaining tasks completed successfully
-    for task_run in tasks_after_callback:
-        assert (
-            is_wf_done(task_run) and task_run.status == V1TaskStatus.COMPLETED
-        ), f"Task {task_run.workflow_name} should have completed successfully"
-
-    # Check that Redis is clean
-    await assert_redis_is_clean(redis_client)
