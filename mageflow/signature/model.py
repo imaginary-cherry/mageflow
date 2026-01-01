@@ -79,7 +79,7 @@ class TaskSignature(AtomicRedisModel):
     @classmethod
     async def get_safe(cls, task_key: TaskIdentifierType) -> Optional[Self]:
         try:
-            return await rapyer.get(task_key)
+            return await rapyer.aget(task_key)
         except KeyNotFound:
             return None
 
@@ -314,7 +314,7 @@ async def lock_from_key(
     cls, key: str, action: str = "default", save_at_end: bool = False
 ) -> AsyncGenerator[TaskSignature, None]:
     async with acquire_lock(cls.Meta.redis, f"{key}/{action}"):
-        redis_model = await rapyer.get(key)
+        redis_model = await rapyer.aget(key)
         yield redis_model
         if save_at_end:
             await redis_model.save()
