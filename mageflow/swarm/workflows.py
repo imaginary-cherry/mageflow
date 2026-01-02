@@ -101,9 +101,9 @@ async def handle_finish_tasks(
     swarm_task: SwarmTaskSignature, ctx: Context, msg: BaseModel
 ):
     await swarm_task.decrease_running_tasks_count()
-    did_publish = await swarm_task.fill_running_tasks()
-    if did_publish:
-        ctx.log(f"Swarm item started new task {next_task}/{swarm_task.key}")
+    num_task_started = await swarm_task.fill_running_tasks()
+    if num_task_started:
+        ctx.log(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
     else:
         ctx.log(f"Swarm item no new task to run in {swarm_task.key}")
 
