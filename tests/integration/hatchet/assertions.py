@@ -55,8 +55,9 @@ def find_sub_calls_from_wf(
     called_tasks = [
         wf for wf in runs if wf.parent_task_external_id == origin_wf.task_external_id
     ]
-    for wf in called_tasks:
+    for wf in called_tasks[:]:
         if is_wf_internal_mageflow(wf):
+            called_tasks.remove(wf)
             called_tasks.extend(find_sub_calls_from_wf(wf, runs))
 
     return called_tasks
