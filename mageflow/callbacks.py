@@ -7,11 +7,10 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Standalone
-from pydantic import BaseModel
-
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.pythonic import flexible_call
+from pydantic import BaseModel
 
 
 class AcceptParams(Enum):

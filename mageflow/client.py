@@ -10,9 +10,6 @@ import redis
 from hatchet_sdk import Hatchet, Worker, Context
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
-from redis.asyncio import Redis
-from typing_extensions import override
-
 from mageflow.callbacks import AcceptParams, register_task, handle_task_callback
 from mageflow.chain.creator import chain
 from mageflow.init import init_mageflow_hatchet_tasks
@@ -27,6 +24,8 @@ from mageflow.startup import (
 )
 from mageflow.swarm.creator import swarm, SignatureOptions
 from mageflow.utils.mageflow import does_task_wants_ctx
+from redis.asyncio import Redis
+from typing_extensions import override
 
 
 async def merge_lifespan(original_lifespan: LifespanFn):

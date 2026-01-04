@@ -1,10 +1,9 @@
 import rapyer
 from hatchet_sdk import Hatchet
 from hatchet_sdk.runnables.workflow import Standalone
+from mageflow.task.model import HatchetTaskModel
 from pydantic import BaseModel
 from redis.asyncio.client import Redis
-
-from mageflow.task.model import HatchetTaskModel
 
 REGISTERED_TASKS: list[tuple[Standalone, str]] = []
 
