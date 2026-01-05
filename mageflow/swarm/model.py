@@ -115,8 +115,7 @@ class SwarmTaskSignature(TaskSignature):
 
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
         await self.kwargs.aupdate(**msg.model_dump(mode="json"))
-        workflow = await self.workflow(use_return_field=False)
-        return await workflow.aio_run_no_wait(msg, **kwargs)
+        return super().aio_run_no_wait(msg, **kwargs)
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         # Use on swarm start task name for wf

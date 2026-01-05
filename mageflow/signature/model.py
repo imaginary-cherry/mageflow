@@ -7,6 +7,7 @@ import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
 from mageflow.errors import MissingSignatureError
+from mageflow.root.context import current_root_swarm
 from mageflow.models.message import ReturnValue
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
@@ -142,6 +143,11 @@ class TaskSignature(AtomicRedisModel):
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
 
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
+        root_swarm = current_root_swarm.get()
+        if root_swarm:
+            batch_item = await swarm.add_task(self)
+            return await batch_item.aio_run_no_wait(msg, **kwargs)
+
         workflow = await self.workflow(use_return_field=False)
         return await workflow.aio_run_no_wait(msg, **kwargs)
 

@@ -1,15 +1,10 @@
-from contextvars import ContextVar
 from typing import Optional, Self
 
-from hatchet_sdk.runnables.types import EmptyModel
+from mageflow.root.context import current_root_swarm
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.creator import swarm
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from pydantic import Field
-
-current_root_swarm: ContextVar[Optional["SwarmTaskSignature"]] = ContextVar(
-    "current_root_swarm", default=None
-)
 
 
 class RootTaskSignature(TaskSignature):
