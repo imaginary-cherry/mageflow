@@ -1,3 +1,5 @@
+from typing import Optional, Any
+
 import rapyer
 from hatchet_sdk import Hatchet
 from hatchet_sdk.runnables.workflow import Standalone
@@ -5,7 +7,7 @@ from mageflow.task.model import HatchetTaskModel
 from pydantic import BaseModel
 from redis.asyncio.client import Redis
 
-REGISTERED_TASKS: list[tuple[Standalone, str]] = []
+REGISTERED_TASKS: list[tuple[Standalone, str, bool, Optional[Any]]] = []
 
 
 class ConfigModel(BaseModel):
@@ -47,12 +49,15 @@ async def update_register_signature_models():
 
 async def register_workflows():
     for reg_task in REGISTERED_TASKS:
-        workflow, mageflow_task_name = reg_task
+        workflow, mageflow_task_name, is_root_task, root_task_config = reg_task
+        config_dict = root_task_config.model_dump() if root_task_config else None
         hatchet_task = HatchetTaskModel(
             mageflow_task_name=mageflow_task_name,
             task_name=workflow.name,
             input_validator=workflow.input_validator,
             retries=workflow.tasks[0].retries,
+            is_root_task=is_root_task,
+            root_task_config=config_dict,
         )
         await hatchet_task.save()
 
