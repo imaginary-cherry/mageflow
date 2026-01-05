@@ -236,6 +236,12 @@ class TaskSignature(AtomicRedisModel):
             last_status=self.task_status.status, status=status
         )
 
+    async def start_task(self) -> Self:
+        return self
+
+    async def end_task(self, success: bool = True) -> Self:
+        return self
+
     async def aupdate_real_task_kwargs(self, **kwargs):
         return await self.kwargs.aupdate(**kwargs)
 

@@ -30,6 +30,15 @@ class HatchetInvoker(BaseInvoker):
             async with TaskSignature.lock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
+                await signature.start_task()
+                return signature
+
+    async def end_task(self) -> TaskSignature | None:
+        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        if task_id:
+            signature = await TaskSignature.get_safe(task_id)
+            if signature:
+                await signature.end_task(True)
                 return signature
 
     async def run_success(self, result: Any) -> bool:
@@ -50,6 +59,7 @@ class HatchetInvoker(BaseInvoker):
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
+            await current_task.end_task(False)
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
