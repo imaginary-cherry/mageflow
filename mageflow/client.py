@@ -23,6 +23,8 @@ from mageflow.startup import (
     teardown_mageflow,
 )
 from mageflow.swarm.creator import swarm, SignatureOptions
+from mageflow.swarm.model import SwarmConfig
+from mageflow.root.consts import ROOT_TASK_MARKER, ROOT_TASK_CONFIG
 from mageflow.utils.mageflow import does_task_wants_ctx
 from redis.asyncio import Redis
 from typing_extensions import override
@@ -142,6 +144,24 @@ class HatchetMageflow(Hatchet):
 
         return decorator
 
+    def root_task(
+        self,
+        *,
+        max_concurrency: int = 30,
+        stop_after_n_failures: int | None = None,
+    ):
+        swarm_config = SwarmConfig(
+            max_concurrency=max_concurrency,
+            stop_after_n_failures=stop_after_n_failures,
+        )
+
+        def decorator(func):
+            setattr(func, ROOT_TASK_MARKER, True)
+            setattr(func, ROOT_TASK_CONFIG, swarm_config)
+            return func
+
+        return decorator
+
 
 def task_decorator(
     func: Callable,
@@ -153,12 +173,14 @@ def task_decorator(
         AcceptParams.ALL if does_task_wants_ctx(func) else mage_client.param_config
     )
     send_signature = getattr(func, "__send_signature__", False)
+    is_root_task = getattr(func, ROOT_TASK_MARKER, False)
+    root_task_config = getattr(func, ROOT_TASK_CONFIG, None)
     handler_dec = handle_task_callback(param_config, send_signature=send_signature)
     func = handler_dec(func)
     wf = hatchet_task(func)
 
     task_name = hatchet_task_name or func.__name__
-    register = register_task(task_name)
+    register = register_task(task_name, is_root_task, root_task_config)
     return register(wf)
 
 
