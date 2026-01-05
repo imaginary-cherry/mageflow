@@ -69,11 +69,15 @@ def handle_task_callback(
     return task_decorator
 
 
-def register_task(register_name: str):
+def register_task(
+    register_name: str,
+    is_root_task: bool = False,
+    root_task_config=None,
+):
     from mageflow.startup import REGISTERED_TASKS
 
     def decorator(func: Standalone):
-        REGISTERED_TASKS.append((func, register_name))
+        REGISTERED_TASKS.append((func, register_name, is_root_task, root_task_config))
         return func
 
     return decorator
