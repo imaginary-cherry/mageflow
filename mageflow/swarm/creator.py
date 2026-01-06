@@ -1,12 +1,10 @@
 import asyncio
 import uuid
 
-from mageflow.signature.creator import (
-    TaskSignatureConvertible,
-    TaskSignatureOptions,
-)
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from rapyer.typing_support import Unpack
+
+from mageflow.signature.types import TaskSignatureOptions, TaskSignatureConvertible
+from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 
 
 class SignatureOptions(TaskSignatureOptions):

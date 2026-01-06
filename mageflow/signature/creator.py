@@ -1,46 +1,12 @@
-from datetime import datetime
-from typing import TypeAlias, TypedDict, Any, overload
+from typing import Any, overload
+
+from rapyer.typing_support import Unpack
 
 from mageflow.root.model import RootTaskSignature
-from mageflow.signature.model import (
-    TaskSignature,
-    TaskIdentifierType,
-    HatchetTaskType,
-)
-from mageflow.signature.status import TaskStatus
+from mageflow.signature.model import TaskSignature, HatchetTaskType
+from mageflow.signature.types import TaskSignatureOptions
 from mageflow.swarm.model import SwarmConfig
 from mageflow.task.model import HatchetTaskModel
-
-TaskSignatureConvertible: TypeAlias = (
-    TaskIdentifierType | TaskSignature | HatchetTaskType
-)
-
-
-async def resolve_signature_key(task: TaskSignatureConvertible) -> TaskSignature:
-    if isinstance(task, TaskSignature):
-        return task
-    elif isinstance(task, TaskIdentifierType):
-        return await TaskSignature.get_safe(task)
-    else:
-        return await TaskSignature.from_task(task)
-
-
-try:
-    # Python 3.12+
-    from typing import Unpack
-except ImportError:
-    # Older Python versions
-    from typing_extensions import Unpack
-
-
-class TaskSignatureOptions(TypedDict, total=False):
-    kwargs: dict
-    creation_time: datetime
-    model_validators: Any
-    success_callbacks: list[TaskIdentifierType]
-    error_callbacks: list[TaskIdentifierType]
-    task_status: TaskStatus
-    task_identifiers: dict
 
 
 @overload
