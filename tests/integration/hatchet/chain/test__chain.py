@@ -101,8 +101,3 @@ async def test_chain_fail(
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
-
-
-# TODO - parallel pipeline
-# TODO - add more robust tests
-# TODO - fix the flow and design
