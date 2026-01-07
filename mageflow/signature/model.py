@@ -16,11 +16,7 @@ from mageflow.startup import mageflow_config
 from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.models import get_marked_fields
 from mageflow.workflows import MageflowWorkflow
-from pydantic import (
-    BaseModel,
-    field_validator,
-    Field,
-)
+from pydantic import BaseModel, field_validator, Field
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
