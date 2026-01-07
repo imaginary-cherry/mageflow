@@ -4,12 +4,14 @@ from typing import Any
 import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
+from pydantic import BaseModel
+
 from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
+from mageflow.utils.mageflow import rapyer_aget_safe
 from mageflow.workflows import TASK_DATA_PARAM_NAME
-from pydantic import BaseModel
 
 
 class HatchetInvoker(BaseInvoker):
@@ -33,20 +35,22 @@ class HatchetInvoker(BaseInvoker):
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 await signature.start_task()
                 return signature
+        return None
 
     async def end_task(self) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            signature = await TaskSignature.get_safe(task_id)
+            signature: TaskSignature = await rapyer_aget_safe(task_id)  # noqa
             if signature:
                 await signature.end_task(True)
                 return signature
+        return None
 
     async def run_success(self, result: Any) -> bool:
         success_publish_tasks = []
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            current_task = await TaskSignature.get_safe(task_id)
+            current_task: TaskSignature = await rapyer_aget_safe(task_id)  # noqa
             task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
@@ -59,7 +63,7 @@ class HatchetInvoker(BaseInvoker):
         error_publish_tasks = []
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            current_task = await TaskSignature.get_safe(task_id)
+            current_task: TaskSignature = await rapyer_aget_safe(task_id)  # noqa
             await current_task.end_task(False)
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
@@ -74,14 +78,14 @@ class HatchetInvoker(BaseInvoker):
     ) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            signature = await TaskSignature.get_safe(task_id)
+            signature: TaskSignature = await rapyer_aget_safe(task_id)  # noqa
             if signature:
                 await signature.remove(with_error, with_success)
 
     async def should_run_task(self) -> bool:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            signature = await TaskSignature.get_safe(task_id)
+            signature: TaskSignature = await rapyer_aget_safe(task_id)  # noqa
             if signature is None:
                 return False
             should_task_run = await signature.should_run()

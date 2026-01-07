@@ -11,7 +11,7 @@ def does_task_wants_ctx(func) -> bool:
 
 
 @deprecated("Use this untile rapyer provide safe option for aget")
-async def aget_safe(redis_key: str) -> Optional[AtomicRedisModel]:
+async def rapyer_aget_safe(redis_key: str) -> Optional[AtomicRedisModel]:
     try:
         return await rapyer.aget(redis_key)
     except KeyNotFound:
