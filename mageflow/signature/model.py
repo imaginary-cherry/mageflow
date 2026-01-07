@@ -145,7 +145,7 @@ class TaskSignature(AtomicRedisModel):
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
         root_swarm = current_root_swarm.get()
         if root_swarm:
-            batch_item = await swarm.add_task(self)
+            batch_item = await root_swarm.add_task(self)
             return await batch_item.aio_run_no_wait(msg, **kwargs)
 
         workflow = await self.workflow(use_return_field=False)
