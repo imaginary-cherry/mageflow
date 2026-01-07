@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 
+import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from mageflow.invokers.base import BaseInvoker
@@ -27,7 +28,7 @@ class HatchetInvoker(BaseInvoker):
     async def start_task(self) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            async with TaskSignature.lock_from_key(task_id) as signature:
+            async with rapyer.alock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 await signature.start_task()
