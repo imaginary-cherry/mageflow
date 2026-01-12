@@ -222,6 +222,7 @@ def assert_swarm_task_done(
     tasks: list[TaskSignature],
     allow_fails: bool = True,
     check_callbacks: bool = True,
+    return_field_name: str = "task_result",
 ):
     task_map = {task.key: task for task in tasks}
     batch_map = {batch_item.key: batch_item for batch_item in batch_items}
@@ -256,7 +257,7 @@ def assert_swarm_task_done(
             callback_wf = assert_signature_done(
                 runs, callback_sign, check_called_once=True, **task.kwargs
             )
-            for result in callback_wf.input["input"]["task_result"]:
+            for result in callback_wf.input["input"][return_field_name]:
                 assert (
                     result in expected_output
                 ), f"{result} not found in {expected_output} for callback {callback_wf.workflow_name}"

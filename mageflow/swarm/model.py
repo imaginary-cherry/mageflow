@@ -12,6 +12,7 @@ from mageflow.errors import (
     TooManyTasksError,
     SwarmIsCanceledError,
 )
+from mageflow.root.context import without_root_swarm
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.resolve import resolve_signature_key
 from mageflow.signature.status import SignatureStatus
@@ -51,7 +52,8 @@ class BatchItemTaskSignature(TaskSignature):
                 kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
             await original_task.aupdate_real_task_kwargs(**kwargs)
             if can_run_task:
-                return await original_task.aio_run_no_wait(msg, **orig_task_kwargs)
+                with without_root_swarm():
+                    return await original_task.aio_run_no_wait(msg, **orig_task_kwargs)
 
             return None
 
