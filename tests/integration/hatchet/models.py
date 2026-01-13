@@ -1,8 +1,10 @@
 from typing import Any, Annotated
 
-from pydantic import BaseModel, Field
-
+from mageflow.chain.model import ChainTaskSignature
 from mageflow.models.message import ReturnValue
+from mageflow.signature.model import TaskSignature
+from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
+from pydantic import BaseModel, Field
 
 
 class ContextMessage(BaseModel):
@@ -31,3 +33,10 @@ class CommandMessageWithResult(ContextMessage):
 class SleepTaskMessage(ContextMessage):
     sleep_time: int = 2
     result: Any = None
+
+
+class SavedSignaturesResults(BaseModel):
+    signatures: dict[str, TaskSignature] = Field(default_factory=dict)
+    batch_items: dict[str, BatchItemTaskSignature] = Field(default_factory=dict)
+    swarms: dict[str, SwarmTaskSignature] = Field(default_factory=dict)
+    chains: dict[str, ChainTaskSignature] = Field(default_factory=dict)

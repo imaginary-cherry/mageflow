@@ -9,10 +9,12 @@ settings = Dynaconf(
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
-def redis_client():
+async def redis_client():
     redis_client = redis.asyncio.from_url(settings.redis.url, decode_responses=True)
 
     yield redis_client
+
+    await redis_client.aclose()
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
@@ -23,4 +25,3 @@ async def real_redis(redis_client):
     delete_keys = [key for key in all_keys if key not in current_keys]
     if delete_keys:
         await redis_client.delete(*delete_keys)
-    await redis_client.aclose()
