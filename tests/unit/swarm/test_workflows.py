@@ -1,16 +1,6 @@
-"""
-Unit tests for swarm workflow functions.
-
-Tests the three main swarm lifecycle event handlers:
-- swarm_start_tasks: Triggered when swarm starts
-- swarm_item_done: Triggered when swarm item completes successfully
-- swarm_item_failed: Triggered when swarm item fails
-"""
-
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import MagicMock
 import pytest
-from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
@@ -32,52 +22,14 @@ from tests.integration.hatchet.models import ContextMessage
 
 
 # ============================================================================
-# Fixtures and Helpers
-# ============================================================================
-
-
-@pytest.fixture
-def mock_context():
-    """Create a mock Hatchet Context."""
-    ctx = MagicMock(spec=Context)
-    ctx.log = MagicMock()
-    ctx.additional_metadata = {}
-    return ctx
-
-
-@pytest.fixture
-def create_mock_context_with_metadata():
-    """Factory fixture to create mock context with specific metadata."""
-
-    def _create(task_id=None, swarm_task_id=None, swarm_item_id=None):
-        ctx = MagicMock(spec=Context)
-        ctx.log = MagicMock()
-        metadata = {}
-        if task_id is not None:
-            metadata[TASK_ID_PARAM_NAME] = task_id
-        if swarm_task_id is not None:
-            metadata[SWARM_TASK_ID_PARAM_NAME] = swarm_task_id
-        if swarm_item_id is not None:
-            metadata[SWARM_ITEM_TASK_ID_PARAM_NAME] = swarm_item_id
-        ctx.additional_metadata = {"task_data": metadata}
-        return ctx
-
-    return _create
-
-
-# ============================================================================
 # swarm_start_tasks - SANITY TESTS
 # ============================================================================
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_sanity_basic_flow(create_mock_context_with_metadata):
-    """
-    SANITY TEST: swarm_start_tasks starts correct number of tasks based on max_concurrency.
-
-    Scenario: Swarm with 5 tasks, max_concurrency=2
-    Expected: 2 tasks start, 3 go to tasks_left_to_run
-    """
+async def test_swarm_start_tasks_sanity_basic_flow(
+    create_mock_context_with_metadata, mock_task_aio_run_no_wait
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -86,53 +38,37 @@ async def test_swarm_start_tasks_sanity_basic_flow(create_mock_context_with_meta
     )
     await swarm_task.save()
 
-    # Create 5 tasks
-    tasks = []
-    for i in range(5):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(5)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
-    # Add tasks to swarm manually
     await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
-    # Mock aio_run_no_wait to track calls
-    with patch.object(
-        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock_run:
-        # Act
-        await swarm_start_tasks(msg, ctx)
+    # Act
+    await swarm_start_tasks(msg, ctx)
 
-        # Assert
-        # Verify 2 tasks were started
-        assert mock_run.call_count == 2
+    # Assert
+    assert mock_task_aio_run_no_wait.call_count == 2
 
-        # Verify tasks_left_to_run has 3 tasks
-        reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-        assert len(reloaded_swarm.tasks_left_to_run) == 3
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert len(reloaded_swarm.tasks_left_to_run) == 3
 
-        # Verify logging
-        assert ctx.log.called
-        assert any(
-            "Swarm task started with tasks" in str(call) for call in ctx.log.call_args_list
-        )
+    assert ctx.log.called
+    assert any(
+        "Swarm task started with tasks" in str(call) for call in ctx.log.call_args_list
+    )
 
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
-    create_mock_context_with_metadata,
+    create_mock_context_with_metadata, mock_task_aio_run_no_wait
 ):
-    """
-    SANITY TEST: All tasks start when max_concurrency >= task count.
-
-    Scenario: 3 tasks, max_concurrency=5
-    Expected: All 3 tasks start, tasks_left_to_run is empty
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -141,30 +77,26 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
-    with patch.object(
-        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock_run:
-        # Act
-        await swarm_start_tasks(msg, ctx)
+    # Act
+    await swarm_start_tasks(msg, ctx)
 
-        # Assert
-        assert mock_run.call_count == 3
+    # Assert
+    assert mock_task_aio_run_no_wait.call_count == 3
 
-        reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-        assert len(reloaded_swarm.tasks_left_to_run) == 0
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert len(reloaded_swarm.tasks_left_to_run) == 0
 
 
 # ============================================================================
@@ -173,63 +105,45 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_already_started(create_mock_context_with_metadata):
-    """
-    EDGE CASE: Swarm already started (has_swarm_started = True).
-
-    Why: Duplicate triggers, retry mechanisms, race conditions
-    Expected: Early return, no tasks started, idempotent behavior
-    """
+async def test_swarm_start_tasks_already_started_edge_case(
+    create_mock_context_with_metadata, mock_task_aio_run_no_wait
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=1,  # This makes has_swarm_started = True
+        current_running_tasks=1,
         config=SwarmConfig(max_concurrency=2),
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
-    with patch.object(
-        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock_run:
-        # Act
-        await swarm_start_tasks(msg, ctx)
+    # Act
+    await swarm_start_tasks(msg, ctx)
 
-        # Assert
-        # No tasks should be started
-        assert mock_run.call_count == 0
+    # Assert
+    assert mock_task_aio_run_no_wait.call_count == 0
 
-        # Verify early return logging
-        assert any(
-            "already running" in str(call).lower()
-            for call in ctx.log.call_args_list
-        )
+    assert any(
+        "already running" in str(call).lower() for call in ctx.log.call_args_list
+    )
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_max_concurrency_zero(
-    create_mock_context_with_metadata,
+async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
+    create_mock_context_with_metadata, mock_task_aio_run_no_wait
 ):
-    """
-    EDGE CASE: max_concurrency = 0.
-
-    Why: Configuration error, dynamic adjustment
-    Expected: No tasks start, all go to tasks_left_to_run
-    Critical: System would hang if no mechanism to increase concurrency later
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -238,40 +152,32 @@ async def test_swarm_start_tasks_max_concurrency_zero(
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
-    with patch.object(
-        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock_run:
-        # Act
-        await swarm_start_tasks(msg, ctx)
+    # Act
+    await swarm_start_tasks(msg, ctx)
 
-        # Assert
-        assert mock_run.call_count == 0
+    # Assert
+    assert mock_task_aio_run_no_wait.call_count == 0
 
-        reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-        assert len(reloaded_swarm.tasks_left_to_run) == 3
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert len(reloaded_swarm.tasks_left_to_run) == 3
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_empty_tasks_list(create_mock_context_with_metadata):
-    """
-    EDGE CASE: Empty tasks list.
-
-    Why: Edge case in swarm creation, cleanup race condition
-    Expected: No errors, graceful handling
-    """
+async def test_swarm_start_tasks_empty_tasks_list_edge_case(
+    create_mock_context_with_metadata,
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -279,26 +185,19 @@ async def test_swarm_start_tasks_empty_tasks_list(create_mock_context_with_metad
         config=SwarmConfig(max_concurrency=2),
     )
     await swarm_task.save()
-    # No tasks added
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
-    # Act & Assert - should not raise
+    # Act & Assert
     await swarm_start_tasks(msg, ctx)
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_missing_swarm_task_id(mock_context):
-    """
-    EDGE CASE: Missing SWARM_TASK_ID_PARAM_NAME in context.
-
-    Why: Workflow misconfiguration, context corruption
-    Expected: KeyError raised with clear error
-    """
+async def test_swarm_start_tasks_missing_swarm_task_id_edge_case(mock_context):
     # Arrange
     ctx = mock_context
-    ctx.additional_metadata = {"task_data": {}}  # Missing swarm_task_id
+    ctx.additional_metadata = {"task_data": {}}
     msg = EmptyModel()
 
     # Act & Assert
@@ -307,30 +206,22 @@ async def test_swarm_start_tasks_missing_swarm_task_id(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_swarm_not_found(create_mock_context_with_metadata):
-    """
-    EDGE CASE: SwarmTaskSignature not found in Redis.
-
-    Why: Premature cleanup, Redis eviction, corruption
-    Expected: Error raised (get_safe behavior)
-    """
+async def test_swarm_start_tasks_swarm_not_found_edge_case(
+    create_mock_context_with_metadata,
+):
     # Arrange
     ctx = create_mock_context_with_metadata(swarm_task_id="nonexistent_swarm")
     msg = EmptyModel()
 
     # Act & Assert
-    with pytest.raises(Exception):  # get_safe should raise if not found
+    with pytest.raises(Exception):
         await swarm_start_tasks(msg, ctx)
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_task_not_found(create_mock_context_with_metadata):
-    """
-    EDGE CASE: One of the tasks in tasks list doesn't exist.
-
-    Why: Task deleted between swarm creation and start
-    Expected: get_safe returns None, aio_run_no_wait fails on None
-    """
+async def test_swarm_start_tasks_task_not_found_edge_case(
+    create_mock_context_with_metadata,
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -339,14 +230,13 @@ async def test_swarm_start_tasks_task_not_found(create_mock_context_with_metadat
     )
     await swarm_task.save()
 
-    # Add non-existent task keys
     await swarm_task.tasks.aextend(["nonexistent_task_1", "nonexistent_task_2"])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
 
     # Act & Assert
-    with pytest.raises(Exception):  # Should fail when trying to get tasks
+    with pytest.raises(Exception):
         await swarm_start_tasks(msg, ctx)
 
 
@@ -356,13 +246,9 @@ async def test_swarm_start_tasks_task_not_found(create_mock_context_with_metadat
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_basic_flow(create_mock_context_with_metadata):
-    """
-    SANITY TEST: Item completes successfully, results saved, next task started.
-
-    Scenario: 3 tasks in swarm, 1 completes
-    Expected: finished_tasks += 1, results saved, next task starts
-    """
+async def test_swarm_item_done_sanity_basic_flow(
+    create_mock_context_with_metadata, mock_fill_running_tasks
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -372,19 +258,16 @@ async def test_swarm_item_done_sanity_basic_flow(create_mock_context_with_metada
     )
     await swarm_task.save()
 
-    # Create and add 3 tasks
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
     await swarm_task.tasks_left_to_run.aextend([tasks[1].key, tasks[2].key])
 
-    # Create task for cleanup
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
     await item_task.save()
 
@@ -395,42 +278,25 @@ async def test_swarm_item_done_sanity_basic_flow(create_mock_context_with_metada
     )
     msg = SwarmResultsMessage(results={"status": "success", "value": 42})
 
-    with patch.object(
-        SwarmTaskSignature, "fill_running_tasks", return_value=1
-    ) as mock_fill:
-        # Act
-        await swarm_item_done(msg, ctx)
+    # Act
+    await swarm_item_done(msg, ctx)
 
-        # Assert
-        reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    # Assert
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-        # Verify finished_tasks updated
-        assert tasks[0].key in reloaded_swarm.finished_tasks
-        assert len(reloaded_swarm.finished_tasks) == 1
+    assert tasks[0].key in reloaded_swarm.finished_tasks
+    assert len(reloaded_swarm.finished_tasks) == 1
 
-        # Verify results saved
-        assert len(reloaded_swarm.tasks_results) == 1
-        assert reloaded_swarm.tasks_results[0] == msg.results
+    assert len(reloaded_swarm.tasks_results) == 1
+    assert reloaded_swarm.tasks_results[0] == msg.results
 
-        # Verify handle_finish_tasks called (via fill_running_tasks mock)
-        assert mock_fill.called
-
-        # Verify cleanup attempted
-        item_task_after = await TaskSignature.get_safe(item_task.key)
-        # Task should be removed or marked for removal
-        # try_remove might succeed or fail, but it should be attempted
+    assert mock_fill_running_tasks.called
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_sanity_last_item_completes(
-    create_mock_context_with_metadata,
+    create_mock_context_with_metadata, mock_activate_success
 ):
-    """
-    SANITY TEST: Last item completes, swarm finishes successfully.
-
-    Scenario: 2 tasks, 1 finished, 1 completing now, swarm closed
-    Expected: activate_success called, swarm removed
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -441,13 +307,12 @@ async def test_swarm_item_done_sanity_last_item_completes(
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(2):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(2)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
     await swarm_task.finished_tasks.aappend(tasks[0].key)
@@ -462,17 +327,11 @@ async def test_swarm_item_done_sanity_last_item_completes(
     )
     msg = SwarmResultsMessage(results={"status": "complete"})
 
-    with patch.object(
-        SwarmTaskSignature, "activate_success", new_callable=AsyncMock
-    ) as mock_activate:
-        # Act
-        await swarm_item_done(msg, ctx)
+    # Act
+    await swarm_item_done(msg, ctx)
 
-        # Assert
-        # activate_success should be called when swarm is done
-        # Note: This depends on is_swarm_done logic and may need adjustment
-        assert mock_activate.called or mock_activate.call_count >= 0
-        # The actual behavior depends on handle_finish_tasks implementation
+    # Assert
+    assert mock_activate_success.called or mock_activate_success.call_count >= 0
 
 
 # ============================================================================
@@ -481,19 +340,12 @@ async def test_swarm_item_done_sanity_last_item_completes(
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_missing_swarm_task_id(mock_context):
-    """
-    EDGE CASE: Missing SWARM_TASK_ID_PARAM_NAME in context.
-
-    Why: Context corruption, workflow misconfiguration
-    Expected: KeyError raised, cleanup still executes in finally
-    """
+async def test_swarm_item_done_missing_swarm_task_id_edge_case(mock_context):
     # Arrange
     ctx = mock_context
     ctx.additional_metadata = {
         "task_data": {
             TASK_ID_PARAM_NAME: "some_task",
-            # Missing SWARM_TASK_ID_PARAM_NAME
         }
     }
     msg = SwarmResultsMessage(results={})
@@ -504,13 +356,9 @@ async def test_swarm_item_done_missing_swarm_task_id(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_missing_swarm_item_id(create_mock_context_with_metadata):
-    """
-    EDGE CASE: Missing SWARM_ITEM_TASK_ID_PARAM_NAME in context.
-
-    Why: Context corruption
-    Expected: KeyError raised
-    """
+async def test_swarm_item_done_missing_swarm_item_id_edge_case(
+    create_mock_context_with_metadata,
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm", model_validators=ContextMessage
@@ -520,7 +368,6 @@ async def test_swarm_item_done_missing_swarm_item_id(create_mock_context_with_me
     ctx = create_mock_context_with_metadata(
         task_id="some_task",
         swarm_task_id=swarm_task.key,
-        # Missing swarm_item_id
     )
     msg = SwarmResultsMessage(results={})
 
@@ -530,13 +377,9 @@ async def test_swarm_item_done_missing_swarm_item_id(create_mock_context_with_me
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_swarm_not_found(create_mock_context_with_metadata):
-    """
-    EDGE CASE: SwarmTaskSignature not found in Redis.
-
-    Why: Swarm deleted while items running, cleanup race
-    Expected: get_safe raises or returns None, error raised
-    """
+async def test_swarm_item_done_swarm_not_found_edge_case(
+    create_mock_context_with_metadata,
+):
     # Arrange
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
     await item_task.save()
@@ -554,15 +397,9 @@ async def test_swarm_item_done_swarm_not_found(create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_exception_during_handle_finish(
-    create_mock_context_with_metadata,
+async def test_swarm_item_done_exception_during_handle_finish_edge_case(
+    create_mock_context_with_metadata, mock_handle_finish_tasks_error
 ):
-    """
-    EDGE CASE: Exception during handle_finish_tasks.
-
-    Why: Various issues in task finishing logic
-    Expected: Exception raised, error logged, cleanup still attempted
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -582,16 +419,9 @@ async def test_swarm_item_done_exception_during_handle_finish(
     )
     msg = SwarmResultsMessage(results={})
 
-    # Mock handle_finish_tasks to raise an exception
-    from mageflow.swarm import workflows
-
-    with patch.object(workflows, "handle_finish_tasks", side_effect=RuntimeError("Finish tasks error")):
-        # Act & Assert
-        with pytest.raises(RuntimeError, match="Finish tasks error"):
-            await swarm_item_done(msg, ctx)
-
-        # Verify cleanup was still attempted (item_task should be removed or attempted)
-        # This is handled in finally block, so it should execute despite the error
+    # Act & Assert
+    with pytest.raises(RuntimeError, match="Finish tasks error"):
+        await swarm_item_done(msg, ctx)
 
 
 # ============================================================================
@@ -601,14 +431,8 @@ async def test_swarm_item_done_exception_during_handle_finish(
 
 @pytest.mark.asyncio
 async def test_swarm_item_failed_sanity_continue_after_failure(
-    create_mock_context_with_metadata,
+    create_mock_context_with_metadata, mock_fill_running_tasks
 ):
-    """
-    SANITY TEST: Item fails, recorded, swarm continues with next task.
-
-    Scenario: 3 tasks, 1 fails, stop_after_n_failures=2 (unlimited)
-    Expected: failed_tasks += 1, next task starts, swarm continues
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -618,13 +442,12 @@ async def test_swarm_item_failed_sanity_continue_after_failure(
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
     await swarm_task.tasks_left_to_run.aextend([tasks[1].key, tasks[2].key])
@@ -639,36 +462,24 @@ async def test_swarm_item_failed_sanity_continue_after_failure(
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "fill_running_tasks", return_value=1
-    ) as mock_fill:
-        # Act
-        await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-        # Assert
-        reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    # Assert
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-        # Verify failed_tasks updated
-        assert tasks[0].key in reloaded_swarm.failed_tasks
-        assert len(reloaded_swarm.failed_tasks) == 1
+    assert tasks[0].key in reloaded_swarm.failed_tasks
+    assert len(reloaded_swarm.failed_tasks) == 1
 
-        # Verify swarm not stopped (status not CANCELED)
-        assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
+    assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
-        # Verify handle_finish_tasks called
-        assert mock_fill.called
+    assert mock_fill_running_tasks.called
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_failed_sanity_stop_after_threshold(
-    create_mock_context_with_metadata,
+    create_mock_context_with_metadata, mock_activate_error, mock_swarm_remove
 ):
-    """
-    SANITY TEST: Failure reaches threshold, swarm stops.
-
-    Scenario: stop_after_n_failures=2, this is the 2nd failure
-    Expected: Swarm stops, status=CANCELED, activate_error called
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -678,16 +489,14 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
-    # Already have 1 failure
     await swarm_task.failed_tasks.aappend(tasks[0].key)
 
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
@@ -700,27 +509,17 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_error:
-        with patch.object(
-            SwarmTaskSignature, "remove", new_callable=AsyncMock
-        ) as mock_remove:
-            # Act
-            await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-            # Assert
-            reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    # Assert
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-            # If swarm still exists (might be removed)
-            if reloaded_swarm:
-                assert reloaded_swarm.task_status.status == SignatureStatus.CANCELED
+    if reloaded_swarm:
+        assert reloaded_swarm.task_status.status == SignatureStatus.CANCELED
 
-            # Verify activate_error called
-            assert mock_error.called
-
-            # Verify remove called
-            assert mock_remove.called
+    assert mock_activate_error.called
+    assert mock_swarm_remove.called
 
 
 # ============================================================================
@@ -729,36 +528,26 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_stop_after_n_failures_none(
-    create_mock_context_with_metadata,
+async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
+    create_mock_context_with_metadata, mock_activate_error, mock_fill_running_tasks_zero
 ):
-    """
-    EDGE CASE: stop_after_n_failures = None (unlimited failures).
-
-    Why: Configuration for fault-tolerant swarms
-    Expected: Swarm never stops due to failures, always continues
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        config=SwarmConfig(
-            max_concurrency=1, stop_after_n_failures=None
-        ),  # None = unlimited
+        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=None),
         current_running_tasks=1,
     )
     await swarm_task.save()
 
-    tasks = []
-    for i in range(3):
-        task = TaskSignature(
-            task_name=f"test_task_{i}", model_validators=ContextMessage
-        )
+    tasks = [
+        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    for task in tasks:
         await task.save()
-        tasks.append(task)
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
-    # Add many failures
     await swarm_task.failed_tasks.aextend([tasks[0].key, tasks[1].key])
 
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
@@ -771,40 +560,22 @@ async def test_swarm_item_failed_stop_after_n_failures_none(
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_error:
-        with patch.object(
-            SwarmTaskSignature, "fill_running_tasks", return_value=0
-        ) as mock_fill:
-            # Act
-            await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-            # Assert
-            # Should NOT call activate_error (swarm not stopping)
-            assert not mock_error.called
+    # Assert
+    assert not mock_activate_error.called
 
-            # Should call handle_finish_tasks
-            assert mock_fill.called
+    assert mock_fill_running_tasks_zero.called
 
-            reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-            assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_stop_after_n_failures_zero(
-    create_mock_context_with_metadata,
+async def test_swarm_item_failed_stop_after_n_failures_zero_edge_case(
+    create_mock_context_with_metadata, mock_activate_error, mock_swarm_remove
 ):
-    """
-    EDGE CASE: stop_after_n_failures = 0.
-
-    Why: Configuration for immediate fail-fast
-    Expected: Stop immediately on first failure
-
-    CRITICAL: This test may reveal a bug in the code!
-    Line 80: stop_after_n_failures = swarm_task.config.stop_after_n_failures or 0
-    If config is 0, this becomes 0, then len >= 0 is always True.
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -827,32 +598,18 @@ async def test_swarm_item_failed_stop_after_n_failures_zero(
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_error:
-        with patch.object(
-            SwarmTaskSignature, "remove", new_callable=AsyncMock
-        ) as mock_remove:
-            # Act
-            await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-            # Assert
-            # With stop_after_n_failures=0, should stop immediately
-            # This might fail due to the bug mentioned in analysis
-            assert mock_error.called
-            assert mock_remove.called
+    # Assert
+    assert mock_activate_error.called
+    assert mock_swarm_remove.called
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_stop_after_one_failure(
-    create_mock_context_with_metadata,
+async def test_swarm_item_failed_stop_after_one_failure_edge_case(
+    create_mock_context_with_metadata, mock_activate_error
 ):
-    """
-    EDGE CASE: stop_after_n_failures = 1 (stop on first failure).
-
-    Why: Fail-fast swarms
-    Expected: First failure stops swarm immediately
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -875,24 +632,17 @@ async def test_swarm_item_failed_stop_after_one_failure(
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_error:
-        # Act
-        await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-        # Assert
-        assert mock_error.called
+    # Assert
+    assert mock_activate_error.called
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_below_threshold(create_mock_context_with_metadata):
-    """
-    EDGE CASE: Failures below threshold.
-
-    Scenario: stop_after_n_failures=3, only 1 failure
-    Expected: Swarm continues, handle_finish_tasks called
-    """
+async def test_swarm_item_failed_below_threshold_edge_case(
+    create_mock_context_with_metadata, mock_activate_error, mock_fill_running_tasks_zero
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -913,33 +663,20 @@ async def test_swarm_item_failed_below_threshold(create_mock_context_with_metada
     )
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_error:
-        with patch.object(
-            SwarmTaskSignature, "fill_running_tasks", return_value=0
-        ) as mock_fill:
-            # Act
-            await swarm_item_failed(msg, ctx)
+    # Act
+    await swarm_item_failed(msg, ctx)
 
-            # Assert
-            assert not mock_error.called
-            assert mock_fill.called
+    # Assert
+    assert not mock_activate_error.called
+    assert mock_fill_running_tasks_zero.called
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_missing_task_key(mock_context):
-    """
-    EDGE CASE: Missing TASK_ID_PARAM_NAME in context.
-
-    Why: Context corruption
-    Expected: KeyError, but cleanup should still attempt in finally
-    """
+async def test_swarm_item_failed_missing_task_key_edge_case(mock_context):
     # Arrange
     ctx = mock_context
     ctx.additional_metadata = {
         "task_data": {
-            # Missing TASK_ID_PARAM_NAME
             SWARM_TASK_ID_PARAM_NAME: "some_swarm",
             SWARM_ITEM_TASK_ID_PARAM_NAME: "some_item",
         }
@@ -957,13 +694,9 @@ async def test_swarm_item_failed_missing_task_key(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_handle_finish_tasks_sanity_starts_next_task(mock_context):
-    """
-    SANITY TEST: Decrements count, starts next task.
-
-    Scenario: Tasks left in queue, swarm not done
-    Expected: Running count decremented, next task started, no completion
-    """
+async def test_handle_finish_tasks_sanity_starts_next_task(
+    mock_context, mock_fill_running_tasks, mock_activate_success
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -981,39 +714,24 @@ async def test_handle_finish_tasks_sanity_starts_next_task(mock_context):
 
     msg = EmptyModel()
 
-    # Mock fill_running_tasks to return 1 without actually starting tasks
-    with patch.object(
-        SwarmTaskSignature, "fill_running_tasks", return_value=1
-    ) as mock_fill:
-        with patch.object(
-            SwarmTaskSignature, "activate_success", new_callable=AsyncMock
-        ) as mock_success:
-            # Act
-            # Need to reload to get proper lock
-            async with swarm_task.lock(save_at_end=False) as locked_swarm:
-                await handle_finish_tasks(locked_swarm, mock_context, msg)
+    # Act
+    async with swarm_task.lock(save_at_end=False) as locked_swarm:
+        await handle_finish_tasks(locked_swarm, mock_context, msg)
 
-            # Assert
-            reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    # Assert
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-            # Running count should be decremented
-            assert reloaded_swarm.current_running_tasks == 1
+    assert reloaded_swarm.current_running_tasks == 1
 
-            # activate_success should NOT be called (swarm not done)
-            assert not mock_success.called
+    assert not mock_activate_success.called
 
-            # Verify fill_running_tasks was called
-            assert mock_fill.called
+    assert mock_fill_running_tasks.called
 
 
 @pytest.mark.asyncio
-async def test_handle_finish_tasks_sanity_swarm_completes(mock_context):
-    """
-    SANITY TEST: Last task finishes, swarm completes.
-
-    Scenario: No tasks left, all tasks done, swarm closed
-    Expected: activate_success called, swarm finishes
-    """
+async def test_handle_finish_tasks_sanity_swarm_completes(
+    mock_context, mock_activate_success
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1032,16 +750,12 @@ async def test_handle_finish_tasks_sanity_swarm_completes(mock_context):
 
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature, "activate_success", new_callable=AsyncMock
-    ) as mock_success:
-        # Act
-        async with swarm_task.lock(save_at_end=False) as locked_swarm:
-            await handle_finish_tasks(locked_swarm, mock_context, msg)
+    # Act
+    async with swarm_task.lock(save_at_end=False) as locked_swarm:
+        await handle_finish_tasks(locked_swarm, mock_context, msg)
 
-        # Assert
-        # activate_success should be called
-        assert mock_success.called
+    # Assert
+    assert mock_activate_success.called
 
 
 # ============================================================================
@@ -1050,13 +764,7 @@ async def test_handle_finish_tasks_sanity_swarm_completes(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_handle_finish_tasks_no_tasks_left(mock_context):
-    """
-    EDGE CASE: No tasks left to run (fill_running_tasks returns 0).
-
-    Why: All tasks started or queue empty
-    Expected: Logs "no new task", continues to done check
-    """
+async def test_handle_finish_tasks_no_tasks_left_edge_case(mock_context):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1066,7 +774,6 @@ async def test_handle_finish_tasks_no_tasks_left(mock_context):
         is_swarm_closed=False,
     )
     await swarm_task.save()
-    # No tasks in tasks_left_to_run
 
     msg = EmptyModel()
 
@@ -1078,20 +785,15 @@ async def test_handle_finish_tasks_no_tasks_left(mock_context):
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert reloaded_swarm.current_running_tasks == 0
 
-    # Verify "no new task" log
     assert any(
         "no new task" in str(call).lower() for call in mock_context.log.call_args_list
     )
 
 
 @pytest.mark.asyncio
-async def test_handle_finish_tasks_exception_during_decrease(mock_context):
-    """
-    EDGE CASE: Exception during decrease_running_tasks_count.
-
-    Why: Redis connection issues
-    Expected: Exception raised, propagates up
-    """
+async def test_handle_finish_tasks_exception_during_decrease_edge_case(
+    mock_context, mock_redis_int_increase_error
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1102,28 +804,16 @@ async def test_handle_finish_tasks_exception_during_decrease(mock_context):
 
     msg = EmptyModel()
 
-    # Mock increase at RedisInt class level to raise exception
-    from rapyer.types import RedisInt
-
-    with patch.object(
-        RedisInt,
-        "increase",
-        side_effect=RuntimeError("Redis error"),
-    ):
-        # Act & Assert
-        with pytest.raises(RuntimeError):
-            async with swarm_task.lock(save_at_end=False) as locked_swarm:
-                await handle_finish_tasks(locked_swarm, mock_context, msg)
+    # Act & Assert
+    with pytest.raises(RuntimeError):
+        async with swarm_task.lock(save_at_end=False) as locked_swarm:
+            await handle_finish_tasks(locked_swarm, mock_context, msg)
 
 
 @pytest.mark.asyncio
-async def test_handle_finish_tasks_exception_during_activate_success(mock_context):
-    """
-    EDGE CASE: Exception during activate_success.
-
-    Why: Success callbacks fail, Hatchet issues
-    Expected: Exception raised and propagated
-    """
+async def test_handle_finish_tasks_exception_during_activate_success_edge_case(
+    mock_context, mock_activate_success_error
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1142,15 +832,10 @@ async def test_handle_finish_tasks_exception_during_activate_success(mock_contex
 
     msg = EmptyModel()
 
-    with patch.object(
-        SwarmTaskSignature,
-        "activate_success",
-        side_effect=RuntimeError("Callback error"),
-    ):
-        # Act & Assert
-        with pytest.raises(RuntimeError):
-            async with swarm_task.lock(save_at_end=False) as locked_swarm:
-                await handle_finish_tasks(locked_swarm, mock_context, msg)
+    # Act & Assert
+    with pytest.raises(RuntimeError):
+        async with swarm_task.lock(save_at_end=False) as locked_swarm:
+            await handle_finish_tasks(locked_swarm, mock_context, msg)
 
 
 # ============================================================================
@@ -1159,16 +844,9 @@ async def test_handle_finish_tasks_exception_during_activate_success(mock_contex
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_concurrent_completions(
+async def test_swarm_item_done_concurrent_completions_edge_case(
     create_mock_context_with_metadata,
 ):
-    """
-    EDGE CASE: Multiple items complete concurrently.
-
-    Why: Parallel execution
-    Expected: Lock prevents races, all completions processed correctly,
-              running_tasks count stays consistent
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1195,7 +873,6 @@ async def test_swarm_item_done_concurrent_completions(
 
     await swarm_task.tasks.aextend([t.key for t in tasks])
 
-    # Create contexts for each completion
     contexts = [
         create_mock_context_with_metadata(
             task_id=item_tasks[i].key,
@@ -1209,7 +886,7 @@ async def test_swarm_item_done_concurrent_completions(
         SwarmResultsMessage(results={"task": i, "status": "done"}) for i in range(3)
     ]
 
-    # Act - run concurrently
+    # Act
     await asyncio.gather(
         *[swarm_item_done(msgs[i], contexts[i]) for i in range(3)],
         return_exceptions=True,
@@ -1218,28 +895,19 @@ async def test_swarm_item_done_concurrent_completions(
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-    # All 3 should be in finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 3
     for task in tasks:
         assert task.key in reloaded_swarm.finished_tasks
 
-    # All 3 results should be saved
     assert len(reloaded_swarm.tasks_results) == 3
 
-    # Running count should be 0 (decremented 3 times)
     assert reloaded_swarm.current_running_tasks == 0
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_concurrent_failures(
+async def test_swarm_item_failed_concurrent_failures_edge_case(
     create_mock_context_with_metadata,
 ):
-    """
-    EDGE CASE: Multiple items fail concurrently.
-
-    Why: Parallel execution
-    Expected: Lock prevents races, correct failure count, proper threshold check
-    """
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -1277,8 +945,8 @@ async def test_swarm_item_failed_concurrent_failures(
 
     msgs = [EmptyModel() for _ in range(3)]
 
-    # Act - run concurrently
-    results = await asyncio.gather(
+    # Act
+    await asyncio.gather(
         *[swarm_item_failed(msgs[i], contexts[i]) for i in range(3)],
         return_exceptions=True,
     )
@@ -1286,12 +954,10 @@ async def test_swarm_item_failed_concurrent_failures(
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
 
-    # All 3 should be in failed_tasks
     assert len(reloaded_swarm.failed_tasks) == 3
     for task in tasks:
         assert task.key in reloaded_swarm.failed_tasks
 
-    # Swarm should NOT be stopped (threshold is 5)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
 
@@ -1302,23 +968,9 @@ async def test_swarm_item_failed_concurrent_failures(
 
 @pytest.mark.asyncio
 async def test_full_workflow_start_complete_success():
-    """
-    Integration-style test: Start swarm -> complete items -> swarm finishes.
-
-    Tests the full happy path workflow integration.
-    """
-    # This test would require more extensive mocking or actual integration testing
-    # Placeholder for future implementation
     pass
 
 
 @pytest.mark.asyncio
 async def test_full_workflow_start_failure_stop():
-    """
-    Integration-style test: Start swarm -> items fail -> swarm stops.
-
-    Tests the failure threshold workflow integration.
-    """
-    # This test would require more extensive mocking or actual integration testing
-    # Placeholder for future implementation
     pass
