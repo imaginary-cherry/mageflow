@@ -8,6 +8,7 @@ from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     get_runs,
     assert_signature_done,
+    assert_signature_failed,
     map_wf_by_id,
     assert_signature_not_called,
     assert_swarm_task_done,
@@ -20,6 +21,7 @@ from tests.integration.hatchet.conftest import (
 from tests.integration.hatchet.models import ContextMessage, SavedSignaturesResults
 from tests.integration.hatchet.worker import (
     root_with_chain_and_swarm,
+    root_with_failing_chains,
     simple_root_task,
     task1_callback,
     error_callback,
@@ -126,4 +128,53 @@ async def test_root_task_with_chain_and_swarm__callback_called_after_both_done__
     await assert_redis_is_clean(redis_client)
 
 
-# Test - check if to many fails in the total swarm
+@pytest.mark.asyncio(loop_scope="session")
+async def test_root_task_with_failing_chains__error_callback_called__failure(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    message = ContextMessage(base_data=test_ctx)
+
+    success_callback = await mageflow.sign(task1_callback)
+    error_callback_sign = await mageflow.sign(error_callback)
+    root_signature = await mageflow.sign(
+        root_with_failing_chains,
+        success_callbacks=[success_callback],
+        error_callbacks=[error_callback_sign],
+    )
+
+    # Act
+    root_res: HatchetResult = await root_signature.aio_run(
+        message, options=trigger_options
+    )
+    signatures = root_res["root_with_failing_chains"]["hatchet_results"]
+    saved_signs = SavedSignaturesResults.model_validate(
+        signatures, context={REDIS_DUMP_FLAG_NAME: True}
+    )
+    signatures_list = convert_signature_mapping_to_list(saved_signs.signatures)
+
+    # Assert
+    await asyncio.sleep(25)
+    runs = await get_runs(hatchet, ctx_metadata)
+    wf_map = map_wf_by_id(runs, also_not_done=True)
+
+    # Check error callback was called
+    assert_signature_done(runs, error_callback_sign)
+
+    # Check success callback was NOT called
+    assert_signature_not_called(runs, success_callback)
+
+    # Check that error callback started after the fail_task
+    error_callback_run = wf_map[error_callback_sign.key]
+    latest_start_time = max([wf.started_at for wf in runs])
+    assert error_callback_run.started_at >= latest_start_time
+
+    # Check redis is clean
+    await assert_redis_is_clean(redis_client)

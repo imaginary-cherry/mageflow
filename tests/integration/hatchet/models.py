@@ -36,7 +36,7 @@ class SleepTaskMessage(ContextMessage):
 
 
 class SavedSignaturesResults(BaseModel):
-    signatures: dict[str, TaskSignature]
-    batch_items: dict[str, BatchItemTaskSignature]
-    swarms: dict[str, SwarmTaskSignature]
-    chains: dict[str, ChainTaskSignature]
+    signatures: dict[str, TaskSignature] = Field(default_factory=dict)
+    batch_items: dict[str, BatchItemTaskSignature] = Field(default_factory=dict)
+    swarms: dict[str, SwarmTaskSignature] = Field(default_factory=dict)
+    chains: dict[str, ChainTaskSignature] = Field(default_factory=dict)

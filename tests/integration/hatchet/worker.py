@@ -181,6 +181,27 @@ async def root_with_chain_and_swarm(msg: ContextMessage):
     return results.model_dump(mode="json", context={REDIS_DUMP_FLAG_NAME: True})
 
 
+@hatchet.task(name="root_with_failing_chains", input_validator=ContextMessage)
+@hatchet.root_task(stop_after_n_failures=1)
+async def root_with_failing_chains(msg: ContextMessage):
+    success_chain_sig = await hatchet.chain([task1, task2])
+    fail_chain_sig = await hatchet.chain([task1, fail_task, task3])
+
+    chains, signatures = await asyncio.gather(
+        ChainTaskSignature.afind(),
+        TaskSignature.afind(),
+    )
+
+    await success_chain_sig.aio_run_no_wait(msg)
+    await fail_chain_sig.aio_run_no_wait(msg)
+
+    results = SavedSignaturesResults(
+        signatures={sign.key: sign for sign in signatures},
+        chains={chain.key: chain for chain in chains},
+    )
+    return results.model_dump(mode="json", context={REDIS_DUMP_FLAG_NAME: True})
+
+
 workflows = [
     task1,
     task2,
@@ -200,6 +221,7 @@ workflows = [
     cancel_retry,
     simple_root_task,
     root_with_chain_and_swarm,
+    root_with_failing_chains,
 ]
 
 
