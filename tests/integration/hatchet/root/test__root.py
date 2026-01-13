@@ -141,13 +141,15 @@ async def test_root_task_with_failing_chains__error_callback_called__failure(
         hatchet_client_init.hatchet,
     )
     message = ContextMessage(base_data=test_ctx)
+    base_data2 = {"new_data": "23123"}
 
     success_callback = await mageflow.sign(task1_callback)
     error_callback_sign = await mageflow.sign(error_callback)
+    error_callback_sign2 = await mageflow.sign(error_callback, base_data=base_data2)
     root_signature = await mageflow.sign(
         root_with_failing_chains,
         success_callbacks=[success_callback],
-        error_callbacks=[error_callback_sign],
+        error_callbacks=[error_callback_sign, error_callback_sign2],
     )
 
     # Act
@@ -167,6 +169,7 @@ async def test_root_task_with_failing_chains__error_callback_called__failure(
 
     # Check error callback was called
     assert_signature_done(runs, error_callback_sign)
+    assert_signature_done(runs, error_callback_sign2, base_data=base_data2)
 
     # Check success callback was NOT called
     assert_signature_not_called(runs, success_callback)
