@@ -6,6 +6,7 @@ from rapyer import AtomicRedisModel
 class SignatureStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
+    DONE = "done"
     SUSPENDED = "suspended"
     INTERRUPTED = "interrupted"
     CANCELED = "canceled"
