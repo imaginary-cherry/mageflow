@@ -2,7 +2,6 @@ import asyncio
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
-from pydantic import BaseModel
 
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
@@ -11,9 +10,14 @@ from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
+    SWARM_FILL_TASK,
 )
-from mageflow.swarm.messages import SwarmResultsMessage
-from mageflow.swarm.model import SwarmTaskSignature
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
+from mageflow.swarm.model import (
+    SwarmTaskSignature,
+    BatchItemTaskSignature,
+    DONE_AND_UPDATED_SWARM,
+)
 
 
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
@@ -41,20 +45,28 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
 
 
 async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
-    task_data = HatchetInvoker(msg, ctx).task_ctx
+    invoker = HatchetInvoker(msg, ctx)
+    task_data = invoker.task_ctx
     task_id = task_data[TASK_ID_PARAM_NAME]
     try:
-        swarm_task_id = task_data[SWARM_TASK_ID_PARAM_NAME]
-        swarm_item_id = task_data[SWARM_ITEM_TASK_ID_PARAM_NAME]
+        swarm_task_id = msg.swarm_task_id
+        swarm_item_id = msg.swarm_item_id
         ctx.log(f"Swarm item done {swarm_item_id}")
         # Update swarm tasks
-        swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
+        swarm_task, batch_task = await asyncio.gather(
+            SwarmTaskSignature.get_safe(swarm_task_id),
+            BatchItemTaskSignature.get_safe(swarm_item_id),
+        )
         res = msg.results
-        async with swarm_task.lock(save_at_end=False) as swarm_task:
+        async with swarm_task.apipeline() as swarm_task:
             ctx.log(f"Swarm item done {swarm_item_id} - saving results")
-            await swarm_task.finished_tasks.aappend(swarm_item_id)
-            await swarm_task.tasks_results.aappend(res)
-            await handle_finish_tasks(swarm_task, ctx, msg)
+            swarm_task.finished_tasks.append(swarm_item_id)
+            swarm_task.tasks_results.append(res)
+            swarm_task.current_running_tasks -= 1
+            batch_task.item_status = DONE_AND_UPDATED_SWARM
+        # await
+        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
@@ -88,7 +100,7 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
                 ctx.log(f"Swarm item failed - stopped swarm {swarm_task.key}")
                 return
 
-            await handle_finish_tasks(swarm_task, ctx, msg)
+            await fill_swarm_running_tasks(swarm_task, ctx, msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
@@ -96,10 +108,8 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
         await TaskSignature.try_remove(task_key)
 
 
-async def handle_finish_tasks(
-    swarm_task: SwarmTaskSignature, ctx: Context, msg: BaseModel
-):
-    await swarm_task.decrease_running_tasks_count()
+async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
+    swarm_task = await SwarmTaskSignature.aget(msg.swarm_task_id)
     num_task_started = await swarm_task.fill_running_tasks()
     if num_task_started:
         ctx.log(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
@@ -107,7 +117,7 @@ async def handle_finish_tasks(
         ctx.log(f"Swarm item no new task to run in {swarm_task.key}")
 
     # Check if the swarm should end
-    if await swarm_task.is_swarm_done():
+    if await swarm_task.is_swarm_done() and swarm_task.has_published_callback():
         ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
         await swarm_task.activate_success(msg)
         ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")

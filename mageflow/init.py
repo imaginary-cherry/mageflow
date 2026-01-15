@@ -1,17 +1,26 @@
 from datetime import timedelta
 
 from hatchet_sdk import Hatchet
+from hatchet_sdk.runnables.types import ConcurrencyExpression, ConcurrencyLimitStrategy
 
 from mageflow.callbacks import register_task
 from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
 from mageflow.chain.messages import ChainSuccessTaskCommandMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
-from mageflow.swarm.consts import ON_SWARM_ERROR, ON_SWARM_END, ON_SWARM_START
-from mageflow.swarm.messages import SwarmResultsMessage
+from mageflow.swarm.consts import (
+    ON_SWARM_ERROR,
+    ON_SWARM_END,
+    ON_SWARM_START,
+    SWARM_ITEM_TASK_ID_PARAM_NAME,
+    SWARM_FILL_TASK,
+    SWARM_TASK_ID_PARAM_NAME,
+)
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
 from mageflow.swarm.workflows import (
     swarm_item_failed,
     swarm_item_done,
     swarm_start_tasks,
+    fill_swarm_running_tasks,
 )
 
 
@@ -34,8 +43,15 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
     on_chain_error_task = register_chain_error(on_chain_error_task)
 
     # Swarm tasks
-    swarm_start = hatchet.task(
-        name=ON_SWARM_START, retries=3, execution_timeout=timedelta(minutes=5)
+    swarm_start = hatchet.durable_task(
+        name=ON_SWARM_START,
+        retries=3,
+        execution_timeout=timedelta(minutes=5),
+        concurrency=ConcurrencyExpression(
+            expression=f"input.{SWARM_ITEM_TASK_ID_PARAM_NAME}",
+            max_runs=1,
+            limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
+        ),
     )
     swarm_done = hatchet.task(
         name=ON_SWARM_END,
@@ -56,10 +72,23 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
     swarm_done = register_swarm_done(swarm_done)
     swarm_error = register_swarm_error(swarm_error)
 
+    swarm_fill_task = hatchet.durable_task(
+        name=SWARM_FILL_TASK,
+        input_validator=SwarmMessage,
+        retries=4,
+        concurrency=ConcurrencyExpression(
+            expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
+            max_runs=1,
+            limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
+        ),
+    )
+    swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
+
     return [
         on_chain_error_task,
         chain_done_task,
         swarm_start,
         swarm_done,
         swarm_error,
+        swarm_fill_task,
     ]

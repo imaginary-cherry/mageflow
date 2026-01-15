@@ -30,14 +30,16 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
-from pydantic import Field, field_validator, BaseModel
-from rapyer import AtomicRedisModel
-from rapyer.types import RedisList, RedisInt
+
+# TODO - should be enum once rapyer support pipeline with dumpable fields
+IN_QUEUE = "in_queue"
+DONE_AND_UPDATED_SWARM = "done_and_updated_swarm"
 
 
 class BatchItemTaskSignature(TaskSignature):
     swarm_id: TaskIdentifierType
     original_task_id: TaskIdentifierType
+    item_status: str = IN_QUEUE
 
     async def aio_run_no_wait(self, msg: BaseModel, **orig_task_kwargs):
         async with self.lock() as swarm_item:
@@ -196,11 +198,14 @@ class SwarmTaskSignature(TaskSignature):
         }
         on_success_swarm_item = await TaskSignature.from_task_name(
             task_name=ON_SWARM_END,
+            kwargs=swarm_identifiers,
             input_validator=SwarmResultsMessage,
-            task_identifiers=swarm_identifiers,
+            # task_identifiers=swarm_identifiers,
         )
         on_error_swarm_item = await TaskSignature.from_task_name(
-            task_name=ON_SWARM_ERROR, task_identifiers=swarm_identifiers
+            task_name=ON_SWARM_ERROR,
+            # task_identifiers=swarm_identifiers,
+            kwargs=swarm_identifiers,
         )
         task.success_callbacks.append(on_success_swarm_item.key)
         task.error_callbacks.append(on_error_swarm_item.key)
@@ -269,6 +274,9 @@ class SwarmTaskSignature(TaskSignature):
         done_tasks = self.finished_tasks + self.failed_tasks
         finished_all_tasks = set(done_tasks) == set(self.tasks)
         return self.is_swarm_closed and finished_all_tasks
+
+    def has_published_callback(self):
+        return self.task_status.status == SignatureStatus.DONE
 
     async def activate_error(self, msg, **kwargs):
         full_kwargs = self.kwargs | kwargs

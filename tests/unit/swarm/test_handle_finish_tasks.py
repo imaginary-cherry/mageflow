@@ -3,7 +3,7 @@ from hatchet_sdk.runnables.types import EmptyModel
 
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
-from mageflow.swarm.workflows import handle_finish_tasks
+from mageflow.swarm.workflows import fill_swarm_running_tasks
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -30,7 +30,7 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
 
     # Act
     async with swarm_task.lock(save_at_end=False) as locked_swarm:
-        await handle_finish_tasks(locked_swarm, mock_context, msg)
+        await fill_swarm_running_tasks(locked_swarm, mock_context, msg)
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
@@ -66,7 +66,7 @@ async def test_handle_finish_tasks_sanity_swarm_completes(
 
     # Act
     async with swarm_task.lock(save_at_end=False) as locked_swarm:
-        await handle_finish_tasks(locked_swarm, mock_context, msg)
+        await fill_swarm_running_tasks(locked_swarm, mock_context, msg)
 
     # Assert
     mock_activate_success.assert_awaited_once_with(msg)
@@ -88,7 +88,7 @@ async def test_handle_finish_tasks_no_tasks_left_edge_case(mock_context):
 
     # Act
     async with swarm_task.lock(save_at_end=False) as locked_swarm:
-        await handle_finish_tasks(locked_swarm, mock_context, msg)
+        await fill_swarm_running_tasks(locked_swarm, mock_context, msg)
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
@@ -116,7 +116,7 @@ async def test_handle_finish_tasks_exception_during_decrease_edge_case(
     # Act & Assert
     with pytest.raises(RuntimeError):
         async with swarm_task.lock(save_at_end=False) as locked_swarm:
-            await handle_finish_tasks(locked_swarm, mock_context, msg)
+            await fill_swarm_running_tasks(locked_swarm, mock_context, msg)
 
     mock_redis_int_increase_error.assert_called_once_with(-1)
 
@@ -146,6 +146,6 @@ async def test_handle_finish_tasks_exception_during_activate_success_edge_case(
     # Act & Assert
     with pytest.raises(RuntimeError):
         async with swarm_task.lock(save_at_end=False) as locked_swarm:
-            await handle_finish_tasks(locked_swarm, mock_context, msg)
+            await fill_swarm_running_tasks(locked_swarm, mock_context, msg)
 
     mock_activate_success_error.assert_awaited_once_with(msg)
