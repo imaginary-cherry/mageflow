@@ -232,37 +232,40 @@ class SwarmTaskSignature(TaskSignature):
     async def fill_running_tasks(self) -> int:
         async with self.alock() as swarm_task:
             publish_state = await PublishState.aget(swarm_task.publishing_state_id)
-            if not publish_state.task_ids:
+            task_ids_to_run = list(publish_state.task_ids)
+            num_of_task_to_run = len(task_ids_to_run)
+            if not task_ids_to_run:
                 resource_to_run = (
                     swarm_task.config.max_concurrency - swarm_task.current_running_tasks
                 )
                 if resource_to_run <= 0:
                     return 0
-                num_of_task_to_run = min(resource_to_run, len(self.tasks_left_to_run))
-                batch_ids = self.tasks_left_to_run[:num_of_task_to_run]
-                publish_state.task_ids.aappend(batch_ids)
+                num_of_task_to_run = min(
+                    resource_to_run, len(swarm_task.tasks_left_to_run)
+                )
+                task_ids_to_run = list(
+                    swarm_task.tasks_left_to_run[:num_of_task_to_run]
+                )
+                await publish_state.task_ids.aextend(task_ids_to_run)
 
-            if publish_state.task_ids:
+            if task_ids_to_run:
                 # TODO - add afind with keys
                 tasks = await asyncio.gather(
                     *[
                         BatchItemTaskSignature.get_safe(task_id)
-                        for task_id in batch_ids
-                        if task_id  # Check ±not None
+                        for task_id in task_ids_to_run
                     ]
                 )
                 # TODO - use aio_run_many_no_wait
                 publish_coroutine = [
                     next_task.aio_run_no_wait(EmptyModel()) for next_task in tasks
                 ]
-                await asyncio.gather(*publish_coroutine, return_exceptions=True)
+                await asyncio.gather(*publish_coroutine)
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
-                    left_tasks = swarm_task.tasks_left_to_run[num_of_task_to_run:]
-                    swarm_task.tasks_left_to_run = left_tasks
-                    # swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
-                    # TODO - add rapyer function for list remove_range - pipeline support
-            return len(tasks)
+                    swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
+                return len(tasks)
+            return 0
 
     async def add_to_finished_tasks(self, task: TaskIdentifierType):
         await self.finished_tasks.aappend(task)
