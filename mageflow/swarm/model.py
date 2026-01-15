@@ -222,7 +222,7 @@ class SwarmTaskSignature(TaskSignature):
         async with self.lock() as swarm_task:
             task = await resolve_signature_key(task)
             if self.current_running_tasks < self.config.max_concurrency:
-                await self.current_running_tasks.increase()
+                await self.current_running_tasks.aincrease()
                 self.current_running_tasks += 1
                 return True
             else:
