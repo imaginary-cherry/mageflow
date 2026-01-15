@@ -6,9 +6,9 @@ import pytest_asyncio
 from hatchet_sdk import Context
 from rapyer.types import RedisInt
 
+from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm import workflows
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
@@ -111,17 +111,13 @@ def mock_task_aio_run_no_wait():
 
 @pytest.fixture
 def mock_fill_running_tasks():
-    with patch.object(
-        SwarmTaskSignature, "fill_running_tasks", return_value=1
-    ) as mock_fill:
+    with patch.object(HatchetInvoker, "wait_task", new_callable=AsyncMock) as mock_fill:
         yield mock_fill
 
 
 @pytest.fixture
 def mock_fill_running_tasks_zero():
-    with patch.object(
-        SwarmTaskSignature, "fill_running_tasks", return_value=0
-    ) as mock_fill:
+    with patch.object(HatchetInvoker, "wait_task", new_callable=AsyncMock) as mock_fill:
         yield mock_fill
 
 
@@ -152,7 +148,7 @@ def mock_swarm_remove():
 @pytest.fixture
 def mock_handle_finish_tasks_error():
     with patch.object(
-        workflows, "handle_finish_tasks", side_effect=RuntimeError("Finish tasks error")
+        HatchetInvoker, "wait_task", side_effect=RuntimeError("Finish tasks error")
     ) as mock_finish:
         yield mock_finish
 

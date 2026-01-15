@@ -59,7 +59,7 @@ async def test_swarm_item_failed_sanity_continue_after_failure(
 
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
-    mock_fill_running_tasks.assert_called_once_with()
+    mock_fill_running_tasks.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -155,7 +155,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     # Assert
     mock_activate_error.assert_not_awaited()
 
-    mock_fill_running_tasks_zero.assert_called_once_with()
+    mock_fill_running_tasks_zero.assert_called_once()
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
@@ -266,7 +266,7 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 
     # Assert
     mock_activate_error.assert_not_awaited()
-    mock_fill_running_tasks_zero.assert_called_once_with()
+    mock_fill_running_tasks_zero.assert_called_once()
 
 
 @pytest.mark.asyncio
