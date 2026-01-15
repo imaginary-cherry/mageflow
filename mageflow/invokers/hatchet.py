@@ -32,6 +32,7 @@ class HatchetInvoker(BaseInvoker):
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 return signature
+        return None
 
     async def run_success(self, result: Any) -> bool:
         success_publish_tasks = []
@@ -67,6 +68,7 @@ class HatchetInvoker(BaseInvoker):
             signature = await TaskSignature.get_safe(task_id)
             if signature:
                 await signature.remove(with_error, with_success)
+        return None
 
     async def should_run_task(self) -> bool:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
