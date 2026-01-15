@@ -30,7 +30,7 @@ from typing_extensions import deprecated
 
 class TaskSignature(AtomicRedisModel):
     task_name: str
-    kwargs: RedisDict = Field(default_factory=dict)
+    kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
     model_validators: Optional[Any] = None
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
