@@ -2,9 +2,15 @@ import pytest
 
 import mageflow
 from mageflow.chain.consts import ON_CHAIN_ERROR, ON_CHAIN_END
-from mageflow.signature.model import TaskSignature
 from mageflow.chain.model import ChainTaskSignature
+from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.models import ContextMessage
+from tests.unit.assertions import (
+    assert_single_success_callback,
+    assert_single_error_callback_is_chain_error,
+    assert_success_callback_is_chain_end,
+    assert_callback_contains,
+)
 
 
 @pytest.mark.asyncio
@@ -167,23 +173,13 @@ async def test_chain_success_callbacks_contain_next_task_ids_sanity(
     chain_signature = await mageflow.chain([task1.key, task2.key, task3.key])
 
     # Assert
-    # Reload tasks from Redis to check updated callbacks
     reloaded_task1 = await TaskSignature.get_safe(task1.key)
     reloaded_task2 = await TaskSignature.get_safe(task2.key)
     reloaded_task3 = await TaskSignature.get_safe(task3.key)
 
-    # Task 1 should have Task 2 as a success callback
-    assert len(reloaded_task1.success_callbacks) == 1
-    assert reloaded_task1.success_callbacks[0] == task2.key
-
-    # Task 2 should have Task 3 as a success callback
-    assert len(reloaded_task2.success_callbacks) == 1
-    assert reloaded_task2.success_callbacks[0] == task3.key
-
-    # Task 3 should have a chain end task as success callback
-    assert len(reloaded_task3.success_callbacks) == 1
-    chain_end_task = await TaskSignature.get_safe(reloaded_task3.success_callbacks[0])
-    assert chain_end_task.task_name == ON_CHAIN_END
+    await assert_single_success_callback(reloaded_task1, task2.key)
+    await assert_single_success_callback(reloaded_task2, task3.key)
+    await assert_success_callback_is_chain_end(reloaded_task3)
 
 
 @pytest.mark.asyncio
@@ -209,21 +205,12 @@ async def test_chain_error_callbacks_contain_unique_chain_error_task_ids_sanity(
     chain_signature = await mageflow.chain([task1.key, task2.key])
 
     # Assert
-    # Reload tasks from Redis to check error callbacks
     reloaded_task1 = await TaskSignature.get_safe(task1.key)
     reloaded_task2 = await TaskSignature.get_safe(task2.key)
 
-    # Both tasks should have error callbacks pointing to chain error tasks
-    assert len(reloaded_task1.error_callbacks) == 1
-    assert len(reloaded_task2.error_callbacks) == 1
-
-    # Verify error callback tasks exist and are unique
-    error_task1 = await TaskSignature.get_safe(reloaded_task1.error_callbacks[0])
-    error_task2 = await TaskSignature.get_safe(reloaded_task2.error_callbacks[0])
-
-    assert error_task1.task_name == ON_CHAIN_ERROR
-    assert error_task2.task_name == ON_CHAIN_ERROR
-    assert error_task1.key != error_task2.key  # Unique error tasks
+    error_task1 = await assert_single_error_callback_is_chain_error(reloaded_task1)
+    error_task2 = await assert_single_error_callback_is_chain_error(reloaded_task2)
+    assert error_task1.key != error_task2.key
 
 
 @pytest.mark.asyncio
@@ -269,16 +256,14 @@ async def test_chain_with_existing_callbacks_preserves_and_adds_new_ones_edge_ca
     # Assert
     reloaded_task = await TaskSignature.get_safe(task_with_callbacks.key)
 
-    # Should have both existing success callback and new chain success callback
     assert len(reloaded_task.success_callbacks) == 2
-    assert existing_success.key in reloaded_task.success_callbacks
-    assert simple_task.key in reloaded_task.success_callbacks
-
-    # Should have both existing error callback and new chain error callback
     assert len(reloaded_task.error_callbacks) == 2
-    assert existing_error.key in reloaded_task.error_callbacks
+    assert_callback_contains(
+        reloaded_task,
+        [existing_success.key, simple_task.key],
+        [existing_error.key],
+    )
 
-    # Verify new error callback is a chain error task
     new_error_callbacks = [
         cb for cb in reloaded_task.error_callbacks if cb != existing_error.key
     ]

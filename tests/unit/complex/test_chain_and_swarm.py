@@ -189,4 +189,4 @@ async def test_chain_creation_with_custom_name_and_callbacks_sanity(hatchet_mock
     # Assert
     loaded_chain = await assert_task_reloaded_as_type(chain_signature.key, TaskSignature)
     assert loaded_chain.task_name == "chain-task:custom_chain_name"
-    assert_callback_contains(loaded_chain, custom_success.key, custom_error.key)
+    assert_callback_contains(loaded_chain, [custom_success.key], [custom_error.key])
