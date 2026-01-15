@@ -63,13 +63,16 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
         await swarm_signature.fill_running_tasks()
 
     # Assert
+    # Check the tasks were executed
     assert len(called_instances) == 3
     called_task_ids = [instance.key for instance in called_instances]
     assert set(called_task_ids) == set(task_keys[:3])
 
+    # Check the tasks were deleted from the swarm left to run
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.tasks_left_to_run == task_keys[3:]
 
+    # Check the publish state was cleared
     reloaded_publish_state = await PublishState.aget(publish_state.key)
     assert list(reloaded_publish_state.task_ids) == []
 
