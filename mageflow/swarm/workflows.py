@@ -75,7 +75,8 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
 
 
 async def swarm_item_failed(msg: EmptyModel, ctx: Context):
-    task_data = HatchetInvoker(msg, ctx).task_ctx
+    invoker = HatchetInvoker(msg, ctx)
+    task_data = invoker.task_ctx
     task_key = task_data[TASK_ID_PARAM_NAME]
     try:
         swarm_task_key = task_data[SWARM_TASK_ID_PARAM_NAME]
@@ -100,7 +101,8 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
                 ctx.log(f"Swarm item failed - stopped swarm {swarm_task.key}")
                 return
 
-            await fill_swarm_running_tasks(swarm_task, ctx, msg)
+            fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
+            await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
