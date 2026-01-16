@@ -40,7 +40,7 @@ async def swarm_signature(publish_state):
 
 @pytest.mark.asyncio
 async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idempotent(
-    publish_state, swarm_signature, original_tasks
+    publish_state, swarm_signature, original_tasks, mock_batch_task_run
 ):
     # Arrange
     batch_tasks = [
@@ -52,20 +52,15 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
     await publish_state.task_ids.aextend(task_keys[:3])
 
-    called_instances = []
-
-    async def track_calls(self, *args, **kwargs):
-        called_instances.append(self)
-        return None
-
     # Act
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
-        await swarm_signature.fill_running_tasks()
+    await swarm_signature.fill_running_tasks()
 
     # Assert
     # Check the tasks were executed
-    assert len(called_instances) == 3
-    called_task_ids = [instance.key for instance in called_instances]
+    assert len(mock_batch_task_run.called_instances) == 3
+    called_task_ids = [
+        instance.key for instance in mock_batch_task_run.called_instances
+    ]
     assert set(called_task_ids) == set(task_keys[:3])
 
     # Check the tasks were deleted from the swarm left to run
@@ -78,7 +73,9 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
 
 @pytest.mark.asyncio
-async def test_retry_does_not_double_append_to_publish_state_idempotent(publish_state):
+async def test_retry_does_not_double_append_to_publish_state_idempotent(
+    publish_state, mock_batch_task_run
+):
     # Arrange
     original_tasks = [
         TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
@@ -103,25 +100,20 @@ async def test_retry_does_not_double_append_to_publish_state_idempotent(publish_
     prepopulated_keys = task_keys[:3]
     await publish_state.task_ids.aextend(prepopulated_keys)
 
-    called_instances = []
-
-    async def track_calls(self, *args, **kwargs):
-        called_instances.append(self)
-        return None
-
     # Act
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
-        await swarm_signature.fill_running_tasks()
+    await swarm_signature.fill_running_tasks()
 
     # Assert
-    assert len(called_instances) == 3
-    called_task_ids = [instance.key for instance in called_instances]
+    assert len(mock_batch_task_run.called_instances) == 3
+    called_task_ids = [
+        instance.key for instance in mock_batch_task_run.called_instances
+    ]
     assert set(called_task_ids) == set(prepopulated_keys)
 
 
 @pytest.mark.asyncio
 async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
-    publish_state,
+    publish_state, mock_batch_task_run
 ):
     # Arrange
     original_tasks = [
@@ -146,12 +138,8 @@ async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
 
     await publish_state.task_ids.aextend(task_keys[:3])
 
-    async def noop_run(self, *args, **kwargs):
-        return None
-
     # Act
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=noop_run):
-        await swarm_signature.fill_running_tasks()
+    await swarm_signature.fill_running_tasks()
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
@@ -159,7 +147,9 @@ async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
 
 
 @pytest.mark.asyncio
-async def test_two_consecutive_calls_same_result_idempotent(publish_state):
+async def test_two_consecutive_calls_same_result_idempotent(
+    publish_state, mock_batch_task_run
+):
     # Arrange
     original_tasks = [
         TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
@@ -181,21 +171,14 @@ async def test_two_consecutive_calls_same_result_idempotent(publish_state):
     task_keys = [task.key for task in batch_tasks]
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
-    called_instances = []
-
-    async def track_calls(self, *args, **kwargs):
-        called_instances.append(self)
-        return None
-
     # Act
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
-        result1 = await swarm_signature.fill_running_tasks()
-        result2 = await swarm_signature.fill_running_tasks()
+    result1 = await swarm_signature.fill_running_tasks()
+    result2 = await swarm_signature.fill_running_tasks()
 
     # Assert
     assert result1 == 3
     assert result2 == 2
-    assert len(called_instances) == 5
+    assert len(mock_batch_task_run.called_instances) == 5
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.tasks_left_to_run == []
@@ -262,7 +245,12 @@ async def test_concurrent_calls_single_execution_idempotent(publish_state):
     ],
 )
 async def test_various_batch_sizes_idempotent(
-    total_tasks, prepopulated_count, max_concurrency, expected_remaining, publish_state
+    total_tasks,
+    prepopulated_count,
+    max_concurrency,
+    expected_remaining,
+    publish_state,
+    mock_batch_task_run,
 ):
     # Arrange
     original_tasks = [
@@ -288,15 +276,8 @@ async def test_various_batch_sizes_idempotent(
     if prepopulated_count > 0:
         await publish_state.task_ids.aextend(task_keys[:prepopulated_count])
 
-    called_instances = []
-
-    async def track_calls(self, *args, **kwargs):
-        called_instances.append(self)
-        return None
-
     # Act
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
-        await swarm_signature.fill_running_tasks()
+    await swarm_signature.fill_running_tasks()
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)

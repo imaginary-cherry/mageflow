@@ -13,7 +13,7 @@ from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
 )
-from mageflow.swarm.model import SwarmTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
 
@@ -22,6 +22,11 @@ from tests.integration.hatchet.models import ContextMessage
 class SwarmTestData:
     task_signatures: list
     swarm_signature: SwarmTaskSignature
+
+
+@dataclass
+class BatchTaskRunTracker:
+    called_instances: list
 
 
 @pytest_asyncio.fixture
@@ -169,3 +174,15 @@ def mock_activate_success_error():
         side_effect=RuntimeError("Callback error"),
     ) as mock_success:
         yield mock_success
+
+
+@pytest.fixture
+def mock_batch_task_run():
+    called_instances = []
+
+    async def track_calls(self, *args, **kwargs):
+        called_instances.append(self)
+        return None
+
+    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
+        yield BatchTaskRunTracker(called_instances=called_instances)
