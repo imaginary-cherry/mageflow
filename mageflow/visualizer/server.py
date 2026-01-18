@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def create_dev_app(dev_server_url: str = "http://localhost:3000") -> FastAPI:
+def create_dev_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
 
     @app.get("/api/tasks")

@@ -16,16 +16,11 @@ def validate_static_files_exist() -> bool:
 @click.option(
     "--dev", is_flag=True, help="Run in development mode with proxy to React dev server"
 )
-@click.option(
-    "--dev-server",
-    default="http://localhost:3000",
-    help="React dev server URL (used with --dev)",
-)
 @click.option("--reload", is_flag=True, help="Enable auto-reload for uvicorn")
-def task_display(host: str, port: int, dev: bool, dev_server: str, reload: bool):
+def task_display(host: str, port: int, dev: bool, reload: bool):
     """Start the task visualization server"""
     if dev:
-        click.echo(f"Starting development server, proxying to {dev_server}")
+        click.echo(f"Starting development server, proxying to http://localhost:3000")
         uvicorn.run(
             "mageflow.visualizer.server:create_dev_app",
             host=host,
