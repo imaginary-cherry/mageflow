@@ -94,34 +94,4 @@ def create_dev_app(dev_server_url: str = "http://localhost:3000") -> FastAPI:
         tasks_data = await fetch_all_tasks()
         return {"tasks": tasks_data, "error": None}
 
-    @app.api_route(
-        "/{path:path}",
-        methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
-    )
-    async def proxy(request: Request, path: str):
-        url = f"{dev_server_url}/{path}"
-        if request.query_params:
-            url = f"{url}?{request.query_params}"
-
-        async with httpx.AsyncClient() as client:
-            response = await client.request(
-                method=request.method,
-                url=url,
-                headers={
-                    k: v
-                    for k, v in request.headers.items()
-                    if k.lower() not in ("host", "content-length")
-                },
-                content=await request.body(),
-            )
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers={
-                    k: v
-                    for k, v in response.headers.items()
-                    if k.lower() not in ("content-encoding", "transfer-encoding")
-                },
-            )
-
     return app
