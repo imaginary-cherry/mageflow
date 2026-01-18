@@ -20,7 +20,7 @@ describe('Pagination Calculation Tests', () => {
       const totalPages = task.getTotalPages();
 
       // Assert
-      expect(task.children).toHaveLength(childCount);
+      expect(task.tasks).toHaveLength(childCount);
       expect(task.pageSize).toBe(pageSize);
       expect(totalPages).toBe(expectedPages);
     });
@@ -33,10 +33,10 @@ describe('Pagination Calculation Tests', () => {
     ])('container with %i children and pageSize %i returns %i pages_edge_case', (childCount, pageSize, expectedPages) => {
       // Arrange
       const mockTask = {
-        children: Array(childCount).fill('id'),
+        tasks: Array(childCount).fill('id'),
         pageSize,
         getTotalPages() {
-          return Math.max(1, Math.ceil(this.children.length / this.pageSize));
+          return Math.max(1, Math.ceil(this.tasks.length / this.pageSize));
         },
       };
 
@@ -48,7 +48,7 @@ describe('Pagination Calculation Tests', () => {
     });
   });
 
-  describe('getChildrenForPage slicing', () => {
+  describe('getTasksForPage slicing', () => {
     test.each([
       ['mixedSwarm', 0, 8, 0, 7],
       ['mixedSwarm', 1, 8, 8, 15],
@@ -63,12 +63,12 @@ describe('Pagination Calculation Tests', () => {
       const task = tasks.get(taskId);
 
       // Act
-      const pageChildren = task.getChildrenForPage(pageIndex);
+      const pageChildren = task.getTasksForPage(pageIndex);
 
       // Assert
       expect(pageChildren).toHaveLength(expectedCount);
-      expect(pageChildren[0]).toBe(task.children[startIdx]);
-      expect(pageChildren[pageChildren.length - 1]).toBe(task.children[endIdx]);
+      expect(pageChildren[0]).toBe(task.tasks[startIdx]);
+      expect(pageChildren[pageChildren.length - 1]).toBe(task.tasks[endIdx]);
     });
   });
 
@@ -84,7 +84,7 @@ describe('Pagination Calculation Tests', () => {
       const needsPagination = task.needsPagination();
 
       // Assert
-      expect(task.children).toHaveLength(childCount);
+      expect(task.tasks).toHaveLength(childCount);
       expect(task.pageSize).toBe(pageSize);
       expect(needsPagination).toBe(expected);
     });
@@ -96,10 +96,10 @@ describe('Pagination Calculation Tests', () => {
     ])('container with %i children and pageSize %i returns needsPagination=%s_edge_case', (childCount, pageSize, expected) => {
       // Arrange
       const mockTask = {
-        children: Array(childCount).fill('id'),
+        tasks: Array(childCount).fill('id'),
         pageSize,
         needsPagination() {
-          return this.children.length > this.pageSize;
+          return this.tasks.length > this.pageSize;
         },
       };
 
