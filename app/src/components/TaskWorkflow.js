@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -11,30 +11,77 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { TaskNode, ErrorNode } from './CustomNodes';
-import { buildGraphLayout } from '../utils/graphBuilder';
-import { sampleTasks } from '../data/taskData';
+import { ChainNode } from './ChainNode';
+import { SwarmNode } from './SwarmNode';
+import { buildChainGraphLayout } from '../utils/chainGraphBuilder';
+import { usePaginationState } from '../hooks/usePaginationState';
+import { useTaskData } from '../hooks/useTaskData';
+import styles from './TaskWorkflow.module.css';
 
 const nodeTypes = {
   taskNode: TaskNode,
-  errorNode: ErrorNode
+  errorNode: ErrorNode,
+  chainNode: ChainNode,
+  swarmNode: SwarmNode
 };
 
 const TaskWorkflow = () => {
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => buildGraphLayout(sampleTasks),
-    []
+  const { tasks, loading, error, refetch } = useTaskData();
+  const [paginationState, paginationActions] = usePaginationState();
+
+  const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
+    () => buildChainGraphLayout(tasks, paginationState, paginationActions),
+    [tasks, paginationState, paginationActions]
   );
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
+
+  useEffect(() => {
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorContainer}>
+          <p className={styles.errorMessage}>Error: {error}</p>
+          <button className={styles.retryButton} onClick={refetch}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (Object.keys(tasks).length === 0) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.emptyContainer}>
+          <p>No tasks found</p>
+          <button className={styles.retryButton} onClick={refetch}>Refresh</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
+    <div className={styles.container}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -44,30 +91,44 @@ const TaskWorkflow = () => {
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
       >
         <Controls />
-        <MiniMap 
-          nodeColor={() => '#4299e1'}
+        <MiniMap
+          nodeColor={(node) => {
+            if (node.type === 'chainNode') return '#6366f1';
+            if (node.type === 'swarmNode') return '#f59e0b';
+            if (node.type === 'errorNode') return '#ef4444';
+            return '#4299e1';
+          }}
         />
         <Background variant="dots" gap={12} size={1} />
         
         <Panel position="top-left">
-          <div style={{
-            background: 'white',
-            padding: '15px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-          }}>
-            <h2 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Task Workflow Manager</h2>
-            <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
-              <div style={{ marginBottom: '10px', fontWeight: '600' }}>
-                Connection Types:
+          <div className={styles.panel}>
+            <h2 className={styles.panelTitle}>Task Workflow</h2>
+            <div className={styles.panelContent}>
+              <div className={styles.panelSection}>
+                Task Types:
               </div>
-              <div style={{ marginBottom: '5px', color: '#10b981' }}>
-                → Solid Green Line: Success Callback
+              <div className={styles.legendItem}>
+                <span className={`${styles.legendIcon} ${styles.legendIconChain}`}></span>
+                Chain (Sequential)
               </div>
-              <div style={{ color: '#ef4444' }}>
-                ⇢ Dashed Red Line: Error Callback
+              <div className={styles.legendItem}>
+                <span className={`${styles.legendIcon} ${styles.legendIconSwarm}`}></span>
+                Swarm (Parallel)
+              </div>
+              <div className={styles.legendItem}>
+                <span className={`${styles.legendIcon} ${styles.legendIconTask}`}></span>
+                Normal Task
+              </div>
+              <hr className={styles.panelDivider} />
+              <div className={styles.panelDetails}>
+                <strong>Structure:</strong>
+                <br />• Chain: tasks run sequentially
+                <br />• Swarm: tasks run in parallel
+                <br />• Children stay within containers
               </div>
             </div>
           </div>

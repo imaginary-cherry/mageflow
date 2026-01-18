@@ -5,36 +5,3 @@
   width: 100%;
   height: 100vh;
 }
-
-.toggleContainer {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  z-index: var(--z-ui);
-  background: white;
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.toggleButton {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: var(--font-semibold);
-  transition: background 0.2s ease;
-}
-
-.toggleButtonChain {
-  background: var(--primary-indigo);
-}
-
-.toggleButtonRegular {
-  background: var(--primary-blue);
-}
-
-.toggleButton:hover {
-  opacity: 0.9;
-}
