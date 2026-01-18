@@ -90,15 +90,43 @@ jobs:
           docker stop hatchet-lite || true
           docker rm hatchet-lite || true
 
+  react-tests:
+    name: React Tests
+    runs-on: ubuntu-latest
+    needs: [validate-branch-target]
+    if: always() && (needs.validate-branch-target.result == 'success' || needs.validate-branch-target.result == 'skipped')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: app
+
+      - name: Run React tests
+        run: npm test -- --ci --watchAll=false
+        working-directory: app
+
   test-results:
     runs-on: ubuntu-22.04
-    needs: [ tests ]
+    needs: [tests, react-tests]
     if: always()
     steps:
       - name: Check test results
         run: |
           if [[ "${{ needs.tests.result }}" != "success" ]]; then
-            echo "Test job failed"
+            echo "Python test job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.react-tests.result }}" != "success" ]]; then
+            echo "React test job failed"
             exit 1
           fi
           echo "All checks passed successfully!"
