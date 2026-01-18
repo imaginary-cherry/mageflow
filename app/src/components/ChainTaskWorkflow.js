@@ -14,11 +14,9 @@ import { TaskNode, ErrorNode } from './CustomNodes';
 import { ChainNode } from './ChainNode';
 import { SwarmNode } from './SwarmNode';
 import { buildChainGraphLayout } from '../utils/chainGraphBuilder';
-import { mixedLargeExample } from '../data/largePaginatedTaskData';
 import { usePaginationState } from '../hooks/usePaginationState';
+import { useTaskData } from '../hooks/useTaskData';
 import styles from './ChainTaskWorkflow.module.css';
-
-const DEMO_DATA = mixedLargeExample;
 
 const nodeTypes = {
   taskNode: TaskNode,
@@ -28,11 +26,12 @@ const nodeTypes = {
 };
 
 const ChainTaskWorkflow = () => {
+  const { tasks, loading, error, refetch } = useTaskData();
   const [paginationState, paginationActions] = usePaginationState();
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildChainGraphLayout(DEMO_DATA, paginationState, paginationActions),
-    [paginationState, paginationActions]
+    () => buildChainGraphLayout(tasks, paginationState, paginationActions),
+    [tasks, paginationState, paginationActions]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -47,6 +46,39 @@ const ChainTaskWorkflow = () => {
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorContainer}>
+          <p className={styles.errorMessage}>Error: {error}</p>
+          <button className={styles.retryButton} onClick={refetch}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (Object.keys(tasks).length === 0) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.emptyContainer}>
+          <p>No tasks found</p>
+          <button className={styles.retryButton} onClick={refetch}>Refresh</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
