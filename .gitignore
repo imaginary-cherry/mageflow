@@ -221,3 +221,4 @@ future-features
 # Mageflow visualizer static build (generated during CI)
 mageflow/visualizer/static/*
 !mageflow/visualizer/static/.gitkeep
+app/node_modules/
