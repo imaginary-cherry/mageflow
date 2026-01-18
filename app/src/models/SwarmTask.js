@@ -4,12 +4,12 @@ export class SwarmTask extends ContainerTask {
     static CHILD_SPACING = 15;
 
     calculateDimensions(allTasks) {
-        if (!this.hasChildren()) {
+        if (!this.hasTasks()) {
             return {width: 250, height: 200};
         }
 
         const paginationFooterHeight = this.needsPagination() ? ContainerTask.PAGINATION_FOOTER_HEIGHT : 0;
-        const childrenToMeasure = this.getChildrenForPage(0);
+        const childrenToMeasure = this.getTasksForPage(0);
 
         let swarmWidth = 200;
         let swarmHeight = ContainerTask.CHILD_MARGIN_TOP;
@@ -33,12 +33,12 @@ export class SwarmTask extends ContainerTask {
         const childNodes = [];
         const childEdges = [];
 
-        if (!this.hasChildren()) {
+        if (!this.hasTasks()) {
             return {nodes: childNodes, edges: childEdges};
         }
 
         const swarmDimensions = this.calculateDimensions(allTasks);
-        const pageChildren = this.getChildrenForPage(pageIndex);
+        const pageChildren = this.getTasksForPage(pageIndex);
         let currentY = ContainerTask.CHILD_MARGIN_TOP;
 
         pageChildren.forEach(childId => {

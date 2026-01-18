@@ -2,22 +2,22 @@ export const swarmTaskExample = {
   "startTask": {
     id: "startTask",
     name: "Start Process",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: ["mainSwarm"],
     errorCallbacks: []
   },
   "mainSwarm": {
     id: "mainSwarm",
     name: "Parallel Workers",
-    type: "swarm",
-    children: ["worker1", "worker2", "worker3"],
+    type: "SwarmTaskSignature",
+    tasks: ["worker1", "worker2", "worker3"],
     successCallbacks: ["aggregator"],
     errorCallbacks: ["errorHandler"]
   },
   "worker1": {
     id: "worker1",
     name: "Worker A",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -25,7 +25,7 @@ export const swarmTaskExample = {
   "worker2": {
     id: "worker2",
     name: "Worker B",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -33,7 +33,7 @@ export const swarmTaskExample = {
   "worker3": {
     id: "worker3",
     name: "Worker C",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -41,14 +41,14 @@ export const swarmTaskExample = {
   "aggregator": {
     id: "aggregator",
     name: "Aggregate Results",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "errorHandler": {
     id: "errorHandler",
     name: "Handle Swarm Error",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   }
@@ -58,22 +58,22 @@ export const mixedTaskExample = {
   "startTask": {
     id: "startTask",
     name: "Initialize",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: ["mainChain"],
     errorCallbacks: []
   },
   "mainChain": {
     id: "mainChain",
     name: "Sequential Process",
-    type: "chain",
-    children: ["prepare", "parallelSwarm", "finalize"],
+    type: "ChainTaskSignature",
+    tasks: ["prepare", "parallelSwarm", "finalize"],
     successCallbacks: ["complete"],
     errorCallbacks: ["errorHandler"]
   },
   "prepare": {
     id: "prepare",
     name: "Prepare Data",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainChain",
     successCallbacks: [],
     errorCallbacks: []
@@ -81,16 +81,16 @@ export const mixedTaskExample = {
   "parallelSwarm": {
     id: "parallelSwarm",
     name: "Process in Parallel",
-    type: "swarm",
+    type: "SwarmTaskSignature",
     parent: "mainChain",
-    children: ["processA", "processB"],
+    tasks: ["processA", "processB"],
     successCallbacks: [],
     errorCallbacks: []
   },
   "processA": {
     id: "processA",
     name: "Process A",
-    type: "task",
+    type: "TaskSignature",
     parent: "parallelSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -98,7 +98,7 @@ export const mixedTaskExample = {
   "processB": {
     id: "processB",
     name: "Process B",
-    type: "task",
+    type: "TaskSignature",
     parent: "parallelSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -106,7 +106,7 @@ export const mixedTaskExample = {
   "finalize": {
     id: "finalize",
     name: "Finalize",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainChain",
     successCallbacks: [],
     errorCallbacks: []
@@ -114,14 +114,14 @@ export const mixedTaskExample = {
   "complete": {
     id: "complete",
     name: "Complete",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "errorHandler": {
     id: "errorHandler",
     name: "Error Handler",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   }

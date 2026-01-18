@@ -13,12 +13,12 @@ export class ChainTask extends ContainerTask {
    * @returns {{width: number, height: number}}
    */
   calculateDimensions(allTasks) {
-    if (!this.hasChildren()) {
+    if (!this.hasTasks()) {
       return { width: 400, height: 150 };
     }
 
     const paginationFooterHeight = this.needsPagination() ? ContainerTask.PAGINATION_FOOTER_HEIGHT : 0;
-    const childrenToMeasure = this.getChildrenForPage(0);
+    const childrenToMeasure = this.getTasksForPage(0);
 
     let chainWidth = ContainerTask.CHILD_MARGIN_LEFT * 2;
     let chainHeight = 120;
@@ -55,12 +55,12 @@ export class ChainTask extends ContainerTask {
     const childNodes = [];
     const childEdges = [];
 
-    if (!this.hasChildren()) {
+    if (!this.hasTasks()) {
       return { nodes: childNodes, edges: childEdges };
     }
 
     let currentX = ContainerTask.CHILD_MARGIN_LEFT;
-    const pageChildren = this.getChildrenForPage(pageIndex);
+    const pageChildren = this.getTasksForPage(pageIndex);
 
     pageChildren.forEach((childId, index) => {
       const childTask = allTasks.get(childId);

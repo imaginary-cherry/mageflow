@@ -60,7 +60,7 @@ export const buildChainGraphLayout = (tasksData, paginationState = {}, paginatio
       pagination: {
         currentPage,
         totalPages,
-        totalItems: task.children.length,
+        totalItems: task.tasks.length,
         pageSize: task.pageSize,
       },
       onPrevPage: () => paginationCallbacks.goToPrevPage?.(containerId),

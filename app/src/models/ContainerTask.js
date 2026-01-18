@@ -12,30 +12,26 @@ export class ContainerTask extends Task {
 
     constructor(data) {
         super(data);
-        this.children = data.children || [];
+        this.tasks = data.tasks || [];
         this.pageSize = data.pageSize ?? ContainerTask.DEFAULT_PAGE_SIZE;
     }
 
     getTotalPages() {
-        return Math.max(1, Math.ceil(this.children.length / this.pageSize));
+        return Math.max(1, Math.ceil(this.tasks.length / this.pageSize));
     }
 
-    getChildrenForPage(pageIndex) {
+    getTasksForPage(pageIndex) {
         const startIndex = pageIndex * this.pageSize;
-        const endIndex = Math.min(startIndex + this.pageSize, this.children.length);
-        return this.children.slice(startIndex, endIndex);
+        const endIndex = Math.min(startIndex + this.pageSize, this.tasks.length);
+        return this.tasks.slice(startIndex, endIndex);
     }
 
     needsPagination() {
-        return this.children.length > this.pageSize;
+        return this.tasks.length > this.pageSize;
     }
 
-    /**
-     * Check if this container has children
-     * @returns {boolean}
-     */
-    hasChildren() {
-        return this.children.length > 0;
+    hasTasks() {
+        return this.tasks.length > 0;
     }
 
     /**

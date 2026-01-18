@@ -8,7 +8,7 @@ const generateChildTasks = (parentId, count, prefix = 'task') => {
     tasks[id] = {
       id,
       name: `${prefix.charAt(0).toUpperCase() + prefix.slice(1)} ${i}`,
-      type: 'task',
+      type: 'TaskSignature',
       parent: parentId,
       successCallbacks: [],
       errorCallbacks: [],
@@ -25,8 +25,8 @@ const createLargeSwarmExample = () => {
     largeSwarm: {
       id: 'largeSwarm',
       name: 'Large Parallel Swarm',
-      type: 'swarm',
-      children: swarmChildren,
+      type: 'SwarmTaskSignature',
+      tasks: swarmChildren,
       successCallbacks: ['swarmComplete'],
       errorCallbacks: [],
       pageSize: 10,
@@ -35,7 +35,7 @@ const createLargeSwarmExample = () => {
     swarmComplete: {
       id: 'swarmComplete',
       name: 'Swarm Complete',
-      type: 'task',
+      type: 'TaskSignature',
       successCallbacks: [],
       errorCallbacks: [],
     },
@@ -49,8 +49,8 @@ const createLargeChainExample = () => {
     largeChain: {
       id: 'largeChain',
       name: 'Large Sequential Chain',
-      type: 'chain',
-      children: chainChildren,
+      type: 'ChainTaskSignature',
+      tasks: chainChildren,
       successCallbacks: ['chainComplete'],
       errorCallbacks: [],
       pageSize: 5,
@@ -59,7 +59,7 @@ const createLargeChainExample = () => {
     chainComplete: {
       id: 'chainComplete',
       name: 'Chain Complete',
-      type: 'task',
+      type: 'TaskSignature',
       successCallbacks: [],
       errorCallbacks: [],
     },
@@ -74,15 +74,15 @@ const createMixedLargeExample = () => {
     startTask: {
       id: 'startTask',
       name: 'Start Process',
-      type: 'task',
+      type: 'TaskSignature',
       successCallbacks: ['mixedSwarm'],
       errorCallbacks: [],
     },
     mixedSwarm: {
       id: 'mixedSwarm',
       name: 'Parallel Processing',
-      type: 'swarm',
-      children: swarmChildren,
+      type: 'SwarmTaskSignature',
+      tasks: swarmChildren,
       successCallbacks: ['mixedChain'],
       errorCallbacks: [],
       pageSize: 8,
@@ -91,8 +91,8 @@ const createMixedLargeExample = () => {
     mixedChain: {
       id: 'mixedChain',
       name: 'Sequential Pipeline',
-      type: 'chain',
-      children: chainChildren,
+      type: 'ChainTaskSignature',
+      tasks: chainChildren,
       successCallbacks: ['endTask'],
       errorCallbacks: [],
       pageSize: 4,
@@ -101,7 +101,7 @@ const createMixedLargeExample = () => {
     endTask: {
       id: 'endTask',
       name: 'End Process',
-      type: 'task',
+      type: 'TaskSignature',
       successCallbacks: [],
       errorCallbacks: [],
     },

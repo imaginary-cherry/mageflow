@@ -14,15 +14,15 @@ export class TaskFactory {
    */
   static createTask(taskData) {
     switch (taskData.type) {
-      case 'chain':
+      case 'ChainTaskSignature':
         return new ChainTask(taskData);
 
-      case 'swarm':
+      case 'SwarmTaskSignature':
         return new SwarmTask(taskData);
 
-      case 'task':
+      case 'TaskSignature':
         return new SimpleTask(taskData);
-      
+
       default:
         throw new Error(`Unknown task type: ${taskData.type}`);
     }

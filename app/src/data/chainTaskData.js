@@ -2,15 +2,15 @@ export const chainTaskExample = {
   "mainChain": {
     id: "mainChain",
     name: "Main Process Chain",
-    type: "chain",
-    children: ["task1", "parallelSwarm", "task3"],
+    type: "ChainTaskSignature",
+    tasks: ["task1", "parallelSwarm", "task3"],
     successCallbacks: ["chainSwarm"],
     errorCallbacks: []
   },
   "task1": {
     id: "task1",
     name: "First Task",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainChain",
     successCallbacks: [],
     errorCallbacks: []
@@ -18,16 +18,16 @@ export const chainTaskExample = {
   "parallelSwarm": {
     id: "parallelSwarm",
     name: "Parallel Workers",
-    type: "swarm",
+    type: "SwarmTaskSignature",
     parent: "mainChain",
-    children: ["workerA", "workerB", "workerC"],
+    tasks: ["workerA", "workerB", "workerC"],
     successCallbacks: ["parallelSwarm_callback"],
     errorCallbacks: []
   },
   "workerA": {
     id: "workerA",
     name: "Worker A",
-    type: "task",
+    type: "TaskSignature",
     parent: "parallelSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -35,7 +35,7 @@ export const chainTaskExample = {
   "workerB": {
     id: "workerB",
     name: "Worker B",
-    type: "task",
+    type: "TaskSignature",
     parent: "parallelSwarm",
     successCallbacks: ["workerB_notify"],
     errorCallbacks: ["workerB_error"]
@@ -43,7 +43,7 @@ export const chainTaskExample = {
   "workerC": {
     id: "workerC",
     name: "Worker C",
-    type: "task",
+    type: "TaskSignature",
     parent: "parallelSwarm",
     successCallbacks: [],
     errorCallbacks: []
@@ -51,7 +51,7 @@ export const chainTaskExample = {
   "task3": {
     id: "task3",
     name: "Third Task",
-    type: "task",
+    type: "TaskSignature",
     parent: "mainChain",
     successCallbacks: [],
     errorCallbacks: []
@@ -59,24 +59,24 @@ export const chainTaskExample = {
   "chainSwarm": {
     id: "chainSwarm",
     name: "Parallel Chains",
-    type: "swarm",
-    children: ["chainA", "chainB"],
+    type: "SwarmTaskSignature",
+    tasks: ["chainA", "chainB"],
     successCallbacks: ["finalTask"],
     errorCallbacks: ["errorHandler"]
   },
   "chainA": {
     id: "chainA",
     name: "Pipeline A",
-    type: "chain",
+    type: "ChainTaskSignature",
     parent: "chainSwarm",
-    children: ["chainA_step1", "chainA_step2"],
+    tasks: ["chainA_step1", "chainA_step2"],
     successCallbacks: [],
     errorCallbacks: []
   },
   "chainA_step1": {
     id: "chainA_step1",
     name: "A: Step 1",
-    type: "task",
+    type: "TaskSignature",
     parent: "chainA",
     successCallbacks: ["chainA_step1_success_callback"],
     errorCallbacks: []
@@ -84,7 +84,7 @@ export const chainTaskExample = {
   "chainA_step2": {
     id: "chainA_step2",
     name: "A: Step 2",
-    type: "task",
+    type: "TaskSignature",
     parent: "chainA",
     successCallbacks: [],
     errorCallbacks: []
@@ -92,16 +92,16 @@ export const chainTaskExample = {
   "chainB": {
     id: "chainB",
     name: "Pipeline B",
-    type: "chain",
+    type: "ChainTaskSignature",
     parent: "chainSwarm",
-    children: ["chainB_step1", "chainB_step2"],
+    tasks: ["chainB_step1", "chainB_step2"],
     successCallbacks: [],
     errorCallbacks: []
   },
   "chainB_step1": {
     id: "chainB_step1",
     name: "B: Step 1",
-    type: "task",
+    type: "TaskSignature",
     parent: "chainB",
     successCallbacks: [],
     errorCallbacks: []
@@ -109,7 +109,7 @@ export const chainTaskExample = {
   "chainB_step2": {
     id: "chainB_step2",
     name: "B: Step 2",
-    type: "task",
+    type: "TaskSignature",
     parent: "chainB",
     successCallbacks: ["chainB_done_notify"],
     errorCallbacks: []
@@ -117,49 +117,49 @@ export const chainTaskExample = {
   "finalTask": {
     id: "finalTask",
     name: "Complete",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "errorHandler": {
     id: "errorHandler",
     name: "Handle Chain Error",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "chainA_step1_success_callback": {
     id: "chainA_step1_success_callback",
     name: "A: Step 1 Callback",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "workerB_notify": {
     id: "workerB_notify",
     name: "Worker B Notify",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "workerB_error": {
     id: "workerB_error",
     name: "Worker B Error",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "chainB_done_notify": {
     id: "chainB_done_notify",
     name: "Pipeline B Done",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
   "parallelSwarm_callback": {
     id: "parallelSwarm_callback",
     name: "Parallel swarm callback",
-    type: "task",
+    type: "TaskSignature",
     successCallbacks: [],
     errorCallbacks: []
   },
