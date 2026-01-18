@@ -23,6 +23,7 @@ from pydantic import (
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
+from rapyer.fields import SafeLoad
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
@@ -32,7 +33,7 @@ class TaskSignature(AtomicRedisModel):
     task_name: str
     kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
-    model_validators: Optional[Any] = None
+    model_validators: SafeLoad[Optional[Any]] = None
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)

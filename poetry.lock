@@ -2039,19 +2039,22 @@ files = [
 
 [[package]]
 name = "rapyer"
-version = "1.1.3"
+version = "1.1.5"
 description = "Pydantic models with Redis as the backend"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "rapyer-1.1.3-py3-none-any.whl", hash = "sha256:3fe457c973f6de9bf8992141c9d268f7b1fb366e400b8cc2fa184085b77f542a"},
-    {file = "rapyer-1.1.3.tar.gz", hash = "sha256:53a80ba672b2c96551f7143a8782fb693aa4f8e576f0cca806ebf233b1107441"},
+    {file = "rapyer-1.1.5-py3-none-any.whl", hash = "sha256:377b7d14ea3d4d862ec2f3b5f4c33dee6064ad6fbd0303eae82dd2122732a07a"},
+    {file = "rapyer-1.1.5.tar.gz", hash = "sha256:61ed9bc8092111ab1fe8a67298cd206bee5a1f8e958c984f69b163a5f8d160f0"},
 ]
 
 [package.dependencies]
 pydantic = ">=2.11.0,<2.13.0"
 redis = {version = ">=6.0.0,<7.1.0", extras = ["async"]}
+
+[package.extras]
+test = ["fakeredis[json,lua] (>=2.20.0)", "pytest (>=8.4.2)", "pytest-asyncio (>=0.25.0)", "pytest-cov (>=6.0.0)"]
 
 [[package]]
 name = "redis"
@@ -2768,4 +2771,4 @@ hatchet = ["hatchet-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "4c59312a2d7b78c01d100e7839d379d5ee87fcbcf6683d4e1a990e89272f2b95"
+content-hash = "b0353db94e1cc419862f4fdfdb97a22fd3ee82fbfe51b8fc1a750232108d3bcc"
