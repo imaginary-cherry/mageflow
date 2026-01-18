@@ -18,26 +18,34 @@ def get_static_dir() -> Path:
     return Path(__file__).parent / "static"
 
 
-def transform_task(task: TaskSignature) -> dict:
+def transform_task(
+    task: TaskSignature,
+    batch_to_original: dict[str, str] | None = None,
+    original_to_swarm: dict[str, str] | None = None,
+) -> dict:
+    batch_to_original = batch_to_original or {}
+    original_to_swarm = original_to_swarm or {}
+
     base = {
         "id": task.key,
         "name": task.task_name,
         "successCallbacks": list(task.success_callbacks),
         "errorCallbacks": list(task.error_callbacks),
         "status": task.task_status.status.value,
+        "type": task.__class__.__name__,
     }
 
     if isinstance(task, ChainTaskSignature):
-        base["type"] = "chain"
-        base["children"] = list(task.tasks)
+        base["tasks"] = list(task.tasks)
     elif isinstance(task, SwarmTaskSignature):
-        base["type"] = "swarm"
-        base["children"] = list(task.tasks)
-    elif isinstance(task, BatchItemTaskSignature):
-        base["type"] = "task"
-        base["parent"] = task.swarm_id
+        base["tasks"] = [
+            batch_to_original[batch_id]
+            for batch_id in task.tasks
+            if batch_id in batch_to_original
+        ]
     else:
-        base["type"] = "task"
+        if task.key in original_to_swarm:
+            base["parent"] = original_to_swarm[task.key]
 
     return base
 
