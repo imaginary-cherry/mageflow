@@ -1,0 +1,38 @@
+/* Import shared variables */
+@import '../styles/variables.css';
+
+.chainNode {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--primary-indigo);
+  background: rgba(243, 244, 246, 0.5);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.chainHeader {
+  position: absolute;
+  top: 5px;
+  left: var(--spacing-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--primary-indigo);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chainHandle {
+  background: var(--handle-color);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}
+
+.chainHandleSource {
+  background: var(--success-green);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}

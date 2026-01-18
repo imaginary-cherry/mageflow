@@ -1,0 +1,74 @@
+/* Import shared variables */
+@import '../styles/variables.css';
+
+.taskNode {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  border: 2px solid var(--primary-blue);
+  position: relative;
+  background: linear-gradient(135deg, var(--indigo-100) 0%, var(--indigo-200) 100%);
+  color: var(--gray-800);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.taskLabel {
+  margin-bottom: var(--spacing-xs);
+}
+
+.taskType {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+.handle {
+  background: var(--handle-color);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}
+
+.handleSuccess {
+  background: var(--success-green);
+  width: var(--handle-size);
+  height: var(--handle-size);
+  top: 30%;
+}
+
+.handleError {
+  background: var(--error-red);
+  width: var(--handle-size);
+  height: var(--handle-size);
+  top: 70%;
+}
+
+.handleErrorTarget {
+  background: var(--error-red);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}
+
+.errorNode {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--indigo-100) 0%, var(--indigo-200) 100%);
+  color: var(--gray-800);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  border: 2px solid var(--primary-blue);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}

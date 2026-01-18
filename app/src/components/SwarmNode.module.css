@@ -1,0 +1,43 @@
+@import '../styles/variables.css';
+
+.swarmNode {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  width: 100%;
+  height: 100%;
+  border: 2px dashed #f59e0b;
+  background: rgba(254, 243, 199, 0.5);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.swarmHeader {
+  position: absolute;
+  top: 5px;
+  left: var(--spacing-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: #d97706;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.swarmHandle {
+  background: var(--handle-color);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}
+
+.swarmHandleSuccess {
+  background: var(--success-green);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}
+
+.swarmHandleError {
+  background: var(--error-red);
+  width: var(--handle-size);
+  height: var(--handle-size);
+}

@@ -1,0 +1,68 @@
+/* Import shared variables */
+@import '../styles/variables.css';
+
+.container {
+  width: 100vw;
+  height: 100vh;
+}
+
+.panel {
+  background: white;
+  padding: 15px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.panelTitle {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--text-xl);
+}
+
+.panelContent {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.panelSection {
+  margin-bottom: var(--spacing-md);
+  font-weight: var(--font-semibold);
+}
+
+.legendItem {
+  margin-bottom: 5px;
+}
+
+.legendIcon {
+  display: inline-block;
+  width: var(--spacing-md);
+  height: var(--spacing-md);
+  margin-right: 5px;
+}
+
+.legendIconChain {
+  background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+  border: 2px dashed var(--primary-indigo);
+  border-radius: 2px;
+}
+
+.legendIconTask {
+  background: linear-gradient(135deg, var(--indigo-100) 0%, var(--indigo-200) 100%);
+  border-radius: 2px;
+}
+
+.legendIconSwarm {
+  background: rgba(254, 243, 199, 0.5);
+  border: 2px dashed #f59e0b;
+  border-radius: 2px;
+}
+
+.panelDivider {
+  margin: var(--spacing-md) 0;
+  border: none;
+  border-top: 1px solid var(--gray-300);
+}
+
+.panelDetails {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
