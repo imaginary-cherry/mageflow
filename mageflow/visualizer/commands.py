@@ -1,4 +1,5 @@
 import click
+import uvicorn
 
 from mageflow.visualizer.server import get_static_dir
 
@@ -23,8 +24,6 @@ def validate_static_files_exist() -> bool:
 @click.option("--reload", is_flag=True, help="Enable auto-reload for uvicorn")
 def task_display(host: str, port: int, dev: bool, dev_server: str, reload: bool):
     """Start the task visualization server"""
-    import uvicorn
-
     if dev:
         click.echo(f"Starting development server, proxying to {dev_server}")
         uvicorn.run(
@@ -54,3 +53,7 @@ def task_display(host: str, port: int, dev: bool, dev_server: str, reload: bool)
             reload=reload,
             factory=True,
         )
+
+
+if __name__ == "__main__":
+    task_display()
