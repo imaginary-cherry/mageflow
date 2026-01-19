@@ -3,39 +3,21 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import rapyer
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from rapyer.errors.base import KeyNotFound
 from redis.asyncio import Redis
 
 from mageflow.chain.model import ChainTaskSignature
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
+from mageflow.visualizer.models import TaskCallbacksResponse, TaskChildrenResponse
 
 
 def get_static_dir() -> Path:
     return Path(__file__).parent / "static"
-
-
-async def get_task_by_id(task_id: str) -> TaskSignature | None:
-    for task_cls in [
-        ChainTaskSignature,
-        SwarmTaskSignature,
-        BatchItemTaskSignature,
-        TaskSignature,
-    ]:
-        task = await task_cls.get_safe(task_id)
-        if task is not None:
-            return task
-    return None
-
-
-def to_camel_case(snake_str: str) -> str:
-    components = snake_str.split("_")
-    return components[0] + "".join(x.title() for x in components[1:])
-
-
-EXCLUDE_FIELDS = {"model_validators", "modelValidators"}
 
 
 async def fetch_all_tasks() -> dict:
@@ -77,71 +59,39 @@ async def fetch_root_tasks() -> dict:
     return {task.key: task for task in all_tasks if task.key not in non_root_ids}
 
 
-async def fetch_task_children(task_id: str, page: int = 0, size: int = 10) -> dict:
-    task = await get_task_by_id(task_id)
-    if task is None:
-        return {"children": {}, "total": 0, "page": page, "hasMore": False}
+async def fetch_task_children(task_id: str) -> TaskChildrenResponse | None:
+    try:
+        task = await rapyer.aget(task_id)
+    except KeyNotFound:
+        return None
+    if not isinstance(task, ContainerTaskSignature):
+        return None
 
-    if not isinstance(task, (ChainTaskSignature, SwarmTaskSignature)):
-        return {"children": {}, "total": 0, "page": page, "hasMore": False}
+    children = await task.sub_tasks()
+    return TaskChildrenResponse(children=children)
 
-    batch_items = list(await BatchItemTaskSignature.afind())
-    batch_to_original = {bi.key: bi.original_task_id for bi in batch_items}
-    original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
 
-    child_ids = (
-        list(task.tasks)
-        if isinstance(task, ChainTaskSignature)
-        else [batch_to_original.get(bid, bid) for bid in task.tasks]
+async def fetch_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
+    try:
+        task = await rapyer.aget(task_id)
+    except KeyNotFound:
+        return None
+    if not isinstance(task, TaskSignature):
+        return None
+
+    success_tasks = [
+        cb for cb_id in task.success_callbacks
+        if (cb := await TaskSignature.get_safe(cb_id))
+    ]
+    error_tasks = [
+        cb for cb_id in task.error_callbacks
+        if (cb := await TaskSignature.get_safe(cb_id))
+    ]
+
+    return TaskCallbacksResponse(
+        success_callbacks=success_tasks,
+        error_callbacks=error_tasks,
     )
-
-    total = len(child_ids)
-    start_idx = page * size
-    end_idx = min(start_idx + size, total)
-    page_child_ids = child_ids[start_idx:end_idx]
-
-    children = {}
-    for child_id in page_child_ids:
-        child_task = await get_task_by_id(child_id)
-        if child_task:
-            children[child_id] = serialize_task(
-                child_task, batch_to_original, original_to_swarm
-            )
-
-    return {
-        "children": children,
-        "total": total,
-        "page": page,
-        "hasMore": end_idx < total,
-    }
-
-
-async def fetch_task_callbacks(task_id: str) -> dict:
-    task = await get_task_by_id(task_id)
-    if task is None:
-        return {"callbacks": {}, "successCallbacks": [], "errorCallbacks": []}
-
-    batch_items = list(await BatchItemTaskSignature.afind())
-    batch_to_original = {bi.key: bi.original_task_id for bi in batch_items}
-    original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
-
-    success_callback_ids = list(task.success_callbacks)
-    error_callback_ids = list(task.error_callbacks)
-    all_callback_ids = success_callback_ids + error_callback_ids
-
-    callbacks = {}
-    for callback_id in all_callback_ids:
-        callback_task = await get_task_by_id(callback_id)
-        if callback_task:
-            callbacks[callback_id] = serialize_task(
-                callback_task, batch_to_original, original_to_swarm
-            )
-
-    return {
-        "callbacks": callbacks,
-        "successCallbacks": success_callback_ids,
-        "errorCallbacks": error_callback_ids,
-    }
 
 
 @asynccontextmanager
@@ -165,18 +115,12 @@ def register_api_routes(app: FastAPI):
         return {"tasks": tasks_data, "error": None}
 
     @app.get("/api/tasks/{task_id}/children")
-    async def get_task_children(
-        task_id: str,
-        page: int = Query(default=0, ge=0),
-        size: int = Query(default=10, ge=1, le=100),
-    ):
-        result = await fetch_task_children(task_id, page, size)
-        return {**result, "error": None}
+    async def get_task_children(task_id: str) -> TaskChildrenResponse | None:
+        return await fetch_task_children(task_id)
 
     @app.get("/api/tasks/{task_id}/callbacks")
-    async def get_task_callbacks(task_id: str):
-        result = await fetch_task_callbacks(task_id)
-        return {**result, "error": None}
+    async def get_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
+        return await fetch_task_callbacks(task_id)
 
 
 def create_app() -> FastAPI:
