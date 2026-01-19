@@ -223,3 +223,4 @@ mageflow/visualizer/static/*
 !mageflow/visualizer/static/.gitkeep
 app/node_modules/
 /app/.idea/
+/scripts
