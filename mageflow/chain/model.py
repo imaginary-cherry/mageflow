@@ -1,20 +1,31 @@
 import asyncio
+from typing import cast
 
 import rapyer
 from pydantic import field_validator, Field
 
 from mageflow.errors import MissingSignatureError
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature, TaskIdentifierType
 from mageflow.signature.status import SignatureStatus
 
 
-class ChainTaskSignature(TaskSignature):
+class ChainTaskSignature(ContainerTaskSignature):
     tasks: list[TaskIdentifierType] = Field(default_factory=list)
 
     @field_validator("tasks", mode="before")
     @classmethod
     def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_key(item) for item in v]
+
+    @property
+    async def sub_tasks(self) -> list[TaskSignature]:
+        sub_tasks = [
+            cast(TaskSignature, task)
+            for task_id in self.tasks
+            if (task := await rapyer.aget(task_id))
+        ]
+        return sub_tasks
 
     async def workflow(self, **task_additional_params):
         first_task = await TaskSignature.get_safe(self.tasks[0])

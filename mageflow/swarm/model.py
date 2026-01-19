@@ -1,6 +1,7 @@
 import asyncio
-from typing import Self, Any, Optional
+from typing import Self, Any, Optional, cast
 
+import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
@@ -12,6 +13,7 @@ from mageflow.errors import (
     TooManyTasksError,
     SwarmIsCanceledError,
 )
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
     resolve_signature_key,
@@ -97,7 +99,7 @@ class SwarmConfig(AtomicRedisModel):
         return len(swarm.tasks) < self.max_task_allowed
 
 
-class SwarmTaskSignature(TaskSignature):
+class SwarmTaskSignature(ContainerTaskSignature):
     tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     tasks_left_to_run: RedisList[TaskIdentifierType] = Field(default_factory=list)
     finished_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
@@ -116,6 +118,18 @@ class SwarmTaskSignature(TaskSignature):
     @classmethod
     def validate_tasks(cls, v):
         return [cls.validate_task_key(item) for item in v]
+
+    async def sub_tasks(self) -> list[TaskSignature]:
+        batch_items = [
+            bi
+            for task_id in self.tasks
+            if (bi := await BatchItemTaskSignature.get_safe(task_id))
+        ]
+        return [
+            cast(task, TaskSignature)
+            for bi in batch_items
+            if (task := await rapyer.aget(bi.original_task_id))
+        ]
 
     @property
     def has_swarm_started(self):
