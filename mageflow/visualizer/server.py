@@ -1,9 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
-import httpx
 import rapyer
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
@@ -20,7 +18,12 @@ def get_static_dir() -> Path:
 
 
 async def get_task_by_id(task_id: str) -> TaskSignature | None:
-    for task_cls in [ChainTaskSignature, SwarmTaskSignature, BatchItemTaskSignature, TaskSignature]:
+    for task_cls in [
+        ChainTaskSignature,
+        SwarmTaskSignature,
+        BatchItemTaskSignature,
+        TaskSignature,
+    ]:
         task = await task_cls.get_safe(task_id)
         if task is not None:
             return task
@@ -48,7 +51,8 @@ def transform_task(
         "errorCallbacks": list(task.error_callbacks) if callbacks_loaded else [],
         "status": task.task_status.status.value,
         "type": task.__class__.__name__,
-        "hasCallbacksToLoad": (has_success_callbacks or has_error_callbacks) and not callbacks_loaded,
+        "hasCallbacksToLoad": (has_success_callbacks or has_error_callbacks)
+        and not callbacks_loaded,
         "callbacksLoaded": callbacks_loaded,
     }
 
@@ -92,8 +96,12 @@ async def fetch_root_tasks() -> dict:
 
     chain_children = {child_id for chain in chains for child_id in chain.tasks}
     batch_item_ids = {batch_item.key for batch_item in batch_items}
-    batch_to_original = {batch_item.key: batch_item.original_task_id for batch_item in batch_items}
-    original_to_swarm = {batch_item.original_task_id: batch_item.swarm_id for batch_item in batch_items}
+    batch_to_original = {
+        batch_item.key: batch_item.original_task_id for batch_item in batch_items
+    }
+    original_to_swarm = {
+        batch_item.original_task_id: batch_item.swarm_id for batch_item in batch_items
+    }
 
     all_tasks = base_tasks + chains + swarms + batch_items
     all_callbacks = {
@@ -102,7 +110,9 @@ async def fetch_root_tasks() -> dict:
         for cb_id in list(task.success_callbacks) + list(task.error_callbacks)
     }
 
-    non_root_ids = chain_children | batch_item_ids | all_callbacks | set(original_to_swarm.keys())
+    non_root_ids = (
+        chain_children | batch_item_ids | all_callbacks | set(original_to_swarm.keys())
+    )
 
     result = {}
     for task in all_tasks:
@@ -121,9 +131,7 @@ async def fetch_root_tasks() -> dict:
     return result
 
 
-async def fetch_task_children(
-    task_id: str, page: int = 0, size: int = 10
-) -> dict:
+async def fetch_task_children(task_id: str, page: int = 0, size: int = 10) -> dict:
     task = await get_task_by_id(task_id)
     if task is None:
         return {"children": {}, "total": 0, "page": page, "hasMore": False}
