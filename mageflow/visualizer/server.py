@@ -30,52 +30,12 @@ async def get_task_by_id(task_id: str) -> TaskSignature | None:
     return None
 
 
-def transform_task(
-    task: TaskSignature,
-    batch_to_original: dict[str, str] | None = None,
-    original_to_swarm: dict[str, str] | None = None,
-    include_children: bool = True,
-    children_loaded: bool = True,
-    callbacks_loaded: bool = True,
-) -> dict:
-    batch_to_original = batch_to_original or {}
-    original_to_swarm = original_to_swarm or {}
+def to_camel_case(snake_str: str) -> str:
+    components = snake_str.split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
 
-    has_success_callbacks = len(task.success_callbacks) > 0
-    has_error_callbacks = len(task.error_callbacks) > 0
 
-    base = {
-        "id": task.key,
-        "name": task.task_name,
-        "successCallbacks": list(task.success_callbacks) if callbacks_loaded else [],
-        "errorCallbacks": list(task.error_callbacks) if callbacks_loaded else [],
-        "status": task.task_status.status.value,
-        "type": task.__class__.__name__,
-        "hasCallbacksToLoad": (has_success_callbacks or has_error_callbacks)
-        and not callbacks_loaded,
-        "callbacksLoaded": callbacks_loaded,
-    }
-
-    if isinstance(task, ChainTaskSignature):
-        base["tasks"] = list(task.tasks) if include_children else []
-        base["totalChildren"] = len(task.tasks)
-        base["childrenLoaded"] = children_loaded
-    elif isinstance(task, SwarmTaskSignature):
-        if include_children:
-            base["tasks"] = [
-                batch_to_original[batch_id]
-                for batch_id in task.tasks
-                if batch_id in batch_to_original
-            ]
-        else:
-            base["tasks"] = []
-        base["totalChildren"] = len(task.tasks)
-        base["childrenLoaded"] = children_loaded
-    else:
-        if task.key in original_to_swarm:
-            base["parent"] = original_to_swarm[task.key]
-
-    return base
+EXCLUDE_FIELDS = {"model_validators", "modelValidators"}
 
 
 async def fetch_all_tasks() -> dict:
@@ -85,7 +45,7 @@ async def fetch_all_tasks() -> dict:
     batch_items = await BatchItemTaskSignature.afind()
 
     all_tasks = list(base_tasks) + list(chains) + list(swarms) + list(batch_items)
-    return {task.key: transform_task(task) for task in all_tasks}
+    return {task.key: task for task in all_tasks}
 
 
 async def fetch_root_tasks() -> dict:
@@ -96,12 +56,8 @@ async def fetch_root_tasks() -> dict:
 
     chain_children = {child_id for chain in chains for child_id in chain.tasks}
     batch_item_ids = {batch_item.key for batch_item in batch_items}
-    batch_to_original = {
-        batch_item.key: batch_item.original_task_id for batch_item in batch_items
-    }
-    original_to_swarm = {
-        batch_item.original_task_id: batch_item.swarm_id for batch_item in batch_items
-    }
+    original_linked_tasks = {bi.original_task_id for bi in batch_items}
+    original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
 
     all_tasks = base_tasks + chains + swarms + batch_items
     all_callbacks = {
@@ -111,24 +67,14 @@ async def fetch_root_tasks() -> dict:
     }
 
     non_root_ids = (
-        chain_children | batch_item_ids | all_callbacks | set(original_to_swarm.keys())
+        chain_children
+        | batch_item_ids
+        | all_callbacks
+        | set(original_to_swarm.keys())
+        | original_linked_tasks
     )
 
-    result = {}
-    for task in all_tasks:
-        if task.key in non_root_ids:
-            continue
-        transformed = transform_task(
-            task,
-            batch_to_original=batch_to_original,
-            original_to_swarm=original_to_swarm,
-            include_children=False,
-            children_loaded=False,
-            callbacks_loaded=False,
-        )
-        result[task.key] = transformed
-
-    return result
+    return {task.key: task for task in all_tasks if task.key not in non_root_ids}
 
 
 async def fetch_task_children(task_id: str, page: int = 0, size: int = 10) -> dict:
@@ -143,10 +89,11 @@ async def fetch_task_children(task_id: str, page: int = 0, size: int = 10) -> di
     batch_to_original = {bi.key: bi.original_task_id for bi in batch_items}
     original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
 
-    if isinstance(task, ChainTaskSignature):
-        child_ids = list(task.tasks)
-    else:
-        child_ids = [batch_to_original.get(bid, bid) for bid in task.tasks]
+    child_ids = (
+        list(task.tasks)
+        if isinstance(task, ChainTaskSignature)
+        else [batch_to_original.get(bid, bid) for bid in task.tasks]
+    )
 
     total = len(child_ids)
     start_idx = page * size
@@ -157,15 +104,9 @@ async def fetch_task_children(task_id: str, page: int = 0, size: int = 10) -> di
     for child_id in page_child_ids:
         child_task = await get_task_by_id(child_id)
         if child_task:
-            transformed = transform_task(
-                child_task,
-                batch_to_original=batch_to_original,
-                original_to_swarm=original_to_swarm,
-                include_children=False,
-                children_loaded=False,
-                callbacks_loaded=False,
+            children[child_id] = serialize_task(
+                child_task, batch_to_original, original_to_swarm
             )
-            children[child_id] = transformed
 
     return {
         "children": children,
@@ -192,15 +133,9 @@ async def fetch_task_callbacks(task_id: str) -> dict:
     for callback_id in all_callback_ids:
         callback_task = await get_task_by_id(callback_id)
         if callback_task:
-            transformed = transform_task(
-                callback_task,
-                batch_to_original=batch_to_original,
-                original_to_swarm=original_to_swarm,
-                include_children=False,
-                children_loaded=False,
-                callbacks_loaded=False,
+            callbacks[callback_id] = serialize_task(
+                callback_task, batch_to_original, original_to_swarm
             )
-            callbacks[callback_id] = transformed
 
     return {
         "callbacks": callbacks,
