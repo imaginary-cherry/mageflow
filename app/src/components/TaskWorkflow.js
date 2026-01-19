@@ -15,7 +15,7 @@ import { ChainNode } from './ChainNode';
 import { SwarmNode } from './SwarmNode';
 import { buildChainGraphLayout } from '../utils/chainGraphBuilder';
 import { usePaginationState } from '../hooks/usePaginationState';
-import { useTaskData } from '../hooks/useTaskData';
+import { useTaskDataLazy } from '../hooks/useTaskDataLazy';
 import styles from './TaskWorkflow.module.css';
 
 const nodeTypes = {
@@ -26,12 +26,33 @@ const nodeTypes = {
 };
 
 const TaskWorkflow = () => {
-  const { tasks, loading, error, refetch } = useTaskData();
+  const {
+    tasks,
+    taskDepths,
+    loading,
+    error,
+    loadingStates,
+    fetchRootTasks,
+    loadMoreChildren,
+    fetchCallbacks,
+    loadMore,
+    refetch,
+  } = useTaskDataLazy();
   const [paginationState, paginationActions] = usePaginationState();
 
+  useEffect(() => {
+    fetchRootTasks();
+  }, [fetchRootTasks]);
+
+  const lazyLoadCallbacks = useMemo(() => ({
+    onLoadChildren: loadMoreChildren,
+    onLoadCallbacks: fetchCallbacks,
+    onLoadMore: loadMore,
+  }), [loadMoreChildren, fetchCallbacks, loadMore]);
+
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildChainGraphLayout(tasks, paginationState, paginationActions),
-    [tasks, paginationState, paginationActions]
+    () => buildChainGraphLayout(tasks, paginationState, paginationActions, loadingStates, lazyLoadCallbacks, taskDepths),
+    [tasks, paginationState, paginationActions, loadingStates, lazyLoadCallbacks, taskDepths]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);

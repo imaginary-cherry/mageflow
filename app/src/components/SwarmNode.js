@@ -13,9 +13,15 @@ export const SwarmNode = ({ data }) => {
     onNextPage,
     onFirstPage,
     onLastPage,
+    isChildrenLoading,
+    totalChildren,
+    isCallbacksLoading,
+    showLoadMoreButton,
+    onLoadMore,
   } = data;
 
   const showPagination = pagination && pagination.totalPages > 1;
+  const isLoading = isChildrenLoading || isCallbacksLoading;
 
   return (
     <div className={styles.swarmNode}>
@@ -25,7 +31,14 @@ export const SwarmNode = ({ data }) => {
         className={styles.swarmHandle}
       />
 
-      <div className={styles.swarmHeader}>Swarm: {label}</div>
+      <div className={styles.swarmHeader}>
+        Swarm: {label}
+        {totalChildren > 0 && <span className={styles.childCount}> ({totalChildren})</span>}
+      </div>
+
+      {isLoading && (
+        <div className={styles.loadingSpinner}>Loading...</div>
+      )}
 
       {showPagination && (
         <PaginationControls
@@ -38,6 +51,12 @@ export const SwarmNode = ({ data }) => {
           onFirstPage={onFirstPage}
           onLastPage={onLastPage}
         />
+      )}
+
+      {showLoadMoreButton && !isLoading && (
+        <button className={styles.loadButton} onClick={onLoadMore}>
+          Load More
+        </button>
       )}
 
       {hasSuccessCallbacks && (

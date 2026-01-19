@@ -11,9 +11,15 @@ export const ChainNode = ({ data }) => {
     onNextPage,
     onFirstPage,
     onLastPage,
+    isChildrenLoading,
+    totalChildren,
+    isCallbacksLoading,
+    showLoadMoreButton,
+    onLoadMore,
   } = data;
 
   const showPagination = pagination && pagination.totalPages > 1;
+  const isLoading = isChildrenLoading || isCallbacksLoading;
 
   return (
     <div className={styles.chainNode}>
@@ -23,7 +29,14 @@ export const ChainNode = ({ data }) => {
         className={styles.chainHandle}
       />
 
-      <div className={styles.chainHeader}>Chain: {label}</div>
+      <div className={styles.chainHeader}>
+        Chain: {label}
+        {totalChildren > 0 && <span className={styles.childCount}> ({totalChildren})</span>}
+      </div>
+
+      {isLoading && (
+        <div className={styles.loadingSpinner}>Loading...</div>
+      )}
 
       {showPagination && (
         <PaginationControls
@@ -36,6 +49,12 @@ export const ChainNode = ({ data }) => {
           onFirstPage={onFirstPage}
           onLastPage={onLastPage}
         />
+      )}
+
+      {showLoadMoreButton && !isLoading && (
+        <button className={styles.loadButton} onClick={onLoadMore}>
+          Load More
+        </button>
       )}
 
       <Handle

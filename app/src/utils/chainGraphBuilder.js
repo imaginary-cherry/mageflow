@@ -2,8 +2,12 @@ import dagre from '@dagrejs/dagre';
 import {TaskFactory} from '../models/TaskFactory.js';
 import {ContainerTask} from '../models/ContainerTask.js';
 
-export const buildChainGraphLayout = (tasksData, paginationState = {}, paginationCallbacks = {}) => {
+const MAX_DEPTH = 10;
+
+export const buildChainGraphLayout = (tasksData, paginationState = {}, paginationCallbacks = {}, loadingStates = {}, lazyLoadCallbacks = {}, taskDepths = {}) => {
   const tasks = TaskFactory.createTasksFromData(tasksData);
+
+  const getLoadingState = (taskId) => loadingStates[taskId] || { children: 'idle', callbacks: 'idle' };
 
   const dagreGraph = new dagre.graphlib.Graph();
 
@@ -47,26 +51,59 @@ export const buildChainGraphLayout = (tasksData, paginationState = {}, paginatio
   dagre.layout(dagreGraph);
 
   const addPaginationToNode = (node, task) => {
-    if (!(task instanceof ContainerTask) || !task.needsPagination()) {
-      return node;
-    }
-
     const containerId = task.id;
-    const currentPage = getPageIndex(containerId);
-    const totalPages = task.getTotalPages();
+    const loadingState = getLoadingState(containerId);
+    const depth = taskDepths[task.id] || 0;
+    const isAtDepthLimit = depth >= MAX_DEPTH;
+    const needsChildrenLoad = task instanceof ContainerTask && task.needsChildrenLoad();
+    const hasMoreChildrenToLoad = task instanceof ContainerTask && task.hasMoreChildrenToLoad();
+    const needsCallbacksLoad = task.needsCallbacksLoad();
+    const hasMoreToLoad = needsChildrenLoad || hasMoreChildrenToLoad || needsCallbacksLoad;
 
     node.data = {
       ...node.data,
-      pagination: {
-        currentPage,
-        totalPages,
-        totalItems: task.tasks.length,
-        pageSize: task.pageSize,
-      },
-      onPrevPage: () => paginationCallbacks.goToPrevPage?.(containerId),
-      onNextPage: () => paginationCallbacks.goToNextPage?.(containerId, totalPages),
-      onFirstPage: () => paginationCallbacks.goToFirstPage?.(containerId),
-      onLastPage: () => paginationCallbacks.goToLastPage?.(containerId, totalPages),
+      depth,
+      maxDepth: MAX_DEPTH,
+      isAtDepthLimit,
+      showLoadMoreButton: isAtDepthLimit && hasMoreToLoad,
+      onLoadMore: () => lazyLoadCallbacks.onLoadMore?.(task.id),
+    };
+
+    if (task instanceof ContainerTask) {
+      const currentPage = getPageIndex(containerId);
+      const totalPages = task.getTotalPages();
+
+      node.data = {
+        ...node.data,
+        needsChildrenLoad: needsChildrenLoad,
+        hasMoreChildrenToLoad: hasMoreChildrenToLoad,
+        isChildrenLoading: loadingState.children === 'loading',
+        totalChildren: task.totalChildren,
+        onLoadChildren: () => lazyLoadCallbacks.onLoadChildren?.(containerId),
+      };
+
+      if (task.needsPagination()) {
+        node.data = {
+          ...node.data,
+          pagination: {
+            currentPage,
+            totalPages,
+            totalItems: task.tasks.length,
+            pageSize: task.pageSize,
+          },
+          onPrevPage: () => paginationCallbacks.goToPrevPage?.(containerId),
+          onNextPage: () => paginationCallbacks.goToNextPage?.(containerId, totalPages),
+          onFirstPage: () => paginationCallbacks.goToFirstPage?.(containerId),
+          onLastPage: () => paginationCallbacks.goToLastPage?.(containerId, totalPages),
+        };
+      }
+    }
+
+    node.data = {
+      ...node.data,
+      needsCallbacksLoad: needsCallbacksLoad,
+      isCallbacksLoading: loadingState.callbacks === 'loading',
+      onLoadCallbacks: () => lazyLoadCallbacks.onLoadCallbacks?.(task.id),
     };
 
     return node;
@@ -90,7 +127,7 @@ export const buildChainGraphLayout = (tasksData, paginationState = {}, paginatio
 
       containerLayout.nodes.forEach(childNode => {
         const childTask = tasks.get(childNode.id);
-        if (childTask instanceof ContainerTask) {
+        if (childTask) {
           addPaginationToNode(childNode, childTask);
         }
         nodes.push(childNode);
@@ -102,6 +139,7 @@ export const buildChainGraphLayout = (tasksData, paginationState = {}, paginatio
 
     } else if (!task.parent) {
       const taskNode = task.createReactFlowNode(nodePosition, tasks);
+      addPaginationToNode(taskNode, task);
       nodes.push(taskNode);
     }
   });

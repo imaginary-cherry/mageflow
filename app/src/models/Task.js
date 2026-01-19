@@ -10,10 +10,18 @@ export class Task {
     this.successCallbacks = data.successCallbacks || [];
     this.errorCallbacks = data.errorCallbacks || [];
     this.parent = data.parent || null;
-    
+
     // Allow explicit width/height override
     this.width = data.width;
     this.height = data.height;
+
+    // Lazy loading properties
+    this.hasCallbacksToLoad = data.hasCallbacksToLoad || false;
+    this.callbacksLoaded = data.callbacksLoaded !== false;
+  }
+
+  needsCallbacksLoad() {
+    return this.hasCallbacksToLoad && !this.callbacksLoaded;
   }
 
   /**
