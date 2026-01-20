@@ -1,12 +1,21 @@
 import { SimpleTask } from './SimpleTask.js';
 import { ChainTask } from './ChainTask.js';
 import { SwarmTask } from './SwarmTask.js';
+import { extractTypeFromKey } from './TaskModels.js';
 
-/**
- * Factory class for creating task instances from data objects
- * Handles the creation of appropriate task class instances based on type
- */
 export class TaskFactory {
+  static transformApiTask(apiTask) {
+    const type = extractTypeFromKey(apiTask.key);
+    return {
+      id: apiTask.key,
+      name: apiTask.task_name,
+      type: type,
+      successCallbacks: apiTask.success_callbacks || [],
+      errorCallbacks: apiTask.error_callbacks || [],
+      tasks: apiTask.tasks || [],
+    };
+  }
+
   /**
    * Create a task instance from data object
    * @param {object} taskData - Task data object with id, name, type, etc.

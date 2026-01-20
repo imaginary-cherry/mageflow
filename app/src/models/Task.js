@@ -11,17 +11,12 @@ export class Task {
     this.errorCallbacks = data.errorCallbacks || [];
     this.parent = data.parent || null;
 
-    // Allow explicit width/height override
     this.width = data.width;
     this.height = data.height;
-
-    // Lazy loading properties
-    this.hasCallbacksToLoad = data.hasCallbacksToLoad || false;
-    this.callbacksLoaded = data.callbacksLoaded !== false;
   }
 
-  needsCallbacksLoad() {
-    return this.hasCallbacksToLoad && !this.callbacksLoaded;
+  hasCallbacksToLoad() {
+    return this.successCallbacks.length > 0 || this.errorCallbacks.length > 0;
   }
 
   /**

@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
+import { isContainerTask, hasCallbacks } from '../models/TaskModels.js';
+import { TaskFactory } from '../models/TaskFactory.js';
 
 const LOADING_STATES = {
   IDLE: 'idle',
@@ -54,55 +56,54 @@ export function useTaskDataLazy() {
     }));
   }, []);
 
-  const fetchChildrenInternal = useCallback(async (taskId, page = 0, size = 10, batch = false) => {
+  const fetchChildrenInternal = useCallback(async (taskId, batch = false) => {
     if (!batch) {
       updateLoadingState(taskId, 'children', LOADING_STATES.LOADING);
     }
     try {
-      const response = await fetch(`/api/tasks/${taskId}/children?page=${page}&size=${size}`);
+      const response = await fetch(`/api/tasks/${taskId}/children`);
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.error);
 
-      const newChildIds = Object.keys(data.children);
+      if (data === null || data.children === null) {
+        if (!batch) {
+          updateLoadingState(taskId, 'children', LOADING_STATES.LOADED);
+        } else {
+          pendingUpdatesRef.current.loadingStates[taskId] = {
+            ...(pendingUpdatesRef.current.loadingStates[taskId] || loadingStates[taskId] || {}),
+            children: LOADING_STATES.LOADED,
+          };
+          scheduleFlush();
+        }
+        return { newChildIds: [] };
+      }
+
+      const transformedChildren = {};
+      data.children.forEach(child => {
+        const transformed = TaskFactory.transformApiTask(child);
+        transformedChildren[transformed.id] = transformed;
+      });
+      const newChildIds = Object.keys(transformedChildren);
 
       if (batch) {
-        Object.entries(data.children).forEach(([childId, childData]) => {
+        Object.entries(transformedChildren).forEach(([childId, childData]) => {
           pendingUpdatesRef.current.tasks[childId] = childData;
           if (!pendingUpdatesRef.current.loadingStates[childId]) {
             pendingUpdatesRef.current.loadingStates[childId] = { children: LOADING_STATES.IDLE, callbacks: LOADING_STATES.IDLE };
           }
         });
 
-        const existingTasks = pendingUpdatesRef.current.tasks[taskId]?.tasks || tasks[taskId]?.tasks || [];
-        pendingUpdatesRef.current.tasks[taskId] = {
-          ...(tasks[taskId] || {}),
-          ...(pendingUpdatesRef.current.tasks[taskId] || {}),
-          tasks: [...new Set([...existingTasks, ...newChildIds])],
-          childrenLoaded: !data.hasMore,
-          childrenPage: page,
-          childrenHasMore: data.hasMore,
-        };
         pendingUpdatesRef.current.loadingStates[taskId] = {
           ...(pendingUpdatesRef.current.loadingStates[taskId] || loadingStates[taskId] || {}),
-          children: data.hasMore ? LOADING_STATES.IDLE : LOADING_STATES.LOADED,
+          children: LOADING_STATES.LOADED,
         };
         scheduleFlush();
       } else {
         setTasks(prev => {
           const updated = { ...prev };
-          Object.entries(data.children).forEach(([childId, childData]) => {
+          Object.entries(transformedChildren).forEach(([childId, childData]) => {
             updated[childId] = childData;
           });
-          if (updated[taskId]) {
-            const existingTasks = updated[taskId].tasks || [];
-            updated[taskId] = {
-              ...updated[taskId],
-              tasks: [...new Set([...existingTasks, ...newChildIds])],
-              childrenLoaded: !data.hasMore,
-              childrenPage: page,
-              childrenHasMore: data.hasMore,
-            };
-          }
           return updated;
         });
 
@@ -116,17 +117,17 @@ export function useTaskDataLazy() {
           return updated;
         });
 
-        updateLoadingState(taskId, 'children', data.hasMore ? LOADING_STATES.IDLE : LOADING_STATES.LOADED);
+        updateLoadingState(taskId, 'children', LOADING_STATES.LOADED);
       }
 
-      return { ...data, newChildIds };
+      return { newChildIds };
     } catch (err) {
       if (!batch) {
         updateLoadingState(taskId, 'children', LOADING_STATES.ERROR);
       }
       throw err;
     }
-  }, [updateLoadingState, scheduleFlush, tasks, loadingStates]);
+  }, [updateLoadingState, scheduleFlush, loadingStates]);
 
   const fetchCallbacksInternal = useCallback(async (taskId, batch = false) => {
     if (!batch) {
@@ -135,26 +136,39 @@ export function useTaskDataLazy() {
     try {
       const response = await fetch(`/api/tasks/${taskId}/callbacks`);
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.error);
 
-      const allCallbackIds = [...(data.successCallbacks || []), ...(data.errorCallbacks || [])];
+      if (data === null || (data.success_callbacks === null && data.error_callbacks === null)) {
+        if (!batch) {
+          updateLoadingState(taskId, 'callbacks', LOADING_STATES.LOADED);
+        } else {
+          pendingUpdatesRef.current.loadingStates[taskId] = {
+            ...(pendingUpdatesRef.current.loadingStates[taskId] || loadingStates[taskId] || {}),
+            callbacks: LOADING_STATES.LOADED,
+          };
+          scheduleFlush();
+        }
+        return { allCallbackIds: [] };
+      }
+
+      const successCallbacks = data.success_callbacks || [];
+      const errorCallbacks = data.error_callbacks || [];
+      const allCallbacks = [...successCallbacks, ...errorCallbacks];
+      const transformedCallbacks = {};
+      allCallbacks.forEach(cb => {
+        const transformed = TaskFactory.transformApiTask(cb);
+        transformedCallbacks[transformed.id] = transformed;
+      });
+      const allCallbackIds = Object.keys(transformedCallbacks);
 
       if (batch) {
-        Object.entries(data.callbacks).forEach(([callbackId, callbackData]) => {
+        Object.entries(transformedCallbacks).forEach(([callbackId, callbackData]) => {
           pendingUpdatesRef.current.tasks[callbackId] = callbackData;
           if (!pendingUpdatesRef.current.loadingStates[callbackId]) {
             pendingUpdatesRef.current.loadingStates[callbackId] = { children: LOADING_STATES.IDLE, callbacks: LOADING_STATES.IDLE };
           }
         });
 
-        pendingUpdatesRef.current.tasks[taskId] = {
-          ...(tasks[taskId] || {}),
-          ...(pendingUpdatesRef.current.tasks[taskId] || {}),
-          successCallbacks: data.successCallbacks,
-          errorCallbacks: data.errorCallbacks,
-          callbacksLoaded: true,
-          hasCallbacksToLoad: false,
-        };
         pendingUpdatesRef.current.loadingStates[taskId] = {
           ...(pendingUpdatesRef.current.loadingStates[taskId] || loadingStates[taskId] || {}),
           callbacks: LOADING_STATES.LOADED,
@@ -163,18 +177,9 @@ export function useTaskDataLazy() {
       } else {
         setTasks(prev => {
           const updated = { ...prev };
-          Object.entries(data.callbacks).forEach(([callbackId, callbackData]) => {
+          Object.entries(transformedCallbacks).forEach(([callbackId, callbackData]) => {
             updated[callbackId] = callbackData;
           });
-          if (updated[taskId]) {
-            updated[taskId] = {
-              ...updated[taskId],
-              successCallbacks: data.successCallbacks,
-              errorCallbacks: data.errorCallbacks,
-              callbacksLoaded: true,
-              hasCallbacksToLoad: false,
-            };
-          }
           return updated;
         });
 
@@ -191,14 +196,14 @@ export function useTaskDataLazy() {
         updateLoadingState(taskId, 'callbacks', LOADING_STATES.LOADED);
       }
 
-      return { ...data, allCallbackIds };
+      return { allCallbackIds };
     } catch (err) {
       if (!batch) {
         updateLoadingState(taskId, 'callbacks', LOADING_STATES.ERROR);
       }
       throw err;
     }
-  }, [updateLoadingState, scheduleFlush, tasks, loadingStates]);
+  }, [updateLoadingState, scheduleFlush, loadingStates]);
 
   const autoLoadToDepth = useCallback(async (taskId, currentDepth, tasksSnapshot) => {
     if (currentDepth >= MAX_DEPTH) return;
@@ -209,9 +214,13 @@ export function useTaskDataLazy() {
     const tasksToProcess = [];
     pendingUpdatesRef.current.depths[taskId] = currentDepth;
 
-    if (task.totalChildren > 0 && !task.childrenLoaded) {
+    const taskLoadingState = pendingUpdatesRef.current.loadingStates[taskId] || loadingStates[taskId] || {};
+    const childrenNotLoaded = taskLoadingState.children !== LOADING_STATES.LOADED;
+    const callbacksNotLoaded = taskLoadingState.callbacks !== LOADING_STATES.LOADED;
+
+    if (isContainerTask(task) && task.tasks?.length > 0 && childrenNotLoaded) {
       try {
-        const data = await fetchChildrenInternal(taskId, 0, task.totalChildren, true);
+        const data = await fetchChildrenInternal(taskId, true);
         for (const childId of data.newChildIds) {
           pendingUpdatesRef.current.depths[childId] = currentDepth + 1;
           tasksToProcess.push({ id: childId, depth: currentDepth + 1 });
@@ -221,7 +230,7 @@ export function useTaskDataLazy() {
       }
     }
 
-    if (task.hasCallbacksToLoad) {
+    if (hasCallbacks(task) && callbacksNotLoaded) {
       try {
         const data = await fetchCallbacksInternal(taskId, true);
         for (const callbackId of data.allCallbackIds) {
@@ -237,7 +246,7 @@ export function useTaskDataLazy() {
       const updatedSnapshot = { ...tasksSnapshot, ...pendingUpdatesRef.current.tasks };
       await autoLoadToDepth(id, depth, updatedSnapshot);
     }
-  }, [fetchChildrenInternal, fetchCallbacksInternal]);
+  }, [fetchChildrenInternal, fetchCallbacksInternal, loadingStates]);
 
   const fetchRootTasks = useCallback(async () => {
     setLoading(true);
@@ -249,20 +258,25 @@ export function useTaskDataLazy() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
+      const transformedTasks = {};
+      Object.entries(data.tasks).forEach(([key, apiTask]) => {
+        transformedTasks[key] = TaskFactory.transformApiTask(apiTask);
+      });
+
       const initialStates = {};
       const initialDepths = {};
-      Object.keys(data.tasks).forEach(taskId => {
+      Object.keys(transformedTasks).forEach(taskId => {
         initialStates[taskId] = { children: LOADING_STATES.IDLE, callbacks: LOADING_STATES.IDLE };
         initialDepths[taskId] = 0;
       });
 
-      setTasks(data.tasks);
+      setTasks(transformedTasks);
       setLoadingStates(initialStates);
       setTaskDepths(initialDepths);
       setLoading(false);
 
-      for (const taskId of Object.keys(data.tasks)) {
-        await autoLoadToDepth(taskId, 0, data.tasks);
+      for (const taskId of Object.keys(transformedTasks)) {
+        await autoLoadToDepth(taskId, 0, transformedTasks);
       }
 
       if (flushTimeoutRef.current) {
@@ -277,9 +291,9 @@ export function useTaskDataLazy() {
     }
   }, [autoLoadToDepth, flushPendingUpdates]);
 
-  const fetchChildren = useCallback(async (taskId, page = 0, size = 10) => {
+  const fetchChildren = useCallback(async (taskId) => {
     const currentDepth = taskDepths[taskId] || 0;
-    const data = await fetchChildrenInternal(taskId, page, size, false);
+    const data = await fetchChildrenInternal(taskId, false);
 
     const newDepths = {};
     for (const childId of data.newChildIds) {
@@ -307,8 +321,7 @@ export function useTaskDataLazy() {
     const task = tasks[taskId];
     if (!task) return;
 
-    const currentPage = task.childrenPage ?? -1;
-    return fetchChildren(taskId, currentPage + 1);
+    return fetchChildren(taskId);
   }, [tasks, fetchChildren]);
 
   const loadMore = useCallback(async (taskId) => {
@@ -318,8 +331,12 @@ export function useTaskDataLazy() {
     const currentDepth = taskDepths[taskId] || 0;
     pendingUpdatesRef.current = { tasks: {}, depths: {}, loadingStates: {} };
 
-    if (task.totalChildren > 0 && !task.childrenLoaded) {
-      const data = await fetchChildrenInternal(taskId, 0, task.totalChildren, true);
+    const taskLoadingState = loadingStates[taskId] || {};
+    const childrenNotLoaded = taskLoadingState.children !== LOADING_STATES.LOADED;
+    const callbacksNotLoaded = taskLoadingState.callbacks !== LOADING_STATES.LOADED;
+
+    if (isContainerTask(task) && task.tasks?.length > 0 && childrenNotLoaded) {
+      const data = await fetchChildrenInternal(taskId, true);
       for (const childId of data.newChildIds) {
         pendingUpdatesRef.current.depths[childId] = currentDepth + 1;
         const updatedSnapshot = { ...tasks, ...pendingUpdatesRef.current.tasks };
@@ -327,7 +344,7 @@ export function useTaskDataLazy() {
       }
     }
 
-    if (task.hasCallbacksToLoad) {
+    if (hasCallbacks(task) && callbacksNotLoaded) {
       const data = await fetchCallbacksInternal(taskId, true);
       for (const callbackId of data.allCallbackIds) {
         pendingUpdatesRef.current.depths[callbackId] = currentDepth + 1;
@@ -341,7 +358,7 @@ export function useTaskDataLazy() {
       flushTimeoutRef.current = null;
     }
     flushPendingUpdates();
-  }, [tasks, taskDepths, fetchChildrenInternal, fetchCallbacksInternal, autoLoadToDepth, flushPendingUpdates]);
+  }, [tasks, taskDepths, loadingStates, fetchChildrenInternal, fetchCallbacksInternal, autoLoadToDepth, flushPendingUpdates]);
 
   return {
     tasks,

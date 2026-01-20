@@ -14,20 +14,12 @@ export class ContainerTask extends Task {
         super(data);
         this.tasks = data.tasks || [];
         this.pageSize = data.pageSize ?? ContainerTask.DEFAULT_PAGE_SIZE;
-
-        // Lazy loading properties for children
-        this.totalChildren = data.totalChildren ?? this.tasks.length;
-        this.childrenLoaded = data.childrenLoaded !== false;
         this.childrenPage = data.childrenPage ?? 0;
         this.childrenHasMore = data.childrenHasMore ?? false;
     }
 
-    needsChildrenLoad() {
-        return !this.childrenLoaded && this.totalChildren > 0;
-    }
-
     hasMoreChildrenToLoad() {
-        return this.childrenHasMore || (!this.childrenLoaded && this.totalChildren > this.tasks.length);
+        return this.childrenHasMore;
     }
 
     getTotalPages() {
