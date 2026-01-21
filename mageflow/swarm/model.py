@@ -318,6 +318,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 await swarm_task.activate_success(EmptyModel())
         return self
 
+    async def has_swarm_failed(self):
+        should_stop_after_failures = self.config.stop_after_n_failures is not None
+        stop_after_n_failures = self.config.stop_after_n_failures or 0
+        too_many_errors = len(self.failed_tasks) >= stop_after_n_failures
+        return should_stop_after_failures and too_many_errors
+
     async def finish_task(self, batch_item_key: str, results: Any):
         async with self.apipeline() as swarm_task:
             # In case this was already updated
