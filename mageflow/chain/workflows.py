@@ -42,24 +42,24 @@ async def chain_error_task(msg: EmptyModel, ctx: Context) -> None:
         task_data = HatchetInvoker(msg, ctx).task_ctx
         chain_task_id = task_data[CHAIN_TASK_ID_NAME]
         current_task_id = task_data[TASK_ID_PARAM_NAME]
-        chain_packed_task, current_task = await asyncio.gather(
+        chain_signature, current_task = await asyncio.gather(
             ChainTaskSignature.get_safe(chain_task_id),
             TaskSignature.get_safe(current_task_id),
         )
         ctx.log(
-            f"Chain task failed {chain_packed_task.task_name} on task id - {current_task_id}"
+            f"Chain task failed {chain_signature.task_name} on task id - {current_task_id}"
         )
 
         # Calling error callback from chain task
-        await chain_packed_task.activate_error(msg)
-        ctx.log(f"Chain task error {chain_packed_task.task_name}")
+        await chain_signature.activate_error(msg)
+        ctx.log(f"Chain task error {chain_signature.task_name}")
 
         # Remove tasks
-        await chain_packed_task.delete_chain_tasks()
+        await chain_signature.delete_chain_tasks()
         await asyncio.gather(
-            chain_packed_task.remove(with_error=False), current_task.remove()
+            chain_signature.remove(with_error=False), current_task.remove()
         )
-        ctx.log(f"Clean redis from chain tasks {chain_packed_task.task_name}")
+        ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
     except Exception as e:
         ctx.log(f"MAJOR - infrastructure error in chain error task: {e}")
         raise
