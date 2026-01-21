@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
+import mageflow
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmResultsMessage
@@ -15,23 +16,16 @@ async def test_two_consecutive_calls_same_item_no_duplicate_idempotent(
     create_mock_context_with_metadata, mock_fill_running_tasks, publish_state
 ):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
-        current_running_tasks=1,
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
-
-    batch_task = BatchItemTaskSignature(
-        task_name="test_task",
-        model_validators=ContextMessage,
-        swarm_id=swarm_task.key,
-        original_task_id="original_task",
-    )
-    await batch_task.asave()
-    await swarm_task.tasks.aappend(batch_task.key)
+    swarm_item_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(swarm_item_task)
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks += 1
+        swarm_task.tasks.append(batch_task.key)
 
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
     await item_task.asave()
