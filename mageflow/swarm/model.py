@@ -115,16 +115,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return [cls.validate_task_key(item) for item in v]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        batch_items = [
-            bi
-            for task_id in self.tasks
-            if (bi := await BatchItemTaskSignature.get_safe(task_id))
-        ]
-        return [
-            cast(task, TaskSignature)
-            for bi in batch_items
-            if (task := await rapyer.aget(bi.original_task_id))
-        ]
+        batch_items = await BatchItemTaskSignature.afind(*self.tasks)
+        original_keys = [item.original_task_id for item in batch_items]
+        return cast(list[TaskSignature], await rapyer.afind(*original_keys))
 
     @property
     def has_swarm_started(self):
