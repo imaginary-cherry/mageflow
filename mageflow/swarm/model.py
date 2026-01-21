@@ -209,11 +209,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
             task_name=ON_SWARM_END,
             kwargs=swarm_identifiers,
             input_validator=SwarmResultsMessage,
-            # task_identifiers=swarm_identifiers,
         )
         on_error_swarm_item = await TaskSignature.from_task_name(
             task_name=ON_SWARM_ERROR,
-            # task_identifiers=swarm_identifiers,
             kwargs=swarm_identifiers,
         )
         task.success_callbacks.append(on_success_swarm_item.key)
