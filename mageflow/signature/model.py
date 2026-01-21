@@ -232,7 +232,7 @@ class TaskSignature(AtomicRedisModel):
     async def should_run(self):
         return self.task_status.should_run()
 
-    async def change_status(self, status: SignatureStatus) -> bool:
+    async def change_status(self, status: SignatureStatus):
         await self.task_status.aupdate(
             last_status=self.task_status.status, status=status
         )
@@ -244,7 +244,7 @@ class TaskSignature(AtomicRedisModel):
     @classmethod
     async def safe_change_status(
         cls, task_id: TaskIdentifierType, status: SignatureStatus
-    ) -> bool:
+    ):
         try:
             async with lock_from_key(cls, task_id) as task:
                 return await task.change_status(status)
@@ -274,6 +274,11 @@ class TaskSignature(AtomicRedisModel):
     async def suspend_from_key(cls, task_key: TaskIdentifierType):
         async with lock_from_key(cls, task_key) as task:
             await task.suspend()
+
+    async def done(self):
+        await self.task_status.aupdate(
+            last_status=self.task_status.status, status=SignatureStatus.DONE
+        )
 
     async def suspend(self):
         """
