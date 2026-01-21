@@ -274,9 +274,6 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 return len(tasks)
             return 0
 
-    async def add_to_finished_tasks(self, task: TaskIdentifierType):
-        await self.finished_tasks.aappend(task)
-
     async def add_to_failed_tasks(self, task: TaskIdentifierType):
         await self.failed_tasks.aappend(task)
 
