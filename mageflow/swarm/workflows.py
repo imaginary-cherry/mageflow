@@ -43,7 +43,7 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
 async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
     invoker = HatchetInvoker(msg, ctx)
     task_data = invoker.task_ctx
-    task_id = task_data[TASK_ID_PARAM_NAME]
+    task_key = task_data[TASK_ID_PARAM_NAME]
     try:
         swarm_task_id = msg.swarm_task_id
         swarm_item_id = msg.swarm_item_id
@@ -62,7 +62,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
     finally:
-        await TaskSignature.try_remove(task_id)
+        await TaskSignature.remove_from_key(task_key)
 
 
 async def swarm_item_failed(msg: EmptyModel, ctx: Context):
@@ -98,7 +98,7 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
     finally:
-        await TaskSignature.try_remove(task_key)
+        await TaskSignature.remove_from_key(task_key)
 
 
 async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):

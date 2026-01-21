@@ -99,11 +99,6 @@ class TaskSignature(AtomicRedisModel):
         await signature.asave()
         return signature
 
-    @classmethod
-    async def delete_signature(cls, task_key: TaskIdentifierType):
-        result = await mageflow_config.redis_client.remove(task_key)
-        return result
-
     async def add_callbacks(
         self, success: list[Self] = None, errors: list[Self] = None
     ):
@@ -187,14 +182,6 @@ class TaskSignature(AtomicRedisModel):
             **kwargs,
         )
 
-    @classmethod
-    async def try_remove(cls, task_key: TaskIdentifierType, **kwargs):
-        try:
-            task = await cls.get_safe(task_key)
-            await task.remove(**kwargs)
-        except Exception as e:
-            pass
-
     async def remove_task(self):
         await self.aset_ttl(SUCCESS_TASK_TTL)
 
@@ -218,6 +205,12 @@ class TaskSignature(AtomicRedisModel):
         await self.remove_branches(with_success, with_error)
         await self.remove_references()
         await self.remove_task()
+
+    @classmethod
+    async def remove_from_key(cls, task_key: TaskIdentifierType):
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
+            return await task.remove()
 
     async def handle_inactive_task(self, msg: BaseModel):
         if self.task_status.status == SignatureStatus.SUSPENDED:
