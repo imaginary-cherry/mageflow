@@ -280,6 +280,11 @@ class TaskSignature(AtomicRedisModel):
             last_status=self.task_status.status, status=SignatureStatus.DONE
         )
 
+    async def failed(self):
+        await self.task_status.aupdate(
+            last_status=self.task_status.status, status=SignatureStatus.FAILED
+        )
+
     async def suspend(self):
         """
         Task suspension will try and stop the task at before it starts

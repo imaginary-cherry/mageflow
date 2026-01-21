@@ -51,6 +51,7 @@ def handle_task_callback(
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except (Exception, asyncio.CancelledError) as e:
                 if not task_model.should_retry(ctx.attempt_number, e):
+                    await signature.failed()
                     await invoker.run_error()
                     await invoker.remove_task(with_error=False)
                 raise
