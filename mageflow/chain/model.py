@@ -28,17 +28,6 @@ class ChainTaskSignature(ContainerTaskSignature):
             raise MissingSignatureError(f"First task from chain {self.key} not found")
         return await first_task.workflow(**task_additional_params)
 
-    async def delete_chain_tasks(self, with_errors=True, with_success=True):
-        signatures = await asyncio.gather(
-            *[TaskSignature.get_safe(signature_id) for signature_id in self.tasks],
-            return_exceptions=True,
-        )
-        signatures = [sign for sign in signatures if isinstance(sign, TaskSignature)]
-        delete_tasks = [
-            signature.remove(with_errors, with_success) for signature in signatures
-        ]
-        await asyncio.gather(*delete_tasks)
-
     async def aupdate_real_task_kwargs(self, **kwargs):
         first_task = await rapyer.aget(self.tasks[0])
         if not isinstance(first_task, TaskSignature):

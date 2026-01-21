@@ -1,20 +1,11 @@
 import asyncio
 import contextlib
 from datetime import datetime
-from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar
+from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
-from mageflow.errors import MissingSignatureError
-from mageflow.models.message import ReturnValue
-from mageflow.signature.consts import TASK_ID_PARAM_NAME, SUCCESS_TASK_TTL
-from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
-from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
-from mageflow.startup import mageflow_config
-from mageflow.task.model import HatchetTaskModel
-from mageflow.utils.models import get_marked_fields
-from mageflow.workflows import MageflowWorkflow
 from pydantic import (
     BaseModel,
     field_validator,
@@ -27,6 +18,16 @@ from rapyer.fields import SafeLoad
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
+
+from mageflow.errors import MissingSignatureError
+from mageflow.models.message import ReturnValue
+from mageflow.signature.consts import TASK_ID_PARAM_NAME, SUCCESS_TASK_TTL
+from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
+from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
+from mageflow.startup import mageflow_config
+from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.models import get_marked_fields
+from mageflow.workflows import MageflowWorkflow
 
 
 class TaskSignature(AtomicRedisModel):
@@ -194,34 +195,29 @@ class TaskSignature(AtomicRedisModel):
         except Exception as e:
             pass
 
+    async def remove_task(self):
+        await self.aset_ttl(SUCCESS_TASK_TTL)
+
+    async def remove_branches(self, success: bool = True, errors: bool = True):
+        keys_to_remove = []
+        if errors:
+            keys_to_remove.extend([error_id for error_id in self.error_callbacks])
+        if success:
+            keys_to_remove.extend([success_id for success_id in self.success_callbacks])
+
+        signatures = cast(list[TaskSignature], await rapyer.afind(*keys_to_remove))
+        await asyncio.gather(*[signature.remove() for signature in signatures])
+
+    async def remove_references(self):
+        pass
+
     async def remove(self, with_error: bool = True, with_success: bool = True):
         return await self._remove(with_error, with_success)
 
     async def _remove(self, with_error: bool = True, with_success: bool = True):
-        addition_tasks_to_delete = []
-        if with_error:
-            addition_tasks_to_delete.extend(
-                [error_id for error_id in self.error_callbacks]
-            )
-        if with_success:
-            addition_tasks_to_delete.extend(
-                [success_id for success_id in self.success_callbacks]
-            )
-
-        signatures_to_delete = await asyncio.gather(
-            *[TaskSignature.get_safe(task_id) for task_id in addition_tasks_to_delete]
-        )
-
-        delete_tasks = [self.adelete()]
-        delete_tasks.extend(
-            [
-                signature_to_delete.remove()
-                for signature_to_delete in signatures_to_delete
-                if signature_to_delete
-            ]
-        )
-
-        return await asyncio.gather(*delete_tasks)
+        await self.remove_branches(with_success, with_error)
+        await self.remove_references()
+        await self.remove_task()
 
     async def handle_inactive_task(self, msg: BaseModel):
         if self.task_status.status == SignatureStatus.SUSPENDED:

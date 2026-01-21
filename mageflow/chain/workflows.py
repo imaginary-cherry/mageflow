@@ -55,7 +55,7 @@ async def chain_error_task(msg: EmptyModel, ctx: Context) -> None:
         ctx.log(f"Chain task error {chain_signature.task_name}")
 
         # Remove tasks
-        await chain_signature.delete_chain_tasks()
+        await chain_signature.remove_references()
         await asyncio.gather(
             chain_signature.remove(with_error=False), current_task.remove()
         )
