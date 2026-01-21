@@ -10,33 +10,6 @@ from tests.integration.hatchet.models import ContextMessage
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "task_ids", [["task_1"], ["task_1", "task_2"], ["task_1", "task_2", "task_3"]]
-)
-async def test_add_to_failed_tasks_sanity(task_ids, publish_state):
-    # Arrange
-    swarm_signature = SwarmTaskSignature(
-        task_name="test_swarm",
-        kwargs={},
-        model_validators=ContextMessage,
-        failed_tasks=[],
-        publishing_state_id=publish_state.key,
-    )
-    await swarm_signature.asave()
-    original_failed_tasks = swarm_signature.failed_tasks.copy()
-
-    # Act
-    for task_id in task_ids:
-        await swarm_signature.add_to_failed_tasks(task_id)
-
-    # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    failed_tasks = original_failed_tasks + task_ids
-    assert reloaded_swarm.failed_tasks == failed_tasks
-    assert swarm_signature.failed_tasks == failed_tasks
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
     ["max_concurrency", "current_running", "expected_can_run"],
     [[5, 3, True], [5, 4, True], [5, 5, False], [1, 1, False], [10, 0, True]],
 )

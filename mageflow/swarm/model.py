@@ -248,9 +248,6 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 return len(tasks)
             return 0
 
-    async def add_to_failed_tasks(self, task: TaskIdentifierType):
-        await self.failed_tasks.aappend(task)
-
     async def is_swarm_done(self):
         done_tasks = self.finished_tasks + self.failed_tasks
         finished_all_tasks = set(done_tasks) == set(self.tasks)
@@ -306,4 +303,11 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 return
             swarm_task.finished_tasks.append(batch_item_key)
             swarm_task.tasks_results.append(results)
+            swarm_task.current_running_tasks -= 1
+
+    async def task_failed(self, batch_item_key: str):
+        async with self.apipeline() as swarm_task:
+            if batch_item_key in swarm_task.failed_tasks:
+                return
+            swarm_task.failed_tasks.append(batch_item_key)
             swarm_task.current_running_tasks -= 1

@@ -6,7 +6,6 @@ from hatchet_sdk.runnables.types import EmptyModel
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
@@ -75,25 +74,9 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
         ctx.log(f"Swarm item failed {swarm_item_key}")
         # Check if the swarm should end
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_key)
-        async with swarm_task.alock(save_at_end=False) as swarm_task:
-            await swarm_task.add_to_failed_tasks(swarm_item_key)
-            should_stop_after_failures = (
-                swarm_task.config.stop_after_n_failures is not None
-            )
-            stop_after_n_failures = swarm_task.config.stop_after_n_failures or 0
-            too_many_errors = len(swarm_task.failed_tasks) >= stop_after_n_failures
-            if should_stop_after_failures and too_many_errors:
-                ctx.log(
-                    f"Swarm item failed - stopping swarm {swarm_task.key} after {len(swarm_task.failed_tasks)} failures"
-                )
-                await swarm_task.change_status(SignatureStatus.CANCELED)
-                await swarm_task.activate_error(EmptyModel())
-                await swarm_task.remove(with_error=False)
-                ctx.log(f"Swarm item failed - stopped swarm {swarm_task.key}")
-                return
-
-            fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
-            await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await swarm_task.task_failed(swarm_item_key)
+        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
