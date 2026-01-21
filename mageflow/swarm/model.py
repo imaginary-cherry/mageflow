@@ -318,11 +318,11 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 await swarm_task.activate_success(EmptyModel())
         return self
 
-    async def finish_task(self, batch_item: BatchItemTaskSignature, results: Any):
+    async def finish_task(self, batch_item_key: str, results: Any):
         async with self.apipeline() as swarm_task:
             # In case this was already updated
-            if batch_item.key in swarm_task.finished_tasks:
+            if batch_item_key in swarm_task.finished_tasks:
                 return
-            swarm_task.finished_tasks.append(batch_item.key)
+            swarm_task.finished_tasks.append(batch_item_key)
             swarm_task.tasks_results.append(results)
             swarm_task.current_running_tasks -= 1

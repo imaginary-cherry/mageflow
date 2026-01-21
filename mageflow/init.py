@@ -53,14 +53,14 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
             limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
         ),
     )
-    swarm_done = hatchet.task(
+    swarm_done = hatchet.durable_task(
         name=ON_SWARM_END,
         input_validator=SwarmResultsMessage,
-        retries=3,
-        execution_timeout=timedelta(minutes=5),
+        retries=5,
+        execution_timeout=timedelta(minutes=1),
     )
-    swarm_error = hatchet.task(
-        name=ON_SWARM_ERROR, retries=3, execution_timeout=timedelta(minutes=5)
+    swarm_error = hatchet.durable_task(
+        name=ON_SWARM_ERROR, retries=5, execution_timeout=timedelta(minutes=5)
     )
     swarm_start = swarm_start(swarm_start_tasks)
     swarm_done = swarm_done(swarm_item_done)

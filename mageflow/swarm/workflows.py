@@ -1,7 +1,5 @@
 import asyncio
-from typing import cast
 
-import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
@@ -15,7 +13,7 @@ from mageflow.swarm.consts import (
     SWARM_FILL_TASK,
 )
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature
 
 
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
@@ -50,13 +48,14 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         swarm_task_id = msg.swarm_task_id
         swarm_item_id = msg.swarm_item_id
         ctx.log(f"Swarm item done {swarm_item_id}")
+
         # Update swarm tasks
-        swarm_task, batch_task = await rapyer.afind(swarm_task_id, swarm_item_id)
-        swarm_task = cast(SwarmTaskSignature, swarm_task)
-        batch_task = cast(BatchItemTaskSignature, batch_task)
+        swarm_task = await SwarmTaskSignature.aget(swarm_task_id)
 
         ctx.log(f"Swarm item done {swarm_item_id} - saving results")
-        await swarm_task.finish_task(batch_task, msg.results)
+        await swarm_task.finish_task(swarm_item_id, msg.results)
+
+        # Publish next tasks
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
         await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
