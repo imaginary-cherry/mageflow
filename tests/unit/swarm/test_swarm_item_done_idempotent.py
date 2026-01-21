@@ -199,7 +199,7 @@ async def test_crash_before_pipeline_retry_executes_normally_idempotent(
 
 @pytest.mark.asyncio
 async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
-    create_mock_context_with_metadata, publish_state
+    create_mock_context_with_metadata, mock_fill_running_tasks, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -235,11 +235,15 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
     )
 
     # Act
-    with patch.object(HatchetInvoker, "wait_task", RuntimeError):
+    with patch.object(
+        HatchetInvoker,
+        "wait_task",
+        side_effect=RuntimeError("Simulated wait_task failure"),
+    ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):
             await swarm_item_done(msg, ctx)
 
-        await swarm_item_done(msg, ctx)
+    await swarm_item_done(msg, ctx)
 
     # Assert
     finished_tasks = await swarm_task.finished_tasks.aload()
