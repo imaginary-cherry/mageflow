@@ -13,11 +13,7 @@ from mageflow.swarm.consts import (
     SWARM_FILL_TASK,
 )
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
-from mageflow.swarm.model import (
-    SwarmTaskSignature,
-    BatchItemTaskSignature,
-    DONE_AND_UPDATED_SWARM,
-)
+from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 
 
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
@@ -57,14 +53,8 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
             SwarmTaskSignature.get_safe(swarm_task_id),
             BatchItemTaskSignature.get_safe(swarm_item_id),
         )
-        res = msg.results
-        async with swarm_task.apipeline() as swarm_task:
-            ctx.log(f"Swarm item done {swarm_item_id} - saving results")
-            swarm_task.finished_tasks.append(swarm_item_id)
-            swarm_task.tasks_results.append(res)
-            swarm_task.current_running_tasks -= 1
-            batch_task.item_status = DONE_AND_UPDATED_SWARM
-        # await
+        ctx.log(f"Swarm item done {swarm_item_id} - saving results")
+        await swarm_task.finish_task(batch_task, msg.results)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
         await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:

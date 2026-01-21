@@ -33,15 +33,10 @@ from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
 
-# TODO - should be enum once rapyer support pipeline with dumpable fields
-IN_QUEUE = "in_queue"
-DONE_AND_UPDATED_SWARM = "done_and_updated_swarm"
-
 
 class BatchItemTaskSignature(TaskSignature):
     swarm_id: TaskIdentifierType
     original_task_id: TaskIdentifierType
-    item_status: str = IN_QUEUE
 
     async def aio_run_no_wait(self, msg: BaseModel, **orig_task_kwargs):
         async with self.alock() as swarm_item:
@@ -327,3 +322,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
             if should_finish_swarm:
                 await swarm_task.activate_success(EmptyModel())
         return self
+
+    async def finish_task(self, batch_item: BatchItemTaskSignature, results: Any):
+        async with self.apipeline() as swarm_task:
+            # In case this was already updated
+            if batch_item.key in swarm_task.finished_tasks:
+                return
+            swarm_task.finished_tasks.append(batch_item.key)
+            swarm_task.tasks_results.append(results)
+            swarm_task.current_running_tasks -= 1
