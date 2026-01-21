@@ -8,7 +8,7 @@ from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
 from mageflow.errors import MissingSignatureError
 from mageflow.models.message import ReturnValue
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
+from mageflow.signature.consts import TASK_ID_PARAM_NAME, SUCCESS_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
 from mageflow.startup import mageflow_config
@@ -300,7 +300,8 @@ class TaskSignature(AtomicRedisModel):
         """
         Task interrupt will try to aggressively take hold of the async loop and stop the task
         """
-        raise NotImplementedError()
+        # TODO - not implemented yet - implement
+        await self.suspend()
 
     @classmethod
     async def pause_from_key(
