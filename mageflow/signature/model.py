@@ -21,7 +21,7 @@ from typing_extensions import deprecated
 
 from mageflow.errors import MissingSignatureError
 from mageflow.models.message import ReturnValue
-from mageflow.signature.consts import TASK_ID_PARAM_NAME, SUCCESS_TASK_TTL
+from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
 from mageflow.startup import mageflow_config
@@ -183,7 +183,7 @@ class TaskSignature(AtomicRedisModel):
         )
 
     async def remove_task(self):
-        await self.aset_ttl(SUCCESS_TASK_TTL)
+        await self.aset_ttl(REMOVED_TASK_TTL)
 
     async def remove_branches(self, success: bool = True, errors: bool = True):
         keys_to_remove = []
