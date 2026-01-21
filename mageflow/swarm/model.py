@@ -61,10 +61,10 @@ class BatchItemTaskSignature(TaskSignature):
 
             return None
 
-    async def _remove(self, with_error: bool = True, with_success: bool = True):
-        remove_self = super()._remove(with_error, with_success)
-        remove_original = TaskSignature.try_remove(self.original_task_id)
-        return await asyncio.gather(remove_self, remove_original)
+    async def remove_references(self):
+        orignal_task = await TaskSignature.get_safe(self.original_task_id)
+        if orignal_task:
+            await orignal_task.remove()
 
     async def change_status(self, status: SignatureStatus):
         return await TaskSignature.safe_change_status(self.original_task_id, status)
@@ -142,25 +142,6 @@ class SwarmTaskSignature(ContainerTaskSignature):
         original_ctx = super().task_ctx()
         swarm_ctx = {SWARM_TASK_ID_PARAM_NAME: self.key}
         return original_ctx | swarm_ctx
-
-    async def try_delete_sub_tasks(
-        self, with_error: bool = True, with_success: bool = True
-    ):
-        tasks = await asyncio.gather(
-            *[TaskSignature.get_safe(task_id) for task_id in self.tasks],
-            return_exceptions=True,
-        )
-        tasks = [task for task in tasks if isinstance(task, TaskSignature)]
-        await asyncio.gather(
-            *[task.remove(with_error, with_success) for task in tasks],
-            return_exceptions=True,
-        )
-
-    async def _remove(self, *args, **kwargs):
-        delete_signature = super()._remove(*args, **kwargs)
-        delete_tasks = self.try_delete_sub_tasks()
-
-        return await asyncio.gather(delete_signature, delete_tasks)
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
@@ -287,7 +268,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
         tasks_results = [res for res in results]
 
         await super().activate_success(tasks_results, **kwargs)
-        await self.remove(with_success=False)
+        await self.remove_branches(success=False)
+        await self.remove_task()
 
     async def suspend(self):
         await asyncio.gather(
