@@ -6,6 +6,7 @@ import pytest_asyncio
 from hatchet_sdk import Context
 from rapyer.types import RedisInt
 
+import mageflow
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
@@ -13,7 +14,8 @@ from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
 )
-from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.swarm.messages import SwarmResultsMessage
+from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
 
@@ -29,11 +31,56 @@ class BatchTaskRunTracker:
     called_instances: list
 
 
+@dataclass
+class SwarmItemDoneSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    item_task: TaskSignature
+    ctx: MagicMock
+    msg: SwarmResultsMessage
+
+
 @pytest_asyncio.fixture
 async def publish_state():
     state = PublishState()
     await state.asave()
     return state
+
+
+@pytest_asyncio.fixture
+async def swarm_item_done_setup(create_mock_context_with_metadata):
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=1),
+    )
+    swarm_item_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(swarm_item_task)
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks += 1
+        swarm_task.tasks.append(batch_task.key)
+
+    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
+    await item_task.asave()
+
+    ctx = create_mock_context_with_metadata(
+        task_id=item_task.key,
+        swarm_task_id=swarm_task.key,
+        swarm_item_id=batch_task.key,
+    )
+    msg = SwarmResultsMessage(
+        results=42,
+        swarm_task_id=swarm_task.key,
+        swarm_item_id=batch_task.key,
+    )
+
+    return SwarmItemDoneSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        item_task=item_task,
+        ctx=ctx,
+        msg=msg,
+    )
 
 
 @pytest_asyncio.fixture
