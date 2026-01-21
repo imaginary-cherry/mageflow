@@ -106,5 +106,6 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
     # Check if the swarm should end
     if await swarm_task.is_swarm_done() and swarm_task.has_published_callback():
         ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
+        await swarm_task.done()
         await swarm_task.activate_success(msg)
         ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")
