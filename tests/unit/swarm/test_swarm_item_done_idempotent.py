@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
 import pytest
+import rapyer
 
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.unit.swarm.conftest import SwarmItemDoneSetup
 
@@ -69,19 +69,9 @@ async def test_crash_before_pipeline_retry_executes_normally_idempotent(
     # Arrange
     setup = swarm_item_done_setup
 
-    call_count = 0
-    original_get_safe = SwarmTaskSignature.get_safe
-
-    async def get_safe_crash_first(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise RuntimeError("Simulated crash before pipeline")
-        return await original_get_safe(*args, **kwargs)
-
     # Act - First call crashes before pipeline
-    with patch.object(SwarmTaskSignature, "get_safe", side_effect=get_safe_crash_first):
-        with pytest.raises(RuntimeError, match="Simulated crash before pipeline"):
+    with patch.object(rapyer, "afind", side_effect=RuntimeError):
+        with pytest.raises(RuntimeError):
             await swarm_item_done(setup.msg, setup.ctx)
 
     # Verify no state change - crashed before pipeline

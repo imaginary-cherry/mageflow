@@ -1,5 +1,6 @@
 import asyncio
 
+import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
@@ -13,7 +14,7 @@ from mageflow.swarm.consts import (
     SWARM_FILL_TASK,
 )
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature
 
 
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
@@ -49,10 +50,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         swarm_item_id = msg.swarm_item_id
         ctx.log(f"Swarm item done {swarm_item_id}")
         # Update swarm tasks
-        swarm_task, batch_task = await asyncio.gather(
-            SwarmTaskSignature.get_safe(swarm_task_id),
-            BatchItemTaskSignature.get_safe(swarm_item_id),
-        )
+        swarm_task, batch_task = await rapyer.afind(swarm_task_id, swarm_item_id)
         ctx.log(f"Swarm item done {swarm_item_id} - saving results")
         await swarm_task.finish_task(batch_task, msg.results)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
