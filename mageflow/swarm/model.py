@@ -230,7 +230,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 await publish_state.task_ids.aextend(task_ids_to_run)
 
             if task_ids_to_run:
-                tasks = await self.sub_tasks()
+                tasks = await rapyer.afind(*task_ids_to_run)
                 # TODO - use aio_run_many_no_wait
                 publish_coroutine = [
                     next_task.aio_run_no_wait(EmptyModel()) for next_task in tasks
