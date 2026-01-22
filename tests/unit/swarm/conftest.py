@@ -133,14 +133,6 @@ def create_mock_context_with_metadata(
 
 
 @pytest.fixture
-def mock_close_swarm():
-    with patch.object(
-        SwarmTaskSignature, "close_swarm", new_callable=AsyncMock
-    ) as mock_close:
-        yield mock_close
-
-
-@pytest.fixture
 def mock_task_aio_run_no_wait():
     with patch.object(
         TaskSignature, "aio_run_no_wait", new_callable=AsyncMock

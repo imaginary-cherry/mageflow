@@ -11,6 +11,7 @@ import mageflow
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.startup import update_register_signature_models, mageflow_config
+from mageflow.swarm.model import SwarmTaskSignature
 from tests.integration.hatchet.models import ContextMessage
 
 pytest.register_assert_rewrite("tests.assertions")
@@ -78,3 +79,11 @@ async def chain_with_tasks():
     return ChainTestData(
         task_signatures=task_signatures, chain_signature=chain_signature
     )
+
+
+@pytest.fixture
+def mock_close_swarm():
+    with patch.object(
+        SwarmTaskSignature, "close_swarm", new_callable=AsyncMock
+    ) as mock_close:
+        yield mock_close
