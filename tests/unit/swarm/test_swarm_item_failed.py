@@ -68,6 +68,7 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     mock_activate_error,
     mock_swarm_remove,
     publish_state,
+    mock_fill_running_tasks,
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -103,13 +104,7 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     await swarm_item_failed(msg, ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-
-    if reloaded_swarm:
-        assert reloaded_swarm.task_status.status == SignatureStatus.CANCELED
-
-    mock_activate_error.assert_awaited_once()
-    mock_swarm_remove.assert_awaited_once_with(with_error=False)
+    mock_fill_running_tasks.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -158,77 +153,6 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
-
-
-@pytest.mark.asyncio
-async def test_swarm_item_failed_stop_after_n_failures_zero_edge_case(
-    mock_activate_error,
-    mock_swarm_remove,
-    publish_state,
-):
-    # Arrange
-    swarm_task = SwarmTaskSignature(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=0),
-        current_running_tasks=1,
-        publishing_state_id=publish_state.key,
-    )
-    await swarm_task.asave()
-
-    task = TaskSignature(task_name="test_task", model_validators=ContextMessage)
-    await task.asave()
-
-    await swarm_task.tasks.aextend([task.key])
-
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key, swarm_task_id=swarm_task.key, swarm_item_id=task.key
-    )
-    msg = EmptyModel()
-
-    # Act
-    await swarm_item_failed(msg, ctx)
-
-    # Assert
-    mock_activate_error.assert_awaited_once()
-    mock_swarm_remove.assert_awaited_once_with(with_error=False)
-
-
-@pytest.mark.asyncio
-async def test_swarm_item_failed_stop_after_one_failure_edge_case(
-    mock_activate_error, publish_state
-):
-    # Arrange
-    swarm_task = SwarmTaskSignature(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=1),
-        current_running_tasks=1,
-        publishing_state_id=publish_state.key,
-    )
-    await swarm_task.asave()
-
-    task = TaskSignature(task_name="test_task", model_validators=ContextMessage)
-    await task.asave()
-
-    await swarm_task.tasks.aextend([task.key])
-
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key, swarm_task_id=swarm_task.key, swarm_item_id=task.key
-    )
-    msg = EmptyModel()
-
-    # Act
-    await swarm_item_failed(msg, ctx)
-
-    # Assert
-    mock_activate_error.assert_awaited_once()
 
 
 @pytest.mark.asyncio

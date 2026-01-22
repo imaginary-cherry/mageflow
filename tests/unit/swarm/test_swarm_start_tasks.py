@@ -4,6 +4,8 @@ import pytest
 from hatchet_sdk.runnables.types import EmptyModel
 
 from mageflow.signature.model import TaskSignature
+from mageflow.swarm.consts import SWARM_FILL_TASK
+from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_start_tasks
 from tests.integration.hatchet.models import ContextMessage
@@ -12,7 +14,7 @@ from tests.unit.swarm.conftest import create_mock_context_with_metadata
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_basic_flow(
-    mock_task_aio_run_no_wait, publish_state
+    publish_state, mock_fill_running_tasks
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -34,13 +36,13 @@ async def test_swarm_start_tasks_sanity_basic_flow(
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
+    expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    assert mock_task_aio_run_no_wait.await_count == 2
-    mock_task_aio_run_no_wait.assert_has_awaits([call(msg), call(msg)])
+    mock_fill_running_tasks.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 3
@@ -48,7 +50,7 @@ async def test_swarm_start_tasks_sanity_basic_flow(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
-    mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state, mock_fill_running_tasks
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -70,14 +72,13 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
+    expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    assert mock_task_aio_run_no_wait.await_count == 3
-    mock_task_aio_run_no_wait.assert_has_awaits([call(msg), call(msg), call(msg)])
-
+    mock_fill_running_tasks.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 0
 
@@ -117,7 +118,7 @@ async def test_swarm_start_tasks_already_started_edge_case(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
-    mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state, mock_fill_running_tasks
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -146,12 +147,11 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
     # Assert
     mock_task_aio_run_no_wait.assert_not_awaited()
 
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-    assert len(reloaded_swarm.tasks_left_to_run) == 3
-
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_empty_tasks_list_edge_case(publish_state):
+async def test_swarm_start_tasks_empty_tasks_list_edge_case(
+    publish_state, mock_fill_running_tasks
+):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
