@@ -213,3 +213,11 @@ async def swarm_setup():
         swarm_item_id=batch_task.key,
     )
     return [swarm_task, batch_task, item_task, ctx]
+
+
+@pytest.fixture
+def mock_context():
+    ctx = MagicMock(spec=Context)
+    ctx.log = MagicMock()
+    ctx.additional_metadata = {}
+    return ctx
