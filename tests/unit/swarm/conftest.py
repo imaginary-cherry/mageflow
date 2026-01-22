@@ -4,13 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 from hatchet_sdk import Context
+from hatchet_sdk.runnables.types import EmptyModel
+from pydantic import BaseModel
 from rapyer.types import RedisInt
 
 import mageflow
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
@@ -306,6 +307,47 @@ async def completed_swarm_setup(create_mock_context_with_metadata):
         swarm_task=swarm_task,
         batch_task=batch_task,
         original_task=original_task,
+        ctx=ctx,
+        msg=msg,
+    )
+
+
+@dataclass
+class SwarmItemFailedSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    item_task: TaskSignature
+    ctx: MagicMock
+    msg: BaseModel
+
+
+@pytest_asyncio.fixture
+async def swarm_item_failed_setup(create_mock_context_with_metadata):
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm_failed_idempotent",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=None),
+    )
+    swarm_item_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(swarm_item_task)
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks += 1
+        swarm_task.tasks.append(batch_task.key)
+
+    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
+    await item_task.asave()
+
+    ctx = create_mock_context_with_metadata(
+        task_id=item_task.key,
+        swarm_task_id=swarm_task.key,
+        swarm_item_id=batch_task.key,
+    )
+    msg = EmptyModel()
+
+    return SwarmItemFailedSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        item_task=item_task,
         ctx=ctx,
         msg=msg,
     )
