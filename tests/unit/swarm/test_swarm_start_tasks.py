@@ -7,11 +7,12 @@ from mageflow.signature.model import TaskSignature
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_start_tasks
 from tests.integration.hatchet.models import ContextMessage
+from tests.unit.swarm.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_basic_flow(
-    create_mock_context_with_metadata, mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -47,7 +48,7 @@ async def test_swarm_start_tasks_sanity_basic_flow(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
-    create_mock_context_with_metadata, mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -83,7 +84,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_already_started_edge_case(
-    create_mock_context_with_metadata, mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -116,7 +117,7 @@ async def test_swarm_start_tasks_already_started_edge_case(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
-    create_mock_context_with_metadata, mock_task_aio_run_no_wait, publish_state
+    mock_task_aio_run_no_wait, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -150,9 +151,7 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_empty_tasks_list_edge_case(
-    create_mock_context_with_metadata, publish_state
-):
+async def test_swarm_start_tasks_empty_tasks_list_edge_case(publish_state):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -182,9 +181,7 @@ async def test_swarm_start_tasks_missing_swarm_task_id_edge_case(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_swarm_not_found_edge_case(
-    create_mock_context_with_metadata,
-):
+async def test_swarm_start_tasks_swarm_not_found_edge_case():
     # Arrange
     ctx = create_mock_context_with_metadata(swarm_task_id="nonexistent_swarm")
     msg = EmptyModel()
@@ -195,9 +192,7 @@ async def test_swarm_start_tasks_swarm_not_found_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_task_not_found_edge_case(
-    create_mock_context_with_metadata, publish_state
-):
+async def test_swarm_start_tasks_task_not_found_edge_case(publish_state):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",

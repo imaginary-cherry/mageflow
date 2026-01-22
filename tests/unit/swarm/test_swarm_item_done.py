@@ -8,11 +8,12 @@ from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
+from tests.unit.swarm.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_sanity_basic_flow(
-    create_mock_context_with_metadata, mock_fill_running_tasks, publish_state
+    mock_fill_running_tasks, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -70,9 +71,7 @@ async def test_swarm_item_done_sanity_basic_flow(
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_sanity_last_item_completes(
-    create_mock_context_with_metadata,
-    mock_fill_running_tasks,
-    publish_state,
+    mock_fill_running_tasks, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -145,9 +144,7 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_nonexistent_batch_task_edge_case(
-    create_mock_context_with_metadata, publish_state
-):
+async def test_swarm_item_done_nonexistent_batch_task_edge_case(publish_state):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",
@@ -173,9 +170,7 @@ async def test_swarm_item_done_nonexistent_batch_task_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_swarm_not_found_edge_case(
-    create_mock_context_with_metadata,
-):
+async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
     item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
     await item_task.asave()
@@ -198,7 +193,7 @@ async def test_swarm_item_done_swarm_not_found_edge_case(
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_exception_during_handle_finish_edge_case(
-    create_mock_context_with_metadata, mock_handle_finish_tasks_error, publish_state
+    mock_handle_finish_tasks_error, publish_state
 ):
     # Arrange
     swarm_task = SwarmTaskSignature(
@@ -239,9 +234,7 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_concurrent_completions_edge_case(
-    create_mock_context_with_metadata, publish_state
-):
+async def test_swarm_item_done_concurrent_completions_edge_case(publish_state):
     # Arrange
     swarm_task = SwarmTaskSignature(
         task_name="test_swarm",

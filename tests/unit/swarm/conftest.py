@@ -251,7 +251,7 @@ class FailedSwarmSetup:
 
 
 @pytest_asyncio.fixture
-async def failed_swarm_setup(create_mock_context_with_metadata):
+async def failed_swarm_setup():
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm_failed",
@@ -286,7 +286,7 @@ class CompletedSwarmSetup:
 
 
 @pytest_asyncio.fixture
-async def completed_swarm_setup(create_mock_context_with_metadata):
+async def completed_swarm_setup():
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm_completed",
