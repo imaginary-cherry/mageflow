@@ -15,34 +15,30 @@ from tests.unit.conftest import ChainTestData
 
 @pytest.mark.asyncio
 async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to_paused_sanity(
-    chain_with_tasks: ChainTestData, publish_state
+    chain_with_tasks: ChainTestData,
 ):
     # Arrange
     chain_signature = chain_with_tasks.chain_signature
 
     # Create additional swarm task signatures (not part of chain)
-    swarm_task_signature_1 = TaskSignature(
-        task_name="swarm_task_1", model_validators=ContextMessage
+    swarm_task_signature_1 = await mageflow.sign(
+        "swarm_task_1", model_validators=ContextMessage
     )
-    await swarm_task_signature_1.asave()
-
-    swarm_task_signature_2 = TaskSignature(
-        task_name="swarm_task_2", model_validators=ContextMessage
+    swarm_task_signature_2 = await mageflow.sign(
+        "swarm_task_2", model_validators=ContextMessage
     )
-    await swarm_task_signature_2.asave()
 
     # Create a swarm with both chain and individual tasks
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         tasks=[
-            chain_signature.key,
-            swarm_task_signature_1.key,
-            swarm_task_signature_2.key,
+            chain_signature,
+            swarm_task_signature_1,
+            swarm_task_signature_2,
         ],
-        publishing_state_id=publish_state.key,
     )
-    await swarm_signature.asave()
+
     expected_paused_tasks = [
         swarm_signature,
         chain_signature,
@@ -65,31 +61,20 @@ async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ["task_signatures_to_create", "tasks_to_delete_indices", "new_status"],
+    ["task_names", "tasks_to_delete_indices", "new_status"],
     [
         [
-            [
-                TaskSignature(task_name="swarm_task_1"),
-                TaskSignature(task_name="swarm_task_2"),
-                TaskSignature(task_name="swarm_task_3"),
-            ],
+            ["swarm_task_1", "swarm_task_2", "swarm_task_3"],
             [],
             SignatureStatus.SUSPENDED,
         ],
         [
-            [
-                TaskSignature(task_name="swarm_task_1"),
-                TaskSignature(task_name="swarm_task_2"),
-            ],
+            ["swarm_task_1", "swarm_task_2"],
             [0, 1],
             SignatureStatus.SUSPENDED,
         ],
         [
-            [
-                TaskSignature(task_name="swarm_task_1"),
-                TaskSignature(task_name="swarm_task_2"),
-                TaskSignature(task_name="swarm_task_3"),
-            ],
+            ["swarm_task_1", "swarm_task_2", "swarm_task_3"],
             [0, 2],
             SignatureStatus.SUSPENDED,
         ],
@@ -97,21 +82,18 @@ async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to
 )
 async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     redis_client,
-    task_signatures_to_create: list[TaskSignature],
+    task_names: list[str],
     tasks_to_delete_indices: list[int],
     new_status: SignatureStatus,
 ):
     # Arrange
-    # Save task signatures
-    task_signatures = []
-    for task_signature in task_signatures_to_create:
-        await task_signature.asave()
-        task_signatures.append(task_signature)
+    # Create task signatures via API
+    task_signatures = [await mageflow.sign(name) for name in task_names]
 
     # Create a swarm with task signatures
     swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
-        tasks=[task.key for task in task_signatures],
+        tasks=task_signatures,
     )
 
     # Delete specified subtasks from Redis (simulate they were removed)
@@ -160,21 +142,16 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     [SignatureStatus.CANCELED],
 )
 async def test_add_task_raises_runtime_error_when_swarm_not_active_edge_case(
-    status: SignatureStatus, publish_state
+    status: SignatureStatus,
 ):
     # Arrange
-    task_signature = TaskSignature(
-        task_name="test_task",
-        kwargs={},
-        model_validators=ContextMessage,
+    task_signature = await mageflow.sign(
+        "test_task", model_validators=ContextMessage
     )
-    await task_signature.asave()
 
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
-        kwargs={},
         model_validators=ContextMessage,
-        publishing_state_id=publish_state.key,
     )
     swarm_signature.task_status.status = status
     await swarm_signature.asave()
@@ -185,26 +162,26 @@ async def test_add_task_raises_runtime_error_when_swarm_not_active_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_redis_entry_sanity(
-    publish_state,
-):
+async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_redis_entry_sanity():
     # Arrange
-    swarm_signature = SwarmTaskSignature(
+    # Create a swarm but then delete it to simulate an unsaved/deleted state
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm_unsaved",
         kwargs={},
         model_validators=ContextMessage,
-        tasks=["task_1", "task_2"],
-        publishing_state_id=publish_state.key,
     )
+    # Store the key before deleting
+    swarm_key = swarm_signature.key
+    await swarm_signature.delete()
 
     # Act
     result = await SwarmTaskSignature.safe_change_status(
-        swarm_signature.key, SignatureStatus.SUSPENDED
+        swarm_key, SignatureStatus.SUSPENDED
     )
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.get_safe(swarm_signature.key)
+    reloaded_signature = await TaskSignature.get_safe(swarm_key)
     assert reloaded_signature is None
 
 

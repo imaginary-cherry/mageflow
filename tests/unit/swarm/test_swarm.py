@@ -1,9 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-import rapyer
 
-from mageflow.signature.model import TaskSignature
+import mageflow
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
 from tests.integration.hatchet.models import ContextMessage
 
@@ -14,22 +13,18 @@ from tests.integration.hatchet.models import ContextMessage
     [[5, 3, True], [5, 4, True], [5, 5, False], [1, 1, False], [10, 0, True]],
 )
 async def test_add_to_running_tasks_sanity(
-    max_concurrency, current_running, expected_can_run, publish_state
+    max_concurrency, current_running, expected_can_run
 ):
     # Arrange
-    task_signature = TaskSignature(
-        task_name="test_task", model_validators=ContextMessage
-    )
-    await task_signature.asave()
+    task_signature = await mageflow.sign("test_task", model_validators=ContextMessage)
 
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=current_running,
         config=SwarmConfig(max_concurrency=max_concurrency),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_signature.asave()
+    async with swarm_signature.alock() as locked_swarm:
+        await locked_swarm.aupdate(current_running_tasks=current_running)
     original_tasks_left_to_run = swarm_signature.tasks_left_to_run.copy()
 
     # Act
@@ -65,20 +60,15 @@ async def test_add_to_running_tasks_sanity(
 
 
 @pytest.mark.asyncio
-async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm, publish_state):
+async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm):
     # Arrange
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         config=SwarmConfig(max_task_allowed=2),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_signature.asave()
 
-    task_signature_1 = TaskSignature(task_name="test_task_1")
-    await task_signature_1.asave()
-
-    task_signature_2 = TaskSignature(task_name="test_task_2")
-    await task_signature_2.asave()
+    task_signature_1 = await mageflow.sign("test_task_1")
+    task_signature_2 = await mageflow.sign("test_task_2")
 
     # Act
     mock_close_swarm.return_value = swarm_signature
@@ -90,17 +80,14 @@ async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm, publish_s
 
 
 @pytest.mark.asyncio
-async def test_add_task_not_reaching_max(mock_close_swarm, publish_state):
+async def test_add_task_not_reaching_max(mock_close_swarm):
     # Arrange
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         config=SwarmConfig(max_task_allowed=3),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_signature.asave()
 
-    task_signature = TaskSignature(task_name="test_task")
-    await task_signature.asave()
+    task_signature = await mageflow.sign("test_task")
 
     # Act
     await swarm_signature.add_task(task_signature, close_on_max_task=True)
@@ -110,20 +97,15 @@ async def test_add_task_not_reaching_max(mock_close_swarm, publish_state):
 
 
 @pytest.mark.asyncio
-async def test_add_task_reaches_max_but_no_close(mock_close_swarm, publish_state):
+async def test_add_task_reaches_max_but_no_close(mock_close_swarm):
     # Arrange
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         config=SwarmConfig(max_task_allowed=2),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_signature.asave()
 
-    task_signature_1 = TaskSignature(task_name="test_task_1")
-    await task_signature_1.asave()
-
-    task_signature_2 = TaskSignature(task_name="test_task_2")
-    await task_signature_2.asave()
+    task_signature_1 = await mageflow.sign("test_task_1")
+    task_signature_2 = await mageflow.sign("test_task_2")
 
     # Act
     await swarm_signature.add_task(task_signature_1, close_on_max_task=False)
@@ -142,24 +124,23 @@ async def test_add_task_reaches_max_but_no_close(mock_close_swarm, publish_state
     ],
 )
 async def test_fill_running_tasks_sanity(
-    num_tasks_left, current_running, max_concurrency, expected_started, publish_state
+    num_tasks_left, current_running, max_concurrency, expected_started
 ):
     # Arrange
     # Create original task signatures using list comprehension
     original_tasks = [
-        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
+        await mageflow.sign(f"original_task_{i}", model_validators=ContextMessage)
         for i in range(num_tasks_left + 2)  # Create extra tasks for the swarm
     ]
 
     # Create swarm with config
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=current_running,
         config=SwarmConfig(max_concurrency=max_concurrency),
-        publishing_state_id=publish_state.key,
     )
-    await rapyer.ainsert(swarm_signature, *original_tasks)
+    async with swarm_signature.alock() as locked_swarm:
+        await locked_swarm.aupdate(current_running_tasks=current_running)
 
     # Add tasks to swarm to create BatchItemTaskSignatures using list comprehension
     batch_tasks = [

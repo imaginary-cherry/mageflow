@@ -68,25 +68,9 @@ class ChainTestData:
 
 @pytest_asyncio.fixture
 async def chain_with_tasks():
-    chain_task_signature_1 = TaskSignature(
-        task_name="chain_task_1", model_validators=ContextMessage
-    )
-    await chain_task_signature_1.asave()
-
-    chain_task_signature_2 = TaskSignature(
-        task_name="chain_task_2", model_validators=ContextMessage
-    )
-    await chain_task_signature_2.asave()
-
-    chain_task_signature_3 = TaskSignature(
-        task_name="chain_task_3", model_validators=ContextMessage
-    )
-    await chain_task_signature_3.asave()
-
     task_signatures = [
-        chain_task_signature_1,
-        chain_task_signature_2,
-        chain_task_signature_3,
+        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        for i in range(1, 4)
     ]
 
     chain_signature = await mageflow.chain([task.key for task in task_signatures])

@@ -3,7 +3,7 @@ from unittest.mock import call
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
 
-from mageflow.signature.model import TaskSignature
+import mageflow
 from mageflow.swarm.consts import SWARM_FILL_TASK
 from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
@@ -13,26 +13,18 @@ from tests.unit.swarm.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_sanity_basic_flow(
-    publish_state, mock_fill_running_tasks
-):
+async def test_swarm_start_tasks_sanity_basic_flow(mock_fill_running_tasks):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    original_tasks = [
+        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(5)
+    ]
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
-        publishing_state_id=publish_state.key,
+        tasks=original_tasks,
     )
-    await swarm_task.asave()
-
-    tasks = [
-        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(5)
-    ]
-    for task in tasks:
-        await task.asave()
-
-    await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
@@ -47,25 +39,19 @@ async def test_swarm_start_tasks_sanity_basic_flow(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
-    mock_task_aio_run_no_wait, publish_state, mock_fill_running_tasks
+    mock_task_aio_run_no_wait, mock_fill_running_tasks
 ):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    original_tasks = [
+        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=5),
-        publishing_state_id=publish_state.key,
+        tasks=original_tasks,
     )
-    await swarm_task.asave()
-
-    tasks = [
-        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    for task in tasks:
-        await task.asave()
-
-    await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
@@ -81,27 +67,20 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_already_started_edge_case(
-    mock_task_aio_run_no_wait, publish_state
-):
+async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_wait):
     # Arrange
-    swarm_task = SwarmTaskSignature(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        current_running_tasks=1,
-        config=SwarmConfig(max_concurrency=2),
-        publishing_state_id=publish_state.key,
-    )
-    await swarm_task.asave()
-
-    tasks = [
-        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
+    original_tasks = [
+        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
-    for task in tasks:
-        await task.asave()
-
-    await swarm_task.tasks.aextend([t.key for t in tasks])
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=2),
+        tasks=original_tasks,
+    )
+    async with swarm_task.alock() as locked_swarm:
+        await locked_swarm.aupdate(current_running_tasks=1)
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
@@ -115,25 +94,19 @@ async def test_swarm_start_tasks_already_started_edge_case(
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
-    mock_task_aio_run_no_wait, publish_state, mock_fill_running_tasks
+    mock_task_aio_run_no_wait, mock_fill_running_tasks
 ):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    original_tasks = [
+        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        for i in range(3)
+    ]
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=0),
-        publishing_state_id=publish_state.key,
+        tasks=original_tasks,
     )
-    await swarm_task.asave()
-
-    tasks = [
-        TaskSignature(task_name=f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    for task in tasks:
-        await task.asave()
-
-    await swarm_task.tasks.aextend([t.key for t in tasks])
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
@@ -146,17 +119,13 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_empty_tasks_list_edge_case(
-    publish_state, mock_fill_running_tasks
-):
+async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_fill_running_tasks):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = EmptyModel()
@@ -189,15 +158,13 @@ async def test_swarm_start_tasks_swarm_not_found_edge_case():
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_task_not_found_edge_case(publish_state):
+async def test_swarm_start_tasks_task_not_found_edge_case():
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
 
     await swarm_task.tasks.aextend(["nonexistent_task_1", "nonexistent_task_2"])
 

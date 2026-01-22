@@ -1,15 +1,23 @@
+from dataclasses import dataclass
+
 import pytest
 
 import mageflow
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus, TaskStatus
+from mageflow.signature.status import SignatureStatus
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.assertions import assert_redis_keys_do_not_contain_sub_task_ids
 from tests.unit.assertions import (
     assert_tasks_not_exists,
     assert_tasks_changed_status,
 )
+
+
+@dataclass
+class TaskResumeConfig:
+    name: str
+    last_status: SignatureStatus
 
 
 @pytest.mark.asyncio
@@ -35,31 +43,20 @@ async def test_chain_safe_change_status_on_unsaved_signature_does_not_create_red
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ["task_signatures_to_create", "tasks_to_delete_indices", "new_status"],
+    ["task_names", "tasks_to_delete_indices", "new_status"],
     [
         [
-            [
-                TaskSignature(task_name="task1"),
-                TaskSignature(task_name="task2"),
-                TaskSignature(task_name="task3"),
-            ],
+            ["task1", "task2", "task3"],
             [],
             SignatureStatus.SUSPENDED,
         ],
         [
-            [
-                TaskSignature(task_name="task1"),
-                TaskSignature(task_name="task2"),
-            ],
+            ["task1", "task2"],
             [0, 1],
             SignatureStatus.CANCELED,
         ],
         [
-            [
-                TaskSignature(task_name="task1"),
-                TaskSignature(task_name="task2"),
-                TaskSignature(task_name="task3"),
-            ],
+            ["task1", "task2", "task3"],
             [0, 2],
             SignatureStatus.ACTIVE,
         ],
@@ -67,16 +64,13 @@ async def test_chain_safe_change_status_on_unsaved_signature_does_not_create_red
 )
 async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     redis_client,
-    task_signatures_to_create: list[TaskSignature],
+    task_names: list[str],
     tasks_to_delete_indices: list[int],
     new_status: SignatureStatus,
 ):
     # Arrange
-    # Save task signatures
-    task_signatures = []
-    for task_signature in task_signatures_to_create:
-        await task_signature.asave()
-        task_signatures.append(task_signature)
+    # Create task signatures via API
+    task_signatures = [await mageflow.sign(name) for name in task_names]
 
     # Create a chain
     chain_signature = await mageflow.chain([task.key for task in task_signatures])
@@ -115,76 +109,28 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ["task_signatures_to_create", "tasks_to_delete_indices"],
+    ["task_configs", "tasks_to_delete_indices"],
     [
         [
             [
-                TaskSignature(
-                    task_name="task1",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
-                TaskSignature(
-                    task_name="task2",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
-                TaskSignature(
-                    task_name="task3",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
+                TaskResumeConfig(name="task1", last_status=SignatureStatus.ACTIVE),
+                TaskResumeConfig(name="task2", last_status=SignatureStatus.ACTIVE),
+                TaskResumeConfig(name="task3", last_status=SignatureStatus.ACTIVE),
             ],
             [],
         ],
         [
             [
-                TaskSignature(
-                    task_name="task1",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.PENDING,
-                    ),
-                ),
-                TaskSignature(
-                    task_name="task2",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.PENDING,
-                    ),
-                ),
+                TaskResumeConfig(name="task1", last_status=SignatureStatus.PENDING),
+                TaskResumeConfig(name="task2", last_status=SignatureStatus.PENDING),
             ],
             [0],
         ],
         [
             [
-                TaskSignature(
-                    task_name="task1",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
-                TaskSignature(
-                    task_name="task2",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
-                TaskSignature(
-                    task_name="task3",
-                    task_status=TaskStatus(
-                        status=SignatureStatus.SUSPENDED,
-                        last_status=SignatureStatus.ACTIVE,
-                    ),
-                ),
+                TaskResumeConfig(name="task1", last_status=SignatureStatus.ACTIVE),
+                TaskResumeConfig(name="task2", last_status=SignatureStatus.ACTIVE),
+                TaskResumeConfig(name="task3", last_status=SignatureStatus.ACTIVE),
             ],
             [1, 2],
         ],
@@ -192,18 +138,20 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
 )
 async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
     mock_aio_run_no_wait,
-    task_signatures_to_create: list[TaskSignature],
+    task_configs: list[TaskResumeConfig],
     tasks_to_delete_indices: list[int],
 ):
     # Arrange
     task_signatures = []
     expected_statuses = []
     num_of_aio_run = 0
-    for task_signature in task_signatures_to_create:
+    for config in task_configs:
+        task_signature = await mageflow.sign(config.name)
+        task_signature.task_status.status = SignatureStatus.SUSPENDED
+        task_signature.task_status.last_status = config.last_status
         await task_signature.asave()
         task_signatures.append(task_signature)
-        last_status = task_signature.task_status.last_status
-        expected_statuses.append(last_status)
+        expected_statuses.append(config.last_status)
 
     chain_signature = await mageflow.chain([task.key for task in task_signatures])
     chain_signature.task_status.status = SignatureStatus.SUSPENDED

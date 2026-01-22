@@ -62,8 +62,7 @@ async def swarm_setup():
         swarm_task.current_running_tasks += 1
         swarm_task.tasks.append(batch_task.key)
 
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
         task_id=item_task.key,
@@ -92,35 +91,17 @@ async def swarm_item_done_setup(swarm_setup):
 
 
 @pytest_asyncio.fixture
-async def swarm_with_tasks(publish_state):
-    swarm_task_signature_1 = TaskSignature(
-        task_name="swarm_task_1", model_validators=ContextMessage
-    )
-    await swarm_task_signature_1.asave()
-
-    swarm_task_signature_2 = TaskSignature(
-        task_name="swarm_task_2", model_validators=ContextMessage
-    )
-    await swarm_task_signature_2.asave()
-
-    swarm_task_signature_3 = TaskSignature(
-        task_name="swarm_task_3", model_validators=ContextMessage
-    )
-    await swarm_task_signature_3.asave()
-
+async def swarm_with_tasks():
     task_signatures = [
-        swarm_task_signature_1,
-        swarm_task_signature_2,
-        swarm_task_signature_3,
+        await mageflow.sign(f"swarm_task_{i}", model_validators=ContextMessage)
+        for i in range(1, 4)
     ]
 
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        tasks=[task.key for task in task_signatures],
-        publishing_state_id=publish_state.key,
+        tasks=task_signatures,
     )
-    await swarm_signature.asave()
 
     return SwarmTestData(
         task_signatures=task_signatures, swarm_signature=swarm_signature

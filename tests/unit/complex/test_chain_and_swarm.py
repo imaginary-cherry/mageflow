@@ -20,26 +20,25 @@ async def test_chain_with_swarm_task_creates_callbacks_correctly_edge_case(
 ):
     # Arrange
     # Create a swarm task
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm_task",
-        kwargs={"swarm_arg": "swarm_value"},
         model_validators=ContextMessage,
-        publishing_state_id="",
+        swarm_arg="swarm_value",
     )
-    await swarm_task.asave()
 
-    simple_task = TaskSignature(
-        task_name="simple_task",
-        kwargs={"param": "value"},
+    simple_task = await mageflow.sign(
+        "simple_task",
         model_validators=ContextMessage,
+        param="value",
     )
-    await simple_task.asave()
 
     # Act
     chain_signature = await mageflow.chain([swarm_task.key, simple_task.key])
 
     # Assert
-    reloaded_swarm = await assert_task_reloaded_as_type(swarm_task.key, SwarmTaskSignature)
+    reloaded_swarm = await assert_task_reloaded_as_type(
+        swarm_task.key, SwarmTaskSignature
+    )
     await assert_single_success_callback(reloaded_swarm, simple_task.key)
     await assert_single_error_callback_is_chain_error(reloaded_swarm)
 
@@ -49,41 +48,27 @@ async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
     hatchet_mock,
 ):
     # Arrange
-    parent_swarm = SwarmTaskSignature(
+    parent_swarm = await mageflow.swarm(
         task_name="parent_swarm",
-        kwargs={},
         model_validators=ContextMessage,
-        publishing_state_id="",
     )
-    await parent_swarm.asave()
 
     # Create an original task for a batch item
-    original_task = TaskSignature(
-        task_name="original_task",
-        kwargs={},
+    original_task = await mageflow.sign(
+        "original_task",
         model_validators=ContextMessage,
     )
-    await original_task.asave()
 
-    # Create batch item task
-    batch_item_task = BatchItemTaskSignature(
-        task_name="batch_item_task",
-        kwargs={"batch_arg": "batch_value"},
-        swarm_id=parent_swarm.key,
-        original_task_id=original_task.key,
-        model_validators=ContextMessage,
-    )
-    await batch_item_task.asave()
+    # Create batch item task via swarm.add_task
+    batch_item_task = await parent_swarm.add_task(original_task)
 
-    simple_task = TaskSignature(
-        task_name="simple_task_after_batch",
-        kwargs={},
+    simple_task = await mageflow.sign(
+        "simple_task_after_batch",
         model_validators=ContextMessage,
     )
-    await simple_task.asave()
 
     # Act
-    chain_signature = await mageflow.chain([batch_item_task.key, simple_task.key])
+    await mageflow.chain([batch_item_task.key, simple_task.key])
 
     # Assert
     reloaded_batch_item = await assert_task_reloaded_as_type(
@@ -99,28 +84,24 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
 ):
     # Arrange
     # Create various task types
-    simple_task = TaskSignature(
-        task_name="simple_task",
-        kwargs={"simple_arg": "simple_value"},
+    simple_task = await mageflow.sign(
+        "simple_task",
         model_validators=ContextMessage,
+        simple_arg="simple_value",
     )
-    await simple_task.asave()
 
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="swarm_task",
-        kwargs={"swarm_arg": "swarm_value"},
         model_validators=ContextMessage,
-        publishing_state_id="",
+        swarm_arg="swarm_value",
     )
-    await swarm_task.asave()
 
     # Create another simple task
-    final_task = TaskSignature(
-        task_name="final_task",
-        kwargs={"final_arg": "final_value"},
+    final_task = await mageflow.sign(
+        "final_task",
         model_validators=ContextMessage,
+        final_arg="final_value",
     )
-    await final_task.asave()
 
     # Act
     chain_signature = await mageflow.chain(
@@ -129,7 +110,9 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
 
     # Assert
     loaded_simple = await assert_task_reloaded_as_type(simple_task.key, TaskSignature)
-    loaded_swarm = await assert_task_reloaded_as_type(swarm_task.key, SwarmTaskSignature)
+    loaded_swarm = await assert_task_reloaded_as_type(
+        swarm_task.key, SwarmTaskSignature
+    )
     loaded_final = await assert_task_reloaded_as_type(final_task.key, TaskSignature)
 
     await assert_single_success_callback(loaded_simple, swarm_task.key)
@@ -149,34 +132,26 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
 async def test_chain_creation_with_custom_name_and_callbacks_sanity(hatchet_mock):
     # Arrange
     # Create custom success and error callbacks
-    custom_success = TaskSignature(
-        task_name="custom_success_callback",
-        kwargs={},
+    custom_success = await mageflow.sign(
+        "custom_success_callback",
         model_validators=ContextMessage,
     )
-    await custom_success.asave()
 
-    custom_error = TaskSignature(
-        task_name="custom_error_callback",
-        kwargs={},
+    custom_error = await mageflow.sign(
+        "custom_error_callback",
         model_validators=ContextMessage,
     )
-    await custom_error.asave()
 
     # Create tasks for a chain
-    task1 = TaskSignature(
-        task_name="task1",
-        kwargs={},
+    task1 = await mageflow.sign(
+        "task1",
         model_validators=ContextMessage,
     )
-    await task1.asave()
 
-    task2 = TaskSignature(
-        task_name="task2",
-        kwargs={},
+    task2 = await mageflow.sign(
+        "task2",
         model_validators=ContextMessage,
     )
-    await task2.asave()
 
     # Act
     chain_signature = await mageflow.chain(
@@ -187,6 +162,8 @@ async def test_chain_creation_with_custom_name_and_callbacks_sanity(hatchet_mock
     )
 
     # Assert
-    loaded_chain = await assert_task_reloaded_as_type(chain_signature.key, TaskSignature)
+    loaded_chain = await assert_task_reloaded_as_type(
+        chain_signature.key, TaskSignature
+    )
     assert loaded_chain.task_name == "chain-task:custom_chain_name"
     assert_callback_contains(loaded_chain, [custom_success.key], [custom_error.key])

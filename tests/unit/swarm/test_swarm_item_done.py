@@ -2,46 +2,37 @@ import asyncio
 
 import pytest
 
+import mageflow
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmResultsMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.swarm.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_basic_flow(
-    mock_fill_running_tasks, publish_state
-):
+async def test_swarm_item_done_sanity_basic_flow(mock_fill_running_tasks):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
-        current_running_tasks=1,
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
 
-    batch_tasks = [
-        BatchItemTaskSignature(
-            task_name=f"test_task_{i}",
-            model_validators=ContextMessage,
-            swarm_id=swarm_task.key,
-            original_task_id=f"original_task_{i}",
-        )
+    original_tasks = [
+        await mageflow.sign(f"original_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
-    for task in batch_tasks:
-        await task.asave()
+    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
 
-    await swarm_task.tasks.aextend([t.key for t in batch_tasks])
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks = 1
+        swarm_task.tasks.extend([t.key for t in batch_tasks])
     await swarm_task.tasks_left_to_run.aextend([batch_tasks[1].key, batch_tasks[2].key])
 
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
         task_id=item_task.key,
@@ -70,37 +61,29 @@ async def test_swarm_item_done_sanity_basic_flow(
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_last_item_completes(
-    mock_fill_running_tasks, publish_state
-):
+async def test_swarm_item_done_sanity_last_item_completes(mock_fill_running_tasks):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
-        current_running_tasks=1,
-        is_swarm_closed=True,
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
 
-    batch_tasks = [
-        BatchItemTaskSignature(
-            task_name=f"test_task_{i}",
-            model_validators=ContextMessage,
-            swarm_id=swarm_task.key,
-            original_task_id=f"original_task_{i}",
-        )
+    original_tasks = [
+        await mageflow.sign(f"original_task_{i}", model_validators=ContextMessage)
         for i in range(2)
     ]
-    for task in batch_tasks:
-        await task.asave()
+    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
 
-    await swarm_task.tasks.aextend([t.key for t in batch_tasks])
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks = 1
+        swarm_task.tasks.extend([t.key for t in batch_tasks])
     await swarm_task.finished_tasks.aappend(batch_tasks[0].key)
 
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
+    async with swarm_task.alock() as locked_swarm:
+        await locked_swarm.aupdate(is_swarm_closed=True)
+
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
         task_id=item_task.key,
@@ -144,15 +127,14 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_nonexistent_batch_task_edge_case(publish_state):
+async def test_swarm_item_done_nonexistent_batch_task_edge_case():
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        publishing_state_id=publish_state.key,
-        current_running_tasks=1,
     )
-    await swarm_task.asave()
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks = 1
 
     ctx = create_mock_context_with_metadata(
         task_id="some_task",
@@ -172,8 +154,7 @@ async def test_swarm_item_done_nonexistent_batch_task_edge_case(publish_state):
 @pytest.mark.asyncio
 async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
         task_id=item_task.key,
@@ -193,27 +174,20 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_exception_during_handle_finish_edge_case(
-    mock_handle_finish_tasks_error, publish_state
+    mock_handle_finish_tasks_error,
 ):
     # Arrange
-    swarm_task = SwarmTaskSignature(
+    swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=1,
-        publishing_state_id=publish_state.key,
     )
-    await swarm_task.asave()
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks = 1
 
-    batch_task = BatchItemTaskSignature(
-        task_name="test_task",
-        model_validators=ContextMessage,
-        swarm_id=swarm_task.key,
-        original_task_id="original_task",
-    )
-    await batch_task.asave()
+    original_task = await mageflow.sign("original_task", model_validators=ContextMessage)
+    batch_task = await swarm_task.add_task(original_task)
 
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
         task_id=item_task.key,

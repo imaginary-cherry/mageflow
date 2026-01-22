@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 import pytest
 
 import mageflow
@@ -11,6 +13,14 @@ from tests.unit.assertions import (
     assert_success_callback_is_chain_end,
     assert_callback_contains,
 )
+
+
+@dataclass
+class TaskConfig:
+    name: str
+    task_kwargs: dict = field(default_factory=dict)
+    success_callbacks: list[str] = field(default_factory=list)
+    error_callbacks: list[str] = field(default_factory=list)
 
 
 @pytest.mark.asyncio
@@ -48,65 +58,42 @@ async def test__chain_signature_create_save_load__input_output_same__sanity(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "task_signatures",
+    "task_configs",
     [
         [
-            TaskSignature(
-                task_name="simple_task_0",
-                kwargs={"arg": "value_0"},
-                model_validators=ContextMessage,
-            ),
-            TaskSignature(
-                task_name="another_task_1",
-                kwargs={"param": "param_value_1"},
-                model_validators=ContextMessage,
-            ),
+            TaskConfig(name="simple_task_0", task_kwargs={"arg": "value_0"}),
+            TaskConfig(name="another_task_1", task_kwargs={"param": "param_value_1"}),
         ],
         [
-            TaskSignature(
-                task_name="simple_task_0",
-                kwargs={"arg": "value_0"},
-                model_validators=ContextMessage,
-            ),
-            TaskSignature(
-                task_name="another_task_1",
-                kwargs={"param": "param_value_1"},
-                model_validators=ContextMessage,
-            ),
-            TaskSignature(
-                task_name="third_task_2",
-                kwargs={"data": "data_value_2"},
-                model_validators=ContextMessage,
-            ),
+            TaskConfig(name="simple_task_0", task_kwargs={"arg": "value_0"}),
+            TaskConfig(name="another_task_1", task_kwargs={"param": "param_value_1"}),
+            TaskConfig(name="third_task_2", task_kwargs={"data": "data_value_2"}),
         ],
         [
-            TaskSignature(
-                task_name="existing_success_callback",
-                kwargs={},
-                model_validators=ContextMessage,
-            ),
-            TaskSignature(
-                task_name="existing_error_callback",
-                kwargs={},
-                model_validators=ContextMessage,
-            ),
-            TaskSignature(
-                task_name="task_with_callbacks_0",
-                kwargs={"callback_arg": "callback_value_0"},
+            TaskConfig(name="existing_success_callback"),
+            TaskConfig(name="existing_error_callback"),
+            TaskConfig(
+                name="task_with_callbacks_0",
+                task_kwargs={"callback_arg": "callback_value_0"},
                 success_callbacks=["existing_success_task.key"],
                 error_callbacks=["existing_error_task.key"],
-                model_validators=ContextMessage,
             ),
         ],
     ],
 )
 async def test_chain_creation_with_various_task_types_loads_correctly_from_redis_sanity(
-    hatchet_mock, task_signatures
+    hatchet_mock, task_configs: list[TaskConfig]
 ):
     # Arrange
     tasks = []
-    for task_signature in task_signatures:
-        await task_signature.asave()
+    for config in task_configs:
+        task_signature = await mageflow.sign(
+            config.name,
+            model_validators=ContextMessage,
+            success_callbacks=config.success_callbacks,
+            error_callbacks=config.error_callbacks,
+            **config.task_kwargs,
+        )
         tasks.append(task_signature)
 
     # Act
@@ -148,26 +135,23 @@ async def test_chain_success_callbacks_contain_next_task_ids_sanity(
     hatchet_mock,
 ):
     # Arrange
-    task1 = TaskSignature(
-        task_name="first_task",
-        kwargs={"arg1": "value1"},
+    task1 = await mageflow.sign(
+        "first_task",
         model_validators=ContextMessage,
+        arg1="value1",
     )
-    await task1.asave()
 
-    task2 = TaskSignature(
-        task_name="second_task",
-        kwargs={"arg2": "value2"},
+    task2 = await mageflow.sign(
+        "second_task",
         model_validators=ContextMessage,
+        arg2="value2",
     )
-    await task2.asave()
 
-    task3 = TaskSignature(
-        task_name="third_task",
-        kwargs={"arg3": "value3"},
+    task3 = await mageflow.sign(
+        "third_task",
         model_validators=ContextMessage,
+        arg3="value3",
     )
-    await task3.asave()
 
     # Act
     chain_signature = await mageflow.chain([task1.key, task2.key, task3.key])
@@ -187,22 +171,20 @@ async def test_chain_error_callbacks_contain_unique_chain_error_task_ids_sanity(
     hatchet_mock,
 ):
     # Arrange
-    task1 = TaskSignature(
-        task_name="first_task",
-        kwargs={"arg1": "value1"},
+    task1 = await mageflow.sign(
+        "first_task",
         model_validators=ContextMessage,
+        arg1="value1",
     )
-    await task1.asave()
 
-    task2 = TaskSignature(
-        task_name="second_task",
-        kwargs={"arg2": "value2"},
+    task2 = await mageflow.sign(
+        "second_task",
         model_validators=ContextMessage,
+        arg2="value2",
     )
-    await task2.asave()
 
     # Act
-    chain_signature = await mageflow.chain([task1.key, task2.key])
+    await mageflow.chain([task1.key, task2.key])
 
     # Assert
     reloaded_task1 = await TaskSignature.get_safe(task1.key)
@@ -219,39 +201,33 @@ async def test_chain_with_existing_callbacks_preserves_and_adds_new_ones_edge_ca
 ):
     # Arrange
     # Create existing callback tasks
-    existing_success = TaskSignature(
-        task_name="existing_success",
-        kwargs={},
+    existing_success = await mageflow.sign(
+        "existing_success",
         model_validators=ContextMessage,
     )
-    await existing_success.asave()
 
-    existing_error = TaskSignature(
-        task_name="existing_error",
-        kwargs={},
+    existing_error = await mageflow.sign(
+        "existing_error",
         model_validators=ContextMessage,
     )
-    await existing_error.asave()
 
     # Create task with existing callbacks
-    task_with_callbacks = TaskSignature(
-        task_name="task_with_existing_callbacks",
-        kwargs={"arg": "value"},
+    task_with_callbacks = await mageflow.sign(
+        "task_with_existing_callbacks",
         success_callbacks=[existing_success.key],
         error_callbacks=[existing_error.key],
         model_validators=ContextMessage,
+        arg="value",
     )
-    await task_with_callbacks.asave()
 
-    simple_task = TaskSignature(
-        task_name="simple_task",
-        kwargs={"param": "param_value"},
+    simple_task = await mageflow.sign(
+        "simple_task",
         model_validators=ContextMessage,
+        param="param_value",
     )
-    await simple_task.asave()
 
     # Act
-    chain_signature = await mageflow.chain([task_with_callbacks.key, simple_task.key])
+    await mageflow.chain([task_with_callbacks.key, simple_task.key])
 
     # Assert
     reloaded_task = await TaskSignature.get_safe(task_with_callbacks.key)

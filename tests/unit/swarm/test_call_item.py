@@ -58,12 +58,11 @@ async def test_simple_task_kwargs_saved_sanity(test_message, test_swarm):
     # Arrange
     # Create original task
     task_kwargs = {"task_param": "task_value"}
-    original_task = TaskSignature(
-        task_name="simple_task",
-        kwargs=task_kwargs,
+    original_task = await mageflow.sign(
+        "simple_task",
         model_validators=ContextMessage,
+        **task_kwargs,
     )
-    await original_task.asave()
 
     swarm_signature, swarm_kwargs = test_swarm
     batch_item = await swarm_signature.add_task(original_task)
@@ -110,39 +109,35 @@ async def test_nested_chain_kwargs_saved_in_first_task_of_first_chain_sanity(
     # Arrange
     # Create first chain
     first_chain_task1_kwargs = {"first_chain_task1_param": "first_chain_task1_value"}
-    first_chain_task1 = TaskSignature(
-        task_name="first_chain_task1",
-        kwargs=first_chain_task1_kwargs,
+    first_chain_task1 = await mageflow.sign(
+        "first_chain_task1",
         model_validators=ContextMessage,
+        **first_chain_task1_kwargs,
     )
-    await first_chain_task1.asave()
 
     first_chain_task2_kwargs = {"first_chain_task2_param": "first_chain_task2_value"}
-    first_chain_task2 = TaskSignature(
-        task_name="first_chain_task2",
-        kwargs=first_chain_task2_kwargs,
+    first_chain_task2 = await mageflow.sign(
+        "first_chain_task2",
         model_validators=ContextMessage,
+        **first_chain_task2_kwargs,
     )
-    await first_chain_task2.asave()
 
     first_chain = await mageflow.chain([first_chain_task1.key, first_chain_task2.key])
 
     # Create second chain
     second_chain_task1_kwargs = {"second_chain_task1_param": "second_chain_task1_value"}
-    second_chain_task1 = TaskSignature(
-        task_name="second_chain_task1",
-        kwargs=second_chain_task1_kwargs,
+    second_chain_task1 = await mageflow.sign(
+        "second_chain_task1",
         model_validators=ContextMessage,
+        **second_chain_task1_kwargs,
     )
-    await second_chain_task1.asave()
 
     second_chain_task2_kwargs = {"second_chain_task2_param": "second_chain_task2_value"}
-    second_chain_task2 = TaskSignature(
-        task_name="second_chain_task2",
-        kwargs=second_chain_task2_kwargs,
+    second_chain_task2 = await mageflow.sign(
+        "second_chain_task2",
         model_validators=ContextMessage,
+        **second_chain_task2_kwargs,
     )
-    await second_chain_task2.asave()
 
     second_chain = await mageflow.chain(
         [second_chain_task1.key, second_chain_task2.key]
