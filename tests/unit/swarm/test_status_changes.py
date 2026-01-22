@@ -123,11 +123,6 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     await assert_tasks_changed_status(
         non_deleted_indices, new_status, SignatureStatus.PENDING
     )
-    batch_non_deleted_tasks = [
-        swarm_signature.tasks[i]
-        for i in range(len(task_signatures))
-        if i not in tasks_to_delete_indices
-    ]
     await assert_tasks_changed_status(
         non_deleted_indices, new_status, SignatureStatus.PENDING
     )
