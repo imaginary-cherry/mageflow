@@ -50,7 +50,7 @@ async def publish_state():
 
 
 @pytest_asyncio.fixture
-async def swarm_item_done_setup(create_mock_context_with_metadata):
+async def swarm_setup():
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
@@ -70,6 +70,12 @@ async def swarm_item_done_setup(create_mock_context_with_metadata):
         swarm_task_id=swarm_task.key,
         swarm_item_id=batch_task.key,
     )
+    return [swarm_task, batch_task, item_task, ctx]
+
+
+@pytest_asyncio.fixture
+async def swarm_item_done_setup(swarm_setup):
+    swarm_task, batch_task, item_task, ctx = swarm_setup
     msg = SwarmResultsMessage(
         results=42,
         swarm_task_id=swarm_task.key,
@@ -129,22 +135,20 @@ def mock_context():
     return ctx
 
 
-@pytest.fixture
-def create_mock_context_with_metadata():
-    def _create(task_id=None, swarm_task_id=None, swarm_item_id=None):
-        ctx = MagicMock(spec=Context)
-        ctx.log = MagicMock()
-        metadata = {}
-        if task_id is not None:
-            metadata[TASK_ID_PARAM_NAME] = task_id
-        if swarm_task_id is not None:
-            metadata[SWARM_TASK_ID_PARAM_NAME] = swarm_task_id
-        if swarm_item_id is not None:
-            metadata[SWARM_ITEM_TASK_ID_PARAM_NAME] = swarm_item_id
-        ctx.additional_metadata = {"task_data": metadata}
-        return ctx
-
-    return _create
+def create_mock_context_with_metadata(
+    task_id=None, swarm_task_id=None, swarm_item_id=None
+):
+    ctx = MagicMock(spec=Context)
+    ctx.log = MagicMock()
+    metadata = {}
+    if task_id is not None:
+        metadata[TASK_ID_PARAM_NAME] = task_id
+    if swarm_task_id is not None:
+        metadata[SWARM_TASK_ID_PARAM_NAME] = swarm_task_id
+    if swarm_item_id is not None:
+        metadata[SWARM_ITEM_TASK_ID_PARAM_NAME] = swarm_item_id
+    ctx.additional_metadata = {"task_data": metadata}
+    return ctx
 
 
 @pytest.fixture
@@ -322,26 +326,8 @@ class SwarmItemFailedSetup:
 
 
 @pytest_asyncio.fixture
-async def swarm_item_failed_setup(create_mock_context_with_metadata):
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm_failed_idempotent",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=None),
-    )
-    swarm_item_task = await mageflow.sign("item_task")
-    batch_task = await swarm_task.add_task(swarm_item_task)
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks += 1
-        swarm_task.tasks.append(batch_task.key)
-
-    item_task = TaskSignature(task_name="item_task", model_validators=ContextMessage)
-    await item_task.asave()
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_task.key,
-    )
+async def swarm_item_failed_setup(swarm_setup):
+    swarm_task, batch_task, item_task, ctx = swarm_setup
     msg = EmptyModel()
 
     return SwarmItemFailedSetup(
