@@ -78,7 +78,7 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     # Delete specified subtasks from Redis (simulate they were removed)
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
-        await task_signatures[idx].delete()
+        await task_signatures[idx].adelete()
         deleted_task_ids.append(task_signatures[idx].key)
 
     # Act
@@ -158,7 +158,7 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
 
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
-        await task_signatures[idx].delete()
+        await task_signatures[idx].adelete()
         deleted_task_ids.append(task_signatures[idx].key)
 
     # Act

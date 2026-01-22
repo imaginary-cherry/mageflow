@@ -99,7 +99,7 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     # Delete specified subtasks from Redis (simulate they were removed)
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
-        await task_signatures[idx].delete()
+        await task_signatures[idx].adelete()
         deleted_task_ids.append(task_signatures[idx].key)
 
     # Act
@@ -145,9 +145,7 @@ async def test_add_task_raises_runtime_error_when_swarm_not_active_edge_case(
     status: SignatureStatus,
 ):
     # Arrange
-    task_signature = await mageflow.sign(
-        "test_task", model_validators=ContextMessage
-    )
+    task_signature = await mageflow.sign("test_task", model_validators=ContextMessage)
 
     swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
@@ -172,7 +170,7 @@ async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_red
     )
     # Store the key before deleting
     swarm_key = swarm_signature.key
-    await swarm_signature.delete()
+    await swarm_signature.adelete()
 
     # Act
     result = await SwarmTaskSignature.safe_change_status(
