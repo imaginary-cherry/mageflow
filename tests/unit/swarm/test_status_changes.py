@@ -117,7 +117,7 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     # Delete specified subtasks from Redis (simulate they were removed)
     deleted_task_ids = []
     for idx in tasks_to_delete_indices:
-        await task_signatures[idx].remove()
+        await task_signatures[idx].delete()
         deleted_task_ids.append(task_signatures[idx].key)
 
     # Act

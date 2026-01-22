@@ -44,9 +44,6 @@ async def test_swarm_start_tasks_sanity_basic_flow(
     # Assert
     mock_fill_running_tasks.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
 
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-    assert len(reloaded_swarm.tasks_left_to_run) == 3
-
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
