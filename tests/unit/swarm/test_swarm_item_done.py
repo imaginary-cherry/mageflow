@@ -1,15 +1,12 @@
-import asyncio
-
 import pytest
 
 import mageflow
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.swarm.conftest import create_mock_context_with_metadata
+from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
@@ -184,7 +181,9 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = 1
 
-    original_task = await mageflow.sign("original_task", model_validators=ContextMessage)
+    original_task = await mageflow.sign(
+        "original_task", model_validators=ContextMessage
+    )
     batch_task = await swarm_task.add_task(original_task)
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)

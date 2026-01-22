@@ -1,5 +1,3 @@
-from unittest.mock import call
-
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
 
@@ -9,7 +7,7 @@ from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_start_tasks
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.swarm.conftest import create_mock_context_with_metadata
+from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio

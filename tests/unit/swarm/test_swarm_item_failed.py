@@ -4,7 +4,6 @@ import pytest
 from hatchet_sdk.runnables.types import EmptyModel
 
 import mageflow
-from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
@@ -13,7 +12,7 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.swarm.conftest import create_mock_context_with_metadata
+from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
