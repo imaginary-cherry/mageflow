@@ -1,5 +1,3 @@
-import asyncio
-
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
@@ -24,16 +22,11 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
         if swarm_task.has_swarm_started:
             ctx.log(f"Swarm task started but already running {msg}")
             return
-        tasks_ids_to_run = swarm_task.tasks[: swarm_task.config.max_concurrency]
-        tasks_left_to_run = swarm_task.tasks[swarm_task.config.max_concurrency :]
-        async with swarm_task.apipeline() as swarm_task:
-            await swarm_task.tasks_left_to_run.aclear()
-            await swarm_task.tasks_left_to_run.aextend(tasks_left_to_run)
-        tasks_to_run = await asyncio.gather(
-            *[TaskSignature.get_safe(task_id) for task_id in tasks_ids_to_run]
-        )
-        await asyncio.gather(*[task.aio_run_no_wait(msg) for task in tasks_to_run])
-        ctx.log(f"Swarm task started with tasks {tasks_ids_to_run} {msg}")
+
+        invoker = HatchetInvoker(msg, ctx)
+        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception:
         ctx.log(f"MAJOR - Error in swarm start tasks")
         raise
