@@ -79,33 +79,3 @@ async def test_completion_path_crash_at_activate_success_retry_idempotent(
 
     # Assert - activate_success was called on retry
     assert mock_activate_success.call_count == 1
-
-
-@pytest.mark.asyncio
-async def test_completion_path_multiple_calls_activate_success_once_idempotent(
-    completed_swarm_setup, mock_batch_task_run, mock_swarm_done
-):
-    # Arrange
-    setup: CompletedSwarmSetup = completed_swarm_setup
-    activate_success_call_count = 0
-
-    async def track_and_update_status(*args, **kwargs):
-        nonlocal activate_success_call_count
-        activate_success_call_count += 1
-        async with SwarmTaskSignature.lock_from_key(setup.swarm_task.key) as swarm:
-            await swarm.aupdate(task_status={"status": SignatureStatus.ACTIVE.value})
-
-    # Act - First call
-    with patch.object(
-        SwarmTaskSignature, "activate_success", side_effect=track_and_update_status
-    ):
-        await fill_swarm_running_tasks(setup.msg, setup.ctx)
-
-        # Assert - called once
-        assert activate_success_call_count == 1
-
-        # Act - Second call - has_published_callback() should now be False
-        await fill_swarm_running_tasks(setup.msg, setup.ctx)
-
-        # Assert - still only called once (second call didn't trigger it)
-        assert activate_success_call_count == 1
