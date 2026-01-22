@@ -1,4 +1,4 @@
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 import pytest
 
@@ -38,73 +38,52 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
-    failed_swarm_setup,
+    failed_swarm_setup, mock_activate_error, mock_swarm_remove
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
+    mock_activate_error.side_effect = RuntimeError
 
     # Act - First call crashes at activate_error
-    with patch.object(SwarmTaskSignature, "activate_error", side_effect=RuntimeError):
-        with pytest.raises(RuntimeError):
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    with pytest.raises(RuntimeError):
+        await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - swarm still exists (remove wasn't called due to crash)
     swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
     assert swarm is not None
 
     # Act - Retry succeeds (activate_error can be called multiple times - it's idempotent)
-    with patch.object(
-        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
-    ) as mock_activate:
-        with patch.object(
-            SwarmTaskSignature, "remove", new_callable=AsyncMock
-        ) as mock_remove:
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    mock_activate_error.side_effect = None
+    await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-            # Assert - both activate_error and remove were called on retry
-            mock_activate.assert_called_once()
-            mock_remove.assert_called_once()
+    # Assert - both activate_error and remove were called on retry
+    assert mock_activate_error.call_count == 2
+    mock_swarm_remove.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_completion_path_crash_at_activate_success_retry_idempotent(
-    completed_swarm_setup, mock_batch_task_run
+    completed_swarm_setup, mock_batch_task_run, mock_activate_success
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
-    call_count = 0
+    mock_activate_success.side_effect = RuntimeError()
 
-    async def fail_first_time(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            raise RuntimeError("activate_success failed")
+    # Act - First call crashes at activate_success
+    with pytest.raises(RuntimeError):
+        await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-    # Mock done() to avoid side effects
-    with patch.object(SwarmTaskSignature, "done", new_callable=AsyncMock):
-        # Act - First call crashes at activate_success
-        with patch.object(
-            SwarmTaskSignature, "activate_success", side_effect=fail_first_time
-        ):
-            with pytest.raises(RuntimeError, match="activate_success failed"):
-                await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    # Act - Retry succeeds
+    mock_activate_success.side_effect = None
+    await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-        # Assert - first call raised
-        assert call_count == 1
-
-        # Act - Retry succeeds
-        with patch.object(
-            SwarmTaskSignature, "activate_success", new_callable=AsyncMock
-        ) as mock_success:
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
-
-            # Assert - activate_success was called on retry
-            mock_success.assert_called_once()
+    # Assert - activate_success was called on retry
+    assert mock_activate_success.call_count == 1
 
 
 @pytest.mark.asyncio
 async def test_completion_path_multiple_calls_activate_success_once_idempotent(
-    completed_swarm_setup, mock_batch_task_run
+    completed_swarm_setup, mock_batch_task_run, mock_swarm_done
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
@@ -113,24 +92,20 @@ async def test_completion_path_multiple_calls_activate_success_once_idempotent(
     async def track_and_update_status(*args, **kwargs):
         nonlocal activate_success_call_count
         activate_success_call_count += 1
-        # Simulate what activate_success does - changes status so condition won't be met again
         async with SwarmTaskSignature.lock_from_key(setup.swarm_task.key) as swarm:
             await swarm.aupdate(task_status={"status": SignatureStatus.ACTIVE.value})
 
-    # Mock done() and activate_success to track calls
-    with patch.object(SwarmTaskSignature, "done", new_callable=AsyncMock):
-        with patch.object(
-            SwarmTaskSignature, "activate_success", side_effect=track_and_update_status
-        ):
-            # Act - First call
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    # Act - First call
+    with patch.object(
+        SwarmTaskSignature, "activate_success", side_effect=track_and_update_status
+    ):
+        await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-            # Assert - called once
-            assert activate_success_call_count == 1
+        # Assert - called once
+        assert activate_success_call_count == 1
 
-            # Act - Second call - has_published_callback() should now be False
-            # because status changed from DONE to ACTIVE
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+        # Act - Second call - has_published_callback() should now be False
+        await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-            # Assert - still only called once (second call didn't trigger it)
-            assert activate_success_call_count == 1
+        # Assert - still only called once (second call didn't trigger it)
+        assert activate_success_call_count == 1

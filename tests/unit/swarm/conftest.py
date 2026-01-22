@@ -297,10 +297,7 @@ async def completed_swarm_setup(create_mock_context_with_metadata):
 
     # Use aupdate for scalar fields as apipeline doesn't persist them
     async with swarm_task.alock() as locked_swarm:
-        await locked_swarm.aupdate(
-            is_swarm_closed=True,
-            task_status={"status": SignatureStatus.DONE.value},
-        )
+        await locked_swarm.aupdate(is_swarm_closed=True)
 
     ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
