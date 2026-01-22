@@ -5,7 +5,7 @@ import pytest
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
-from tests.unit.swarm.conftest import SwarmItemDoneSetup
+from tests.unit.conftest import SwarmItemDoneSetup
 
 
 async def assert_swarm_item_done_state(

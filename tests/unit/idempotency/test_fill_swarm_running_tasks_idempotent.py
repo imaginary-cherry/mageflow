@@ -6,7 +6,7 @@ from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
-from tests.unit.swarm.conftest import FailedSwarmSetup, CompletedSwarmSetup
+from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetup
 
 
 @pytest.mark.asyncio

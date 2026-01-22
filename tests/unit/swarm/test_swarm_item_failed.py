@@ -102,7 +102,7 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
 @pytest.mark.asyncio
 async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     mock_activate_error,
-    mock_fill_running_tasks_zero,
+    mock_fill_running_tasks,
 ):
     # Arrange
     swarm_task = await mageflow.swarm(
@@ -137,7 +137,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     # Assert
     mock_activate_error.assert_not_awaited()
 
-    mock_fill_running_tasks_zero.assert_called_once()
+    mock_fill_running_tasks.assert_called_once()
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
@@ -146,7 +146,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
 @pytest.mark.asyncio
 async def test_swarm_item_failed_below_threshold_edge_case(
     mock_activate_error,
-    mock_fill_running_tasks_zero,
+    mock_fill_running_tasks,
 ):
     # Arrange
     swarm_task = await mageflow.swarm(
@@ -164,7 +164,9 @@ async def test_swarm_item_failed_below_threshold_edge_case(
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(
-        task_id=item_task.key, swarm_task_id=swarm_task.key, swarm_item_id=batch_task.key
+        task_id=item_task.key,
+        swarm_task_id=swarm_task.key,
+        swarm_item_id=batch_task.key,
     )
     msg = EmptyModel()
 
@@ -173,7 +175,7 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 
     # Assert
     mock_activate_error.assert_not_awaited()
-    mock_fill_running_tasks_zero.assert_called_once()
+    mock_fill_running_tasks.assert_called_once()
 
 
 @pytest.mark.asyncio

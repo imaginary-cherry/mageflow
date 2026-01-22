@@ -5,7 +5,7 @@ import pytest
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_failed
-from tests.unit.swarm.conftest import SwarmItemFailedSetup
+from tests.unit.idempotency.conftest import SwarmItemFailedSetup
 
 
 async def assert_swarm_item_failed_state(
