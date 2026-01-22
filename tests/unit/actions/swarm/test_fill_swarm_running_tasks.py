@@ -1,5 +1,4 @@
 import pytest
-import pytest_asyncio
 
 from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature
