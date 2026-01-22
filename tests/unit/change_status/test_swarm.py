@@ -10,7 +10,11 @@ from tests.unit.assertions import (
     assert_tasks_changed_status,
     assert_tasks_not_exists,
 )
-from tests.unit.conftest import ChainTestData
+from tests.unit.change_status.conftest import (
+    ChainTestData,
+    delete_tasks_by_indices,
+    get_non_deleted_task_keys,
+)
 
 
 @pytest.mark.asyncio
@@ -87,47 +91,32 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     new_status: SignatureStatus,
 ):
     # Arrange
-    # Create task signatures via API
     task_signatures = [await mageflow.sign(name) for name in task_names]
-
-    # Create a swarm with task signatures
     swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         tasks=task_signatures,
     )
-
-    # Delete specified subtasks from Redis (simulate they were removed)
-    deleted_task_ids = []
-    for idx in tasks_to_delete_indices:
-        await task_signatures[idx].adelete()
-        deleted_task_ids.append(task_signatures[idx].key)
+    deleted_task_ids = await delete_tasks_by_indices(
+        task_signatures, tasks_to_delete_indices
+    )
 
     # Act
     await swarm_signature.safe_change_status(swarm_signature.key, new_status)
 
     # Assert
-    # Verify swarm signature status changed to new status
     reloaded_swarm = await TaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.task_status.status == new_status
     assert reloaded_swarm.task_status.last_status == SignatureStatus.PENDING
 
-    # Verify deleted sub-tasks are still deleted
     await assert_tasks_not_exists(deleted_task_ids)
 
-    # Verify non-deleted subtasks changed status to new status
-    non_deleted_indices = [
-        task_signatures[i].key
-        for i in range(len(task_signatures))
-        if i not in tasks_to_delete_indices
-    ]
-    await assert_tasks_changed_status(
-        non_deleted_indices, new_status, SignatureStatus.PENDING
+    non_deleted_keys = get_non_deleted_task_keys(
+        task_signatures, tasks_to_delete_indices
     )
     await assert_tasks_changed_status(
-        non_deleted_indices, new_status, SignatureStatus.PENDING
+        non_deleted_keys, new_status, SignatureStatus.PENDING
     )
 
-    # Verify no Redis keys contain the deleted subtask IDs
     await assert_redis_keys_do_not_contain_sub_task_ids(redis_client, deleted_task_ids)
 
 

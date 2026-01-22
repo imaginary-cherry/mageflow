@@ -8,7 +8,6 @@ import rapyer
 from hatchet_sdk import Hatchet, ClientConfig, Context
 
 import mageflow
-from mageflow.chain.model import ChainTaskSignature
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
@@ -20,6 +19,7 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage
+from tests.unit.change_status.conftest import ChainTestData
 
 pytest.register_assert_rewrite("tests.assertions")
 
@@ -80,12 +80,6 @@ def mock_aio_run_no_wait():
         new_callable=AsyncMock,
     ) as mock_aio_run:
         yield mock_aio_run
-
-
-@dataclass
-class ChainTestData:
-    task_signatures: list
-    chain_signature: ChainTaskSignature
 
 
 @pytest_asyncio.fixture

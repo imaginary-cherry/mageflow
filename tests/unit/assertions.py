@@ -2,6 +2,7 @@ from typing import TypeVar, Literal
 
 from mageflow.chain.consts import ON_CHAIN_ERROR, ON_CHAIN_END
 from mageflow.signature.model import TaskSignature
+from mageflow.signature.status import SignatureStatus
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature
 
@@ -153,3 +154,13 @@ async def assert_redis_keys_do_not_contain_sub_task_ids(redis_client, sub_task_i
         assert (
             not keys_containing_sub_task
         ), f"Found Redis keys containing deleted sub-task ID {sub_task_id}: {keys_containing_sub_task}"
+
+
+async def assert_container_status_change(
+    container_key: str,
+    new_status: SignatureStatus,
+    old_status: SignatureStatus = SignatureStatus.PENDING,
+):
+    reloaded = await TaskSignature.get_safe(container_key)
+    assert reloaded.task_status.status == new_status
+    assert reloaded.task_status.last_status == old_status

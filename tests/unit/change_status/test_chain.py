@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import pytest
 
 import mageflow
@@ -12,32 +10,35 @@ from tests.unit.assertions import (
     assert_tasks_not_exists,
     assert_tasks_changed_status,
 )
-
-
-@dataclass
-class TaskResumeConfig:
-    name: str
-    last_status: SignatureStatus
+from tests.unit.change_status.conftest import (
+    TaskResumeConfig,
+    delete_tasks_by_indices,
+    get_non_deleted_task_keys,
+)
 
 
 @pytest.mark.asyncio
-async def test_chain_safe_change_status_on_unsaved_signature_does_not_create_redis_entry_sanity():
+async def test_chain_safe_change_status_on_deleted_signature_does_not_create_redis_entry_sanity():
     # Arrange
-    chain_signature = ChainTaskSignature(
-        task_name="test_chain_unsaved",
-        kwargs={},
-        model_validators=ContextMessage,
-        tasks=["task_1", "task_2", "task_3"],
+    task_signatures = [
+        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        for i in range(1, 4)
+    ]
+    chain_signature = await mageflow.chain(
+        tasks=[task.key for task in task_signatures],
+        name="test_chain_unsaved",
     )
+    chain_key = chain_signature.key
+    await chain_signature.adelete()
 
     # Act
     result = await ChainTaskSignature.safe_change_status(
-        chain_signature.key, SignatureStatus.SUSPENDED
+        chain_key, SignatureStatus.SUSPENDED
     )
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.get_safe(chain_signature.key)
+    reloaded_signature = await TaskSignature.get_safe(chain_key)
     assert reloaded_signature is None
 
 
@@ -69,41 +70,29 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     new_status: SignatureStatus,
 ):
     # Arrange
-    # Create task signatures via API
     task_signatures = [await mageflow.sign(name) for name in task_names]
-
-    # Create a chain
     chain_signature = await mageflow.chain([task.key for task in task_signatures])
-
-    # Delete specified subtasks from Redis (simulate they were removed)
-    deleted_task_ids = []
-    for idx in tasks_to_delete_indices:
-        await task_signatures[idx].adelete()
-        deleted_task_ids.append(task_signatures[idx].key)
+    deleted_task_ids = await delete_tasks_by_indices(
+        task_signatures, tasks_to_delete_indices
+    )
 
     # Act
     await chain_signature.safe_change_status(chain_signature.key, new_status)
 
     # Assert
-    # Verify chain signature status changed to new status
     reloaded_chain = await TaskSignature.get_safe(chain_signature.key)
     assert reloaded_chain.task_status.status == new_status
     assert reloaded_chain.task_status.last_status == SignatureStatus.PENDING
 
-    # Verify deleted sub-tasks are still deleted
     await assert_tasks_not_exists(deleted_task_ids)
 
-    # Verify non-deleted subtasks changed status to new status
-    non_deleted_indices = [
-        task_signatures[i].key
-        for i in range(len(task_signatures))
-        if i not in tasks_to_delete_indices
-    ]
+    non_deleted_keys = get_non_deleted_task_keys(
+        task_signatures, tasks_to_delete_indices
+    )
     await assert_tasks_changed_status(
-        non_deleted_indices, new_status, SignatureStatus.PENDING
+        non_deleted_keys, new_status, SignatureStatus.PENDING
     )
 
-    # Verify no Redis keys contain the deleted subtask IDs
     await assert_redis_keys_do_not_contain_sub_task_ids(redis_client, deleted_task_ids)
 
 
@@ -156,19 +145,18 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
     chain_signature = await mageflow.chain([task.key for task in task_signatures])
     chain_signature.task_status.status = SignatureStatus.SUSPENDED
 
-    deleted_task_ids = []
-    for idx in tasks_to_delete_indices:
-        await task_signatures[idx].adelete()
-        deleted_task_ids.append(task_signatures[idx].key)
+    deleted_task_ids = await delete_tasks_by_indices(
+        task_signatures, tasks_to_delete_indices
+    )
 
     # Act
     await chain_signature.resume()
 
     # Assert
-    non_deleted_task_ids = [
+    non_deleted_task_indices = [
         i for i in range(len(task_signatures)) if i not in tasks_to_delete_indices
     ]
-    for i in non_deleted_task_ids:
+    for i in non_deleted_task_indices:
         task = task_signatures[i]
         new_status = expected_statuses[i]
         if new_status == SignatureStatus.ACTIVE:
