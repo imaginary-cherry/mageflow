@@ -10,11 +10,12 @@ import mageflow
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
+from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
 )
-from mageflow.swarm.messages import SwarmResultsMessage
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
@@ -233,3 +234,81 @@ def mock_batch_task_run():
 
     with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
         yield BatchTaskRunTracker(called_instances=called_instances)
+
+
+@dataclass
+class FailedSwarmSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    original_task: TaskSignature
+    ctx: MagicMock
+    msg: SwarmMessage
+
+
+@pytest_asyncio.fixture
+async def failed_swarm_setup(create_mock_context_with_metadata):
+    # Arrange
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm_failed",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=1),
+    )
+    original_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(original_task)
+    async with swarm_task.apipeline():
+        swarm_task.failed_tasks.append(batch_task.key)
+        swarm_task.current_running_tasks += 1
+
+    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+
+    return FailedSwarmSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        original_task=original_task,
+        ctx=ctx,
+        msg=msg,
+    )
+
+
+@dataclass
+class CompletedSwarmSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    original_task: TaskSignature
+    ctx: MagicMock
+    msg: SwarmMessage
+
+
+@pytest_asyncio.fixture
+async def completed_swarm_setup(create_mock_context_with_metadata):
+    # Arrange
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm_completed",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=1),
+    )
+    original_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(original_task)
+
+    # Mark task as finished and swarm as closed/done
+    async with swarm_task.apipeline():
+        swarm_task.finished_tasks.append(batch_task.key)
+
+    # Use aupdate for scalar fields as apipeline doesn't persist them
+    async with swarm_task.alock() as locked_swarm:
+        await locked_swarm.aupdate(
+            is_swarm_closed=True,
+            task_status={"status": SignatureStatus.DONE.value},
+        )
+
+    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+
+    return CompletedSwarmSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        original_task=original_task,
+        ctx=ctx,
+        msg=msg,
+    )
