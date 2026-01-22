@@ -70,7 +70,7 @@ class BatchItemTaskSignature(TaskSignature):
         return await TaskSignature.safe_change_status(self.original_task_id, status)
 
     async def resume(self):
-        async with TaskSignature.lock_from_key(self.original_task_id) as task:
+        async with TaskSignature.alock_from_key(self.original_task_id) as task:
             await task.resume()
             return await super().change_status(task.task_status.last_status)
 
