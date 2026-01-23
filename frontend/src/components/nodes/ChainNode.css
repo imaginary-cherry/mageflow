@@ -1,0 +1,261 @@
+/**
+ * ChainNode Styles
+ */
+
+/* Base styles */
+.chain-node {
+  background: #0d1b2a;
+  border: 2px solid #00bbf9;
+  border-radius: 12px;
+  min-width: 200px;
+  max-width: 400px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+
+.chain-node:hover {
+  border-color: #48cae4;
+  box-shadow: 0 4px 16px rgba(0, 187, 249, 0.2);
+}
+
+.chain-node--selected {
+  border-color: #90e0ef;
+  box-shadow: 0 0 0 3px rgba(0, 187, 249, 0.3);
+}
+
+.chain-node--expanded {
+  min-width: 300px;
+}
+
+/* Loading state */
+.chain-node--loading {
+  background: #1a1a2e;
+  border-color: #333;
+}
+
+.chain-node__skeleton {
+  height: 60px;
+  background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Header */
+.chain-node__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(0, 187, 249, 0.1);
+  cursor: pointer;
+}
+
+.chain-node__header:hover {
+  background: rgba(0, 187, 249, 0.15);
+}
+
+.chain-node__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.chain-node__type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #00296b;
+  color: #00bbf9;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.chain-node__name {
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chain-node__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.chain-node__count {
+  font-size: 12px;
+  color: #888;
+}
+
+.chain-node__expand-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 187, 249, 0.2);
+  color: #00bbf9;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.chain-node__expand-btn:hover {
+  background: rgba(0, 187, 249, 0.3);
+}
+
+/* Content */
+.chain-node__content {
+  padding: 12px;
+  border-top: 1px solid rgba(0, 187, 249, 0.2);
+}
+
+/* Loading state in content */
+.chain-node__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #888;
+  font-size: 13px;
+}
+
+.chain-node__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 187, 249, 0.2);
+  border-top-color: #00bbf9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Error state */
+.chain-node__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
+.chain-node__retry-btn {
+  padding: 4px 12px;
+  border: 1px solid #ff6b6b;
+  border-radius: 4px;
+  background: transparent;
+  color: #ff6b6b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chain-node__retry-btn:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* Children list - sequential */
+.chain-node__children {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-left: 8px;
+}
+
+.chain-node__children::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chain-node__children::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.chain-node__children::-webkit-scrollbar-thumb {
+  background: rgba(0, 187, 249, 0.3);
+  border-radius: 3px;
+}
+
+/* Step container */
+.chain-node__step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+/* Step number */
+.chain-node__step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #00296b;
+  color: #00bbf9;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Step connector line */
+.chain-node__step-connector {
+  position: absolute;
+  left: 11px;
+  top: 32px;
+  width: 2px;
+  height: calc(100% - 16px);
+  background: linear-gradient(180deg, #00bbf9 0%, rgba(0, 187, 249, 0.3) 100%);
+}
+
+/* Step task */
+.chain-node__step-task {
+  flex: 1;
+  min-width: 0;
+}
+
+.chain-node__empty {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+/* Handles */
+.chain-node__handle {
+  width: 12px;
+  height: 12px;
+  background: #00bbf9;
+  border: 2px solid #48cae4;
+}
+
+/* Status variants */
+.chain-node--active {
+  border-color: #52b788;
+}
+
+.chain-node--completed {
+  border-color: #40e0d0;
+}
+
+.chain-node--failed {
+  border-color: #ff6b6b;
+}

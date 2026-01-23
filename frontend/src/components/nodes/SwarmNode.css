@@ -1,0 +1,222 @@
+/**
+ * SwarmNode Styles
+ */
+
+/* Base styles */
+.swarm-node {
+  background: #10002b;
+  border: 2px solid #ff6b9d;
+  border-radius: 12px;
+  min-width: 200px;
+  max-width: 400px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+
+.swarm-node:hover {
+  border-color: #ff85ab;
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.2);
+}
+
+.swarm-node--selected {
+  border-color: #ffb3c6;
+  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.3);
+}
+
+.swarm-node--expanded {
+  min-width: 280px;
+}
+
+/* Loading state */
+.swarm-node--loading {
+  background: #1a1a2e;
+  border-color: #333;
+}
+
+.swarm-node__skeleton {
+  height: 60px;
+  background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Header */
+.swarm-node__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 107, 157, 0.1);
+  cursor: pointer;
+}
+
+.swarm-node__header:hover {
+  background: rgba(255, 107, 157, 0.15);
+}
+
+.swarm-node__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.swarm-node__type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #3c1642;
+  color: #ff6b9d;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.swarm-node__name {
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swarm-node__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.swarm-node__count {
+  font-size: 12px;
+  color: #888;
+}
+
+.swarm-node__expand-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 107, 157, 0.2);
+  color: #ff6b9d;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.swarm-node__expand-btn:hover {
+  background: rgba(255, 107, 157, 0.3);
+}
+
+/* Content */
+.swarm-node__content {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 107, 157, 0.2);
+}
+
+/* Loading state in content */
+.swarm-node__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #888;
+  font-size: 13px;
+}
+
+.swarm-node__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 107, 157, 0.2);
+  border-top-color: #ff6b9d;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.swarm-node__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
+.swarm-node__retry-btn {
+  padding: 4px 12px;
+  border: 1px solid #ff6b6b;
+  border-radius: 4px;
+  background: transparent;
+  color: #ff6b6b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.swarm-node__retry-btn:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* Children list */
+.swarm-node__children {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.swarm-node__children::-webkit-scrollbar {
+  width: 6px;
+}
+
+.swarm-node__children::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.swarm-node__children::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 157, 0.3);
+  border-radius: 3px;
+}
+
+.swarm-node__empty {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+/* Handles */
+.swarm-node__handle {
+  width: 12px;
+  height: 12px;
+  background: #ff6b9d;
+  border: 2px solid #ff85ab;
+}
+
+/* Status variants */
+.swarm-node--active {
+  border-color: #52b788;
+}
+
+.swarm-node--completed {
+  border-color: #40e0d0;
+}
+
+.swarm-node--failed {
+  border-color: #ff6b6b;
+}
