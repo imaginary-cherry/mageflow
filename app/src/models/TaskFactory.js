@@ -4,10 +4,10 @@ import { SwarmTask } from './SwarmTask.js';
 import { extractTypeFromKey } from './TaskModels.js';
 
 export class TaskFactory {
-  static transformApiTask(apiTask) {
-    const type = extractTypeFromKey(apiTask.key);
+  static transformApiTask(key, apiTask) {
+    const type = extractTypeFromKey(key);
     return {
-      id: apiTask.key,
+      id: key,
       name: apiTask.task_name,
       type: type,
       successCallbacks: apiTask.success_callbacks || [],

@@ -260,7 +260,7 @@ export function useTaskDataLazy() {
 
       const transformedTasks = {};
       Object.entries(data.tasks).forEach(([key, apiTask]) => {
-        transformedTasks[key] = TaskFactory.transformApiTask(apiTask);
+        transformedTasks[key] = TaskFactory.transformApiTask(key, apiTask);
       });
 
       const initialStates = {};
