@@ -275,15 +275,17 @@ export function useTaskDataLazy() {
       setTaskDepths(initialDepths);
       setLoading(false);
 
-      for (const taskId of Object.keys(transformedTasks)) {
-        await autoLoadToDepth(taskId, 0, transformedTasks);
-      }
-
-      if (flushTimeoutRef.current) {
-        clearTimeout(flushTimeoutRef.current);
-        flushTimeoutRef.current = null;
-      }
-      flushPendingUpdates();
+      Promise.all(
+        Object.keys(transformedTasks).map(taskId =>
+          autoLoadToDepth(taskId, 0, transformedTasks)
+        )
+      ).then(() => {
+        if (flushTimeoutRef.current) {
+          clearTimeout(flushTimeoutRef.current);
+          flushTimeoutRef.current = null;
+        }
+        flushPendingUpdates();
+      });
     } catch (err) {
       setError(err.message);
       setTasks({});

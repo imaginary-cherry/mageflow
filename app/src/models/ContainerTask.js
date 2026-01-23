@@ -22,6 +22,11 @@ export class ContainerTask extends Task {
         return this.childrenHasMore;
     }
 
+    needsChildrenLoad(allTasks) {
+        if (this.tasks.length === 0) return false;
+        return !allTasks.has(this.tasks[0]);
+    }
+
     getTotalPages() {
         return Math.max(1, Math.ceil(this.tasks.length / this.pageSize));
     }
@@ -38,6 +43,10 @@ export class ContainerTask extends Task {
 
     hasTasks() {
         return this.tasks.length > 0;
+    }
+
+    get totalChildren() {
+        return this.tasks.length;
     }
 
     /**

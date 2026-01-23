@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -39,9 +39,13 @@ const TaskWorkflow = () => {
     refetch,
   } = useTaskDataLazy();
   const [paginationState, paginationActions] = usePaginationState();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    fetchRootTasks();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      fetchRootTasks();
+    }
   }, [fetchRootTasks]);
 
   const lazyLoadCallbacks = useMemo(() => ({

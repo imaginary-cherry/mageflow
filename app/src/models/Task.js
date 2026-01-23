@@ -19,6 +19,12 @@ export class Task {
     return this.successCallbacks.length > 0 || this.errorCallbacks.length > 0;
   }
 
+  needsCallbacksLoad(allTasks) {
+    if (!this.hasCallbacksToLoad()) return false;
+    const firstCallback = this.successCallbacks[0] || this.errorCallbacks[0];
+    return firstCallback && !allTasks.has(firstCallback);
+  }
+
   /**
    * Calculate the dimensions this task requires
    * @param {Map<string, Task>} [allTasks] - Optional: all tasks in the system (needed for containers)

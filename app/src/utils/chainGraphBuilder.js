@@ -55,9 +55,9 @@ export const buildChainGraphLayout = (tasksData, paginationState = {}, paginatio
     const loadingState = getLoadingState(containerId);
     const depth = taskDepths[task.id] || 0;
     const isAtDepthLimit = depth >= MAX_DEPTH;
-    const needsChildrenLoad = task instanceof ContainerTask && task.needsChildrenLoad();
+    const needsChildrenLoad = task instanceof ContainerTask && task.needsChildrenLoad(tasks);
     const hasMoreChildrenToLoad = task instanceof ContainerTask && task.hasMoreChildrenToLoad();
-    const needsCallbacksLoad = task.needsCallbacksLoad();
+    const needsCallbacksLoad = task.needsCallbacksLoad(tasks);
     const hasMoreToLoad = needsChildrenLoad || hasMoreChildrenToLoad || needsCallbacksLoad;
 
     node.data = {
