@@ -135,3 +135,53 @@ async def swarm_item_done_setup(swarm_setup):
         ctx=ctx,
         msg=msg,
     )
+
+
+@dataclass
+class BatchItemRunSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    original_task: TaskSignature
+    msg: BaseModel
+
+
+@pytest_asyncio.fixture
+async def batch_item_run_setup(publish_state):
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm_batch_item",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=2),
+    )
+    original_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    batch_task = await swarm_task.add_task(original_task)
+    msg = EmptyModel()
+
+    return BatchItemRunSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        original_task=original_task,
+        msg=msg,
+    )
+
+
+@pytest_asyncio.fixture
+async def batch_item_run_setup_at_max_concurrency(publish_state):
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm_batch_item_max",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=2),
+    )
+    original_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    batch_task = await swarm_task.add_task(original_task)
+
+    async with swarm_task.alock() as locked_swarm:
+        await locked_swarm.current_running_tasks.aincrease(2)
+
+    msg = EmptyModel()
+
+    return BatchItemRunSetup(
+        swarm_task=swarm_task,
+        batch_task=batch_task,
+        original_task=original_task,
+        msg=msg,
+    )
