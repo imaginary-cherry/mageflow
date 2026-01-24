@@ -217,3 +217,4 @@ future-features
 .claude
 /junit.xml
 .jbeval
+frontend/node_modules/
