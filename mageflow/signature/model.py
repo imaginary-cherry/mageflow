@@ -91,11 +91,10 @@ class TaskSignature(AtomicRedisModel):
     async def from_task_name(
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
-        return_field_name = None
         if not model_validators:
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
-            return_field_name = return_value_field(model_validators)
+        return_field_name = return_value_field(model_validators)
 
         signature = cls(
             task_name=task_name,
