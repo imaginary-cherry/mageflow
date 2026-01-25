@@ -126,7 +126,7 @@ def mock_task_aio_run_no_wait():
 
 
 @pytest.fixture
-def mock_fill_running_tasks():
+def mock_invoker_wait_task():
     with patch.object(HatchetInvoker, "wait_task", new_callable=AsyncMock) as mock_fill:
         yield mock_fill
 

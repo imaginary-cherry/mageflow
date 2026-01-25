@@ -16,7 +16,7 @@ from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_sanity_continue_after_failure(mock_fill_running_tasks):
+async def test_swarm_item_failed_sanity_continue_after_failure(mock_invoker_wait_task):
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
@@ -55,14 +55,14 @@ async def test_swarm_item_failed_sanity_continue_after_failure(mock_fill_running
 
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_failed_sanity_stop_after_threshold(
     mock_activate_error,
     mock_swarm_remove,
-    mock_fill_running_tasks,
+    mock_invoker_wait_task,
 ):
     # Arrange
     swarm_task = await mageflow.swarm(
@@ -95,13 +95,13 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     await swarm_item_failed(msg, ctx)
 
     # Assert
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     mock_activate_error,
-    mock_fill_running_tasks,
+    mock_invoker_wait_task,
 ):
     # Arrange
     swarm_task = await mageflow.swarm(
@@ -136,7 +136,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     # Assert
     mock_activate_error.assert_not_awaited()
 
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
@@ -145,7 +145,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
 @pytest.mark.asyncio
 async def test_swarm_item_failed_below_threshold_edge_case(
     mock_activate_error,
-    mock_fill_running_tasks,
+    mock_invoker_wait_task,
 ):
     # Arrange
     swarm_task = await mageflow.swarm(
@@ -174,7 +174,7 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 
     # Assert
     mock_activate_error.assert_not_awaited()
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
 
 @pytest.mark.asyncio

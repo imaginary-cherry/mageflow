@@ -10,7 +10,7 @@ from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_basic_flow(mock_fill_running_tasks):
+async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
@@ -54,11 +54,11 @@ async def test_swarm_item_done_sanity_basic_flow(mock_fill_running_tasks):
     assert len(reloaded_swarm.tasks_results) == 1
     assert reloaded_swarm.tasks_results[0] == msg.mageflow_results
 
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_last_item_completes(mock_fill_running_tasks):
+async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task):
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
@@ -100,7 +100,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_fill_running_task
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert batch_tasks[1].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 2
-    mock_fill_running_tasks.assert_called_once()
+    mock_invoker_wait_task.assert_called_once()
 
 
 @pytest.mark.asyncio

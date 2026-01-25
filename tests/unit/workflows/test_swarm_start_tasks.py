@@ -11,7 +11,7 @@ from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_sanity_basic_flow(mock_fill_running_tasks):
+async def test_swarm_start_tasks_sanity_basic_flow(mock_invoker_wait_task):
     # Arrange
     original_tasks = [
         await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
@@ -32,12 +32,12 @@ async def test_swarm_start_tasks_sanity_basic_flow(mock_fill_running_tasks):
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    mock_fill_running_tasks.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
+    mock_invoker_wait_task.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
 
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_sanity_all_tasks_start(
-    mock_task_aio_run_no_wait, mock_fill_running_tasks
+    mock_task_aio_run_no_wait, mock_invoker_wait_task
 ):
     # Arrange
     original_tasks = [
@@ -59,7 +59,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    mock_fill_running_tasks.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
+    mock_invoker_wait_task.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 0
 
@@ -92,7 +92,7 @@ async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
-    mock_task_aio_run_no_wait, mock_fill_running_tasks
+    mock_task_aio_run_no_wait, mock_invoker_wait_task
 ):
     # Arrange
     original_tasks = [
@@ -117,7 +117,7 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_fill_running_tasks):
+async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_task):
     # Arrange
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
