@@ -50,17 +50,12 @@ class BatchItemTaskSignature(TaskSignature):
                 raise MissingSwarmItemError(
                     f"Task {self.original_task_id} was deleted before it was run in swarm"
                 )
-            can_run_task = await swarm_task.add_to_running_tasks(self)
             kwargs = deep_merge(self.kwargs.clone(), original_task.kwargs.clone())
             kwargs = deep_merge(kwargs, swarm_task.kwargs.clone())
-            if not can_run_task:
-                kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
+            kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
             # For tasks are just represent larger tasks (like chain)
             await original_task.aupdate_real_task_kwargs(**kwargs)
-            if can_run_task:
-                return await original_task.aio_run_no_wait(msg, **orig_task_kwargs)
-
-            return None
+            return await swarm_task.fill_running_tasks(max_tasks=1)
 
     async def remove_references(self):
         orignal_task = await TaskSignature.get_safe(self.original_task_id)
@@ -200,18 +195,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
         return batch_task
 
-    async def add_to_running_tasks(self, task: TaskSignatureConvertible) -> bool:
-        async with self.alock() as swarm_task:
-            task = await resolve_signature_key(task)
-            if self.current_running_tasks < self.config.max_concurrency:
-                await self.current_running_tasks.aincrease()
-                self.current_running_tasks += 1
-                return True
-            else:
-                await self.tasks_left_to_run.aappend(task.key)
-                return False
-
-    async def fill_running_tasks(self) -> int:
+    async def fill_running_tasks(self, max_tasks: Optional[int] = None) -> int:
         async with self.alock() as swarm_task:
             publish_state = await PublishState.aget(swarm_task.publishing_state_id)
             task_ids_to_run = list(publish_state.task_ids)
@@ -220,6 +204,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 resource_to_run = (
                     swarm_task.config.max_concurrency - swarm_task.current_running_tasks
                 )
+                if max_tasks is not None:
+                    resource_to_run = min(max_tasks, resource_to_run)
                 if resource_to_run <= 0:
                     return 0
                 num_of_task_to_run = min(
@@ -231,9 +217,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 await publish_state.task_ids.aextend(task_ids_to_run)
 
             if task_ids_to_run:
-                tasks = await rapyer.afind(*task_ids_to_run)
-                tasks = cast(list[BatchItemTaskSignature], tasks)
-                # TODO - use aio_run_many_no_wait
+                tasks = await BatchItemTaskSignature.afind(*task_ids_to_run)
+                original_task_ids = [
+                    batch_item.original_task_id for batch_item in tasks
+                ]
+                original_tasks = await rapyer.afind(*original_task_ids)
+                original_tasks = cast(list[TaskSignature], tasks)
                 publish_coroutine = [
                     next_task.aio_run_no_wait(EmptyModel()) for next_task in tasks
                 ]
@@ -294,12 +283,13 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def finish_task(self, batch_item_key: str, results: Any):
         async with self.apipeline() as swarm_task:
-            # In case this was already updated
             if batch_item_key in swarm_task.finished_tasks:
                 return
             swarm_task.finished_tasks.append(batch_item_key)
             swarm_task.tasks_results.append(results)
             swarm_task.current_running_tasks -= 1
+            if batch_item_key in swarm_task.running_tasks:
+                swarm_task.running_tasks.remove(batch_item_key)
 
     async def task_failed(self, batch_item_key: str):
         async with self.apipeline() as swarm_task:
@@ -307,3 +297,5 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 return
             swarm_task.failed_tasks.append(batch_item_key)
             swarm_task.current_running_tasks -= 1
+            if batch_item_key in swarm_task.running_tasks:
+                swarm_task.running_tasks.remove(batch_item_key)
