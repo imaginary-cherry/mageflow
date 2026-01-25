@@ -89,10 +89,10 @@ async def fetch_task_children(
     page_ids = all_ids[start:end]
 
     return TaskChildrenResponse(
-        taskIds=page_ids,
-        totalCount=total_count,
+        task_ids=page_ids,
+        total_count=total_count,
         page=page,
-        pageSize=page_size,
+        page_size=page_size,
     )
 
 
@@ -142,17 +142,17 @@ def register_api_routes(app: FastAPI):
     @app.get("/api/workflows/roots")
     async def get_root_tasks() -> RootTasksResponse:
         tasks_data = await fetch_root_tasks()
-        return RootTasksResponse(taskIds=list(tasks_data.keys()))
+        return RootTasksResponse(task_ids=list(tasks_data.keys()))
 
     @app.post("/api/tasks/batch")
     async def get_tasks_batch(request: BatchTasksRequest) -> list[TaskFromServer]:
-        return await fetch_tasks_batch(request.taskIds)
+        return await fetch_tasks_batch(request.task_ids)
 
     @app.get("/api/workflows/{task_id}/children")
     async def get_task_children(
-        task_id: str, page: int = 1, pageSize: int = 20
+        task_id: str, page: int = 1, page_size: int = 20
     ) -> TaskChildrenResponse | None:
-        return await fetch_task_children(task_id, page, pageSize)
+        return await fetch_task_children(task_id, page, page_size)
 
     @app.get("/api/workflows/{task_id}/callbacks")
     async def get_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:

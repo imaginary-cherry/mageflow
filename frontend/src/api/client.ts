@@ -340,7 +340,7 @@ export class APIClient {
 
     return this.deduplicatedFetch(cacheKey, async () => {
       const response = await this.fetchWithRetry<SubtasksResponse>(
-        `/workflows/${taskId}/children?page=${page}&pageSize=${pageSize}`
+        `/workflows/${taskId}/children?page=${page}&page_size=${pageSize}`
       );
       return response;
     });

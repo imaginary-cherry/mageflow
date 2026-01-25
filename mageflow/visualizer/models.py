@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
@@ -23,6 +23,18 @@ STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
 }
 
 
+def to_camel(string: str) -> str:
+    components = string.split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
+
+
+class CamelCaseModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
 class TaskFromServer(BaseModel):
     id: str
     type: TaskType
@@ -41,19 +53,19 @@ class TaskCallbacksResponse(BaseModel):
     error_callback_ids: list[str]
 
 
-class TaskChildrenResponse(BaseModel):
-    taskIds: list[str]
-    totalCount: int
+class TaskChildrenResponse(CamelCaseModel):
+    task_ids: list[str]
+    total_count: int
     page: int
-    pageSize: int
+    page_size: int
 
 
-class RootTasksResponse(BaseModel):
-    taskIds: list[str]
+class RootTasksResponse(CamelCaseModel):
+    task_ids: list[str]
 
 
-class BatchTasksRequest(BaseModel):
-    taskIds: list[str]
+class BatchTasksRequest(CamelCaseModel):
+    task_ids: list[str]
 
 
 def get_task_type(task: TaskSignature) -> TaskType:
