@@ -9,6 +9,7 @@ from mageflow.signature.consts import TASK_ID_PARAM_NAME, MAGEFLOW_TASK_INITIALS
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.utils.models import return_value_field
 from mageflow.workflows import TASK_DATA_PARAM_NAME
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
@@ -281,7 +282,7 @@ def assert_chain_done(
     for chain_task_id in chain_signature.tasks:
         task = task_map[chain_task_id]
         if output_value:
-            input_params = {task.return_value_field(): output_value}
+            input_params = {return_value_field(task.model_validators): output_value}
         task_wf = _assert_task_done(chain_task_id, wf_by_signature, input_params)
         output_value = task_wf.output["hatchet_results"]
 
@@ -289,7 +290,7 @@ def assert_chain_done(
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
             task = task_map[chain_success]
-            input_params = {task.return_value_field(): output_value}
+            input_params = {return_value_field(task.model_validators): output_value}
             _assert_task_done(chain_success, wf_by_signature, input_params)
 
 
