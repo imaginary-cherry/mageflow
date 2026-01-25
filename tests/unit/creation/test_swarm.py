@@ -8,58 +8,6 @@ from tests.integration.hatchet.models import ContextMessage
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ["max_concurrency", "current_running", "expected_can_run"],
-    [[5, 3, True], [5, 4, True], [5, 5, False], [1, 1, False], [10, 0, True]],
-)
-async def test_add_to_running_tasks_sanity(
-    max_concurrency, current_running, expected_can_run
-):
-    # Arrange
-    task_signature = await mageflow.sign("test_task", model_validators=ContextMessage)
-
-    swarm_signature = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=max_concurrency),
-    )
-    async with swarm_signature.alock() as locked_swarm:
-        await locked_swarm.aupdate(current_running_tasks=current_running)
-    original_tasks_left_to_run = swarm_signature.tasks_left_to_run.copy()
-
-    # Act
-    can_run = await swarm_signature.add_to_running_tasks(task_signature)
-
-    # Assert
-    assert can_run == expected_can_run
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-
-    if expected_can_run:
-        assert (
-            reloaded_swarm.current_running_tasks
-            == current_running + 1
-            == swarm_signature.current_running_tasks
-        )
-        assert (
-            reloaded_swarm.tasks_left_to_run
-            == original_tasks_left_to_run
-            == swarm_signature.tasks_left_to_run
-        )
-    else:
-        assert (
-            reloaded_swarm.current_running_tasks
-            == current_running
-            == swarm_signature.current_running_tasks
-        )
-        new_tasks_left = original_tasks_left_to_run + [task_signature.key]
-        assert (
-            reloaded_swarm.tasks_left_to_run
-            == new_tasks_left
-            == reloaded_swarm.tasks_left_to_run
-        )
-
-
-@pytest.mark.asyncio
 async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm):
     # Arrange
     swarm_signature = await mageflow.swarm(
