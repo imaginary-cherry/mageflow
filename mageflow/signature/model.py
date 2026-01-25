@@ -20,6 +20,7 @@ from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
 
 from mageflow.errors import MissingSignatureError
+from mageflow.models.message import DEFAULT_RESULT_NAME
 from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
@@ -34,7 +35,7 @@ class TaskSignature(AtomicRedisModel):
     kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
     model_validators: SafeLoad[Optional[Any]] = None
-    return_field_name: Optional[str] = None
+    return_field_name: str = DEFAULT_RESULT_NAME
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
