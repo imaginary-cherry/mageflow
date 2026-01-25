@@ -1,10 +1,12 @@
 import asyncio
+from dataclasses import dataclass, field
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 import rapyer
 
+import mageflow
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.model import (
     SwarmTaskSignature,
@@ -13,6 +15,33 @@ from mageflow.swarm.model import (
 )
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
+
+
+@dataclass
+class FailingBatchTaskRunTracker:
+    called_instances: list = field(default_factory=list)
+    fail_on_call: int = 0
+    should_fail: bool = True
+
+    def reset_failure(self):
+        self.should_fail = False
+
+
+@pytest.fixture
+def failing_mock_batch_task_run():
+    tracker = FailingBatchTaskRunTracker()
+
+    async def track_calls_with_failure(self, *args, **kwargs):
+        tracker.called_instances.append(self)
+        if tracker.should_fail and tracker.fail_on_call > 0:
+            if len(tracker.called_instances) >= tracker.fail_on_call:
+                raise RuntimeError("Simulated aio_run_no_wait failure")
+        return None
+
+    with patch.object(
+        BatchItemTaskSignature, "aio_run_no_wait", new=track_calls_with_failure
+    ):
+        yield tracker
 
 
 @pytest_asyncio.fixture()
@@ -284,4 +313,59 @@ async def test_various_batch_sizes_idempotent(
     assert len(reloaded_swarm.tasks_left_to_run) == expected_remaining
 
     reloaded_publish_state = await PublishState.aget(publish_state.key)
+    assert list(reloaded_publish_state.task_ids) == []
+
+
+@pytest.mark.asyncio
+async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempotent(
+    failing_mock_batch_task_run,
+):
+    # Arrange
+    original_tasks = [
+        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
+        for i in range(5)
+    ]
+    swarm_signature = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=3),
+    )
+    await rapyer.ainsert(swarm_signature, *original_tasks)
+
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
+    ]
+    task_keys = [task.key for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
+    publish_state_key = swarm_signature.publishing_state_id
+
+    failing_mock_batch_task_run.fail_on_call = 3
+
+    # Act
+    with pytest.raises(RuntimeError):
+        await swarm_signature.fill_running_tasks()
+
+    reloaded_publish_state = await PublishState.aget(publish_state_key)
+    first_run_task_ids = list(reloaded_publish_state.task_ids)
+
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
+    assert len(first_run_task_ids) == 3
+    assert reloaded_swarm.tasks_left_to_run == task_keys
+
+    failing_mock_batch_task_run.reset_failure()
+    await swarm_signature.fill_running_tasks()
+
+    # Assert
+    all_called_keys = [
+        instance.key for instance in failing_mock_batch_task_run.called_instances
+    ]
+    unique_task_keys = set(all_called_keys)
+    assert len(unique_task_keys) == 3
+    assert unique_task_keys == set(first_run_task_ids)
+
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
+    assert len(reloaded_swarm.tasks_left_to_run) == 2
+
+    reloaded_publish_state = await PublishState.aget(publish_state_key)
     assert list(reloaded_publish_state.task_ids) == []
