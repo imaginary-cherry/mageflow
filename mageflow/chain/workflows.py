@@ -15,6 +15,11 @@ async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
         current_task_id = task_data[TASK_ID_PARAM_NAME]
 
         chain_task_signature = await ChainTaskSignature.get_safe(msg.chain_task_id)
+
+        if chain_task_signature is None:
+            ctx.log(f"Chain task {msg.chain_task_id} already removed, skipping")
+            return
+
         ctx.log(f"Chain task done {chain_task_signature.task_name}")
 
         # Calling error callback from a chain task - This is done before deletion because a deletion error should not disturb the workflow
