@@ -3,52 +3,35 @@ import pytest
 import mageflow
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.swarm.messages import SwarmResultsMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
+from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata
+from tests.unit.workflows.conftest import create_swarm_item_test_setup
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1),
-    )
-
-    original_tasks = [
-        await mageflow.sign(f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
-
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
-    await swarm_task.tasks_left_to_run.aextend([batch_tasks[1].key, batch_tasks[2].key])
-
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[0].key,
+    setup = await create_swarm_item_test_setup(
+        num_tasks=3,
+        max_concurrency=1,
+        stop_after_n_failures=None,
+        tasks_left_indices=[1, 2],
     )
     msg = SwarmResultsMessage(
         mageflow_results={"status": "success", "value": 42},
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[0].key,
+        swarm_task_id=setup.swarm_task.key,
+        swarm_item_id=setup.batch_tasks[0].key,
     )
 
     # Act
-    await swarm_item_done(msg, ctx)
+    await swarm_item_done(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
 
-    assert batch_tasks[0].key in reloaded_swarm.finished_tasks
+    assert setup.batch_tasks[0].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 1
 
     assert len(reloaded_swarm.tasks_results) == 1
@@ -60,45 +43,28 @@ async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
 @pytest.mark.asyncio
 async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task):
     # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=2),
+    setup = await create_swarm_item_test_setup(
+        num_tasks=2,
+        max_concurrency=2,
+        stop_after_n_failures=None,
+        finished_indices=[0],
+        batch_index_for_context=1,
     )
-
-    original_tasks = [
-        await mageflow.sign(f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(2)
-    ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
-
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
-    await swarm_task.finished_tasks.aappend(batch_tasks[0].key)
-
-    async with swarm_task.alock() as locked_swarm:
+    async with setup.swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(is_swarm_closed=True)
 
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[1].key,
-    )
     msg = SwarmResultsMessage(
         mageflow_results={"status": "complete"},
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[1].key,
+        swarm_task_id=setup.swarm_task.key,
+        swarm_item_id=setup.batch_tasks[1].key,
     )
 
     # Act
-    await swarm_item_done(msg, ctx)
+    await swarm_item_done(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-    assert batch_tasks[1].key in reloaded_swarm.finished_tasks
+    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    assert setup.batch_tasks[1].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 2
     mock_invoker_wait_task.assert_called_once()
 

@@ -13,44 +13,26 @@ from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata
+from tests.unit.workflows.conftest import create_swarm_item_test_setup
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_failed_sanity_continue_after_failure(mock_invoker_wait_task):
     # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=2),
-    )
-
-    original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
-
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
-    await swarm_task.tasks_left_to_run.aextend([batch_tasks[1].key, batch_tasks[2].key])
-
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[0].key,
+    setup = await create_swarm_item_test_setup(
+        num_tasks=3,
+        stop_after_n_failures=2,
+        tasks_left_indices=[1, 2],
     )
     msg = EmptyModel()
 
     # Act
-    await swarm_item_failed(msg, ctx)
+    await swarm_item_failed(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
 
-    assert batch_tasks[0].key in reloaded_swarm.failed_tasks
+    assert setup.batch_tasks[0].key in reloaded_swarm.failed_tasks
     assert len(reloaded_swarm.failed_tasks) == 1
 
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
@@ -65,34 +47,16 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     mock_invoker_wait_task,
 ):
     # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=2),
-    )
-
-    original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
-
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
-    await swarm_task.failed_tasks.aappend(batch_tasks[0].key)
-
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[1].key,
+    setup = await create_swarm_item_test_setup(
+        num_tasks=3,
+        stop_after_n_failures=2,
+        failed_indices=[0],
+        batch_index_for_context=1,
     )
     msg = EmptyModel()
 
     # Act
-    await swarm_item_failed(msg, ctx)
+    await swarm_item_failed(msg, setup.ctx)
 
     # Assert
     mock_invoker_wait_task.assert_called_once()
@@ -104,41 +68,23 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
     mock_invoker_wait_task,
 ):
     # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=1, stop_after_n_failures=None),
-    )
-
-    original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
-        for i in range(3)
-    ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
-
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
-    await swarm_task.failed_tasks.aextend([batch_tasks[0].key, batch_tasks[1].key])
-
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[2].key,
+    setup = await create_swarm_item_test_setup(
+        num_tasks=3,
+        stop_after_n_failures=None,
+        failed_indices=[0, 1],
+        batch_index_for_context=2,
     )
     msg = EmptyModel()
 
     # Act
-    await swarm_item_failed(msg, ctx)
+    await swarm_item_failed(msg, setup.ctx)
 
     # Assert
     mock_activate_error.assert_not_awaited()
 
     mock_invoker_wait_task.assert_called_once()
 
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
 
