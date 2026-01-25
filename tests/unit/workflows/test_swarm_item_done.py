@@ -37,7 +37,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_fill_running_tasks):
         swarm_item_id=batch_tasks[0].key,
     )
     msg = SwarmResultsMessage(
-        results={"status": "success", "value": 42},
+        mageflow_results={"status": "success", "value": 42},
         swarm_task_id=swarm_task.key,
         swarm_item_id=batch_tasks[0].key,
     )
@@ -52,7 +52,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_fill_running_tasks):
     assert len(reloaded_swarm.finished_tasks) == 1
 
     assert len(reloaded_swarm.tasks_results) == 1
-    assert reloaded_swarm.tasks_results[0] == msg.results
+    assert reloaded_swarm.tasks_results[0] == msg.mageflow_results
 
     mock_fill_running_tasks.assert_called_once()
 
@@ -88,7 +88,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_fill_running_task
         swarm_item_id=batch_tasks[1].key,
     )
     msg = SwarmResultsMessage(
-        results={"status": "complete"},
+        mageflow_results={"status": "complete"},
         swarm_task_id=swarm_task.key,
         swarm_item_id=batch_tasks[1].key,
     )
@@ -113,7 +113,7 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
         }
     }
     msg = SwarmResultsMessage(
-        results={},
+        mageflow_results={},
         swarm_task_id="nonexistent_swarm",
         swarm_item_id="nonexistent_item",
     )
@@ -138,7 +138,7 @@ async def test_swarm_item_done_nonexistent_batch_task_edge_case():
         swarm_task_id=swarm_task.key,
     )
     msg = SwarmResultsMessage(
-        results={},
+        mageflow_results={},
         swarm_task_id=swarm_task.key,
         swarm_item_id="nonexistent_batch_task",
     )
@@ -159,7 +159,7 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
         swarm_item_id="some_item",
     )
     msg = SwarmResultsMessage(
-        results={},
+        mageflow_results={},
         swarm_task_id="nonexistent_swarm",
         swarm_item_id="some_item",
     )
@@ -194,7 +194,7 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
         swarm_item_id=batch_task.key,
     )
     msg = SwarmResultsMessage(
-        results={},
+        mageflow_results={},
         swarm_task_id=swarm_task.key,
         swarm_item_id=batch_task.key,
     )

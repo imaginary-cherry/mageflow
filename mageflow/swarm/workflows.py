@@ -45,7 +45,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         swarm_task = await SwarmTaskSignature.aget(swarm_task_id)
 
         ctx.log(f"Swarm item done {swarm_item_id} - saving results")
-        await swarm_task.finish_task(swarm_item_id, msg.results)
+        await swarm_task.finish_task(swarm_item_id, msg.mageflow_results)
 
         # Publish next tasks
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
