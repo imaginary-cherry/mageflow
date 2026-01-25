@@ -3,7 +3,7 @@ from typing import TypeVar, get_type_hints, Optional
 
 from pydantic import BaseModel
 
-from mageflow.models.message import ReturnValue, DEFAULT_RESULT_NAME
+from mageflow.models.message import ReturnValueAnnotation, DEFAULT_RESULT_NAME
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
 
@@ -23,7 +23,7 @@ def get_marked_fields(
 
 def return_value_field(model_validators: type[BaseModel]) -> Optional[str]:
     try:
-        marked_field = get_marked_fields(model_validators, ReturnValue)
+        marked_field = get_marked_fields(model_validators, ReturnValueAnnotation)
         return_field_name = marked_field[0][1]
     except (IndexError, TypeError):
         return_field_name = None
