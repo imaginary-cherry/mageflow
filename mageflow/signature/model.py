@@ -20,13 +20,12 @@ from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
 
 from mageflow.errors import MissingSignatureError
-from mageflow.models.message import ReturnValue, DEFAULT_RESULT_NAME
 from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
 from mageflow.startup import mageflow_config
 from mageflow.task.model import HatchetTaskModel
-from mageflow.utils.models import get_marked_fields
+from mageflow.utils.models import return_value_field
 from mageflow.workflows import MageflowWorkflow
 
 
@@ -35,6 +34,7 @@ class TaskSignature(AtomicRedisModel):
     kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
     model_validators: SafeLoad[Optional[Any]] = None
+    return_field_name: Optional[str] = None
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
@@ -68,9 +68,11 @@ class TaskSignature(AtomicRedisModel):
         error_callbacks: list[TaskIdentifierType | Self] = None,
         **kwargs,
     ) -> Self:
+        return_field_name = return_value_field(task.input_validator)
         signature = cls(
             task_name=task.name,
             model_validators=task.input_validator,
+            return_field_name=return_field_name,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
             **kwargs,
@@ -89,12 +91,17 @@ class TaskSignature(AtomicRedisModel):
     async def from_task_name(
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
+        return_field_name = None
         if not model_validators:
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
+            return_field_name = return_value_field(model_validators)
 
         signature = cls(
-            task_name=task_name, model_validators=model_validators, **kwargs
+            task_name=task_name,
+            return_field_name=return_field_name,
+            model_validators=model_validators,
+            **kwargs,
         )
         await signature.asave()
         return signature
@@ -110,19 +117,11 @@ class TaskSignature(AtomicRedisModel):
             await signature.success_callbacks.aextend(success)
             await signature.error_callbacks.aextend(errors)
 
-    def return_value_field(self) -> Optional[str]:
-        try:
-            marked_field = get_marked_fields(self.model_validators, ReturnValue)
-            return_field_name = marked_field[0][1]
-        except (IndexError, TypeError):
-            return_field_name = None
-        return return_field_name or DEFAULT_RESULT_NAME
-
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
-        return_field = self.return_value_field() if use_return_field else None
+        return_field = self.return_field_name
 
         workflow = mageflow_config.hatchet_client.workflow(
             name=task, input_validator=self.model_validators
