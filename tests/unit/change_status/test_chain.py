@@ -25,8 +25,7 @@ async def test_chain_safe_change_status_on_deleted_signature_does_not_create_red
         for i in range(1, 4)
     ]
     chain_signature = await mageflow.chain(
-        tasks=[task.key for task in task_signatures],
-        name="test_chain_unsaved",
+        tasks=task_signatures, name="test_chain_unsaved"
     )
     chain_key = chain_signature.key
     await chain_signature.adelete()
