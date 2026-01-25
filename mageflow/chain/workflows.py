@@ -58,7 +58,7 @@ async def chain_error_task(msg: ChainCallbackMessage, ctx: Context):
         # Remove tasks
         await asyncio.gather(
             chain_signature.remove(with_error=False),
-            TaskSignature.adelete(current_task_id),
+            TaskSignature.adelete_by_key(current_task_id),
         )
         ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
     except Exception as e:
