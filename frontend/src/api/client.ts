@@ -14,7 +14,17 @@ import { Task, TaskFromServer, transformTask } from '../types';
 // Configuration
 // ============================================================================
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const getApiBase = (): string => {
+  if (typeof process !== 'undefined' && process.env?.VITE_API_URL) {
+    return process.env.VITE_API_URL;
+  }
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return '/api';
+};
+
+const API_BASE = getApiBase();
 const BATCH_SIZE = 50;
 const CACHE_TTL_MS = 30_000; // 30 seconds
 const MAX_RETRIES = 3;
@@ -28,14 +38,6 @@ const BATCH_DELAY_MS = 10; // Wait before executing batch
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
-}
-
-interface PaginatedResponse<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
 }
 
 interface SubtasksResponse {
@@ -168,12 +170,15 @@ class BatchQueue {
 // API Client Class
 // ============================================================================
 
-class APIClient {
+export class APIClient {
   private cache = new Cache<Task>();
   private batchQueue: BatchQueue;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private inflightRequests = new Map<string, Promise<any>>();
+  private baseUrl: string;
 
-  constructor() {
+  constructor(baseUrl: string = API_BASE) {
+    this.baseUrl = baseUrl;
     this.batchQueue = new BatchQueue((ids) => this.fetchTasksBatch(ids));
   }
 
@@ -185,7 +190,7 @@ class APIClient {
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetch(`${this.baseUrl}${url}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -335,7 +340,7 @@ class APIClient {
 
     return this.deduplicatedFetch(cacheKey, async () => {
       const response = await this.fetchWithRetry<SubtasksResponse>(
-        `/tasks/${taskId}/subtasks?page=${page}&pageSize=${pageSize}`
+        `/workflows/${taskId}/children?page=${page}&pageSize=${pageSize}`
       );
       return response;
     });
@@ -355,7 +360,14 @@ class APIClient {
       const response = await this.fetchWithRetry<{
         success_callback_ids: string[];
         error_callback_ids: string[];
-      }>(`/tasks/${taskId}/callbacks`);
+      } | null>(`/workflows/${taskId}/callbacks`);
+
+      if (!response) {
+        return {
+          successCallbackIds: [],
+          errorCallbackIds: [],
+        };
+      }
 
       return {
         successCallbackIds: response.success_callback_ids,
