@@ -20,7 +20,8 @@ class ChainTaskSignature(ContainerTaskSignature):
 
     @property
     async def sub_tasks(self) -> list[TaskSignature]:
-        return cast(list[TaskSignature], await rapyer.afind(*self.tasks))
+        sub_tasks = await rapyer.afind(*self.tasks)
+        return cast(list[TaskSignature], sub_tasks)
 
     async def workflow(self, **task_additional_params):
         first_task = await TaskSignature.get_safe(self.tasks[0])
