@@ -222,5 +222,7 @@ future-features
 mageflow/visualizer/static/*
 !mageflow/visualizer/static/.gitkeep
 app/node_modules/
+frontend/node_modules/
 /app/.idea/
 /scripts
+/frontend/.idea/
