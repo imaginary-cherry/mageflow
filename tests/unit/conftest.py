@@ -132,6 +132,14 @@ def mock_invoker_wait_task():
 
 
 @pytest.fixture
+def mock_fill_running_tasks():
+    with patch.object(
+        SwarmTaskSignature, "fill_running_tasks", new_callable=AsyncMock
+    ) as mock_fill:
+        yield mock_fill
+
+
+@pytest.fixture
 def mock_handle_finish_tasks_error():
     with patch.object(
         HatchetInvoker, "wait_task", side_effect=RuntimeError("Finish tasks error")

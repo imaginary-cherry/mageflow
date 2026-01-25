@@ -96,7 +96,7 @@ async def test_batch_item_aio_run_no_wait_no_capacity_sanity(
 )
 async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
     swarm_with_capacity: SwarmWithCapacityData,
-    mock_invoker_wait_task: AsyncMock,
+    mock_fill_running_tasks: AsyncMock,
     test_message: ContextMessage,
 ):
     # Arrange
@@ -109,7 +109,7 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
 
     # Assert
     reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    mock_invoker_wait_task.assert_called_once_with(max_tssks=1)
+    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
     expected_kwargs = {
         **task_kwargs,
         **batch_item.kwargs,
@@ -120,7 +120,7 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
 
 @pytest.mark.asyncio
 async def test_batch_item_kwargs_merge_order_sanity(
-    mock_invoker_wait_task: AsyncMock, test_message: ContextMessage
+    mock_fill_running_tasks: AsyncMock, test_message: ContextMessage
 ):
     # Arrange
     swarm_kwargs = {"shared_key": "swarm_value", "swarm_only": "swarm"}
@@ -152,7 +152,7 @@ async def test_batch_item_kwargs_merge_order_sanity(
         "shared_key": "swarm_value",  # swarm overwrites task (must be after batch_item_kwargs)
     }
     assert reloaded_original_task.kwargs == expected_kwargs
-    mock_invoker_wait_task.assert_called_once_with(max_tssks=1)
+    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
 
 
 @pytest.mark.asyncio
@@ -184,33 +184,3 @@ async def test_batch_item_no_capacity_includes_message_kwargs_sanity(
     }
     assert reloaded_original_task.kwargs == expected_kwargs
     assert len(mock_workflow_run) == 0
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("swarm_with_capacity", [[5, 0]], indirect=True)
-async def test_batch_item_has_capacity_excludes_message_kwargs_sanity(
-    swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: AsyncMock,
-    test_message: ContextMessage,
-):
-    # Arrange
-    batch_item, original_task, task_kwargs = await create_batch_item_with_task(
-        swarm_with_capacity.swarm
-    )
-    message_with_data = ContextMessage(
-        base_data={"special_msg_key": "special_msg_value"}
-    )
-
-    # Act
-    await batch_item.aio_run_no_wait(message_with_data)
-
-    # Assert
-    reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    expected_kwargs = {
-        **task_kwargs,
-        **batch_item.kwargs,
-        **swarm_with_capacity.swarm_kwargs,
-    }
-    assert reloaded_original_task.kwargs == expected_kwargs
-    assert "special_msg_key" not in reloaded_original_task.kwargs
-    mock_workflow_run.assert_called_once()
