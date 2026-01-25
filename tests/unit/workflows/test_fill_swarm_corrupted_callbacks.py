@@ -31,8 +31,8 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert
-    assert len(mock_workflow_run.captured_workflows) == len(success_callbacks)
-    for workflow in mock_workflow_run.captured_workflows:
+    assert len(mock_workflow_run) == len(success_callbacks)
+    for workflow in mock_workflow_run:
         signature_id = workflow._task_ctx[TASK_ID_PARAM_NAME]
         assert signature_id in success_callbacks
         assert workflow._return_value_field == DEFAULT_RESULT_NAME
@@ -57,8 +57,8 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert
-    assert len(mock_workflow_run.captured_workflows) == len(error_callbacks)
-    for workflow in mock_workflow_run.captured_workflows:
+    assert len(mock_workflow_run) == len(error_callbacks)
+    for workflow in mock_workflow_run:
         signature_id = workflow._task_ctx[TASK_ID_PARAM_NAME]
         reloaded_callback = await TaskSignature.get_safe(signature_id)
         assert reloaded_callback.model_validators is None

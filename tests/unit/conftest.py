@@ -252,4 +252,4 @@ def mock_workflow_run():
 
     with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
         mock.captured_workflows = captured_workflows
-        yield mock
+        yield captured_workflows
