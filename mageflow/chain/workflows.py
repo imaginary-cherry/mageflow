@@ -42,6 +42,11 @@ async def chain_error_task(msg: ChainCallbackMessage, ctx: Context):
         task_data = HatchetInvoker(msg, ctx).task_ctx
         current_task_id = task_data[TASK_ID_PARAM_NAME]
         chain_signature = await ChainTaskSignature.get_safe(msg.chain_task_id)
+
+        if chain_signature is None:
+            ctx.log(f"Chain task {msg.chain_task_id} already removed, skipping")
+            return
+
         ctx.log(
             f"Chain task failed {chain_signature.task_name} on task id - {current_task_id}"
         )
