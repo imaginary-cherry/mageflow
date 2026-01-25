@@ -149,9 +149,9 @@ class TaskSignature(AtomicRedisModel):
             callback_ids.extend(self.success_callbacks)
         if with_error:
             callback_ids.extend(self.error_callbacks)
-        callbacks_signatures = await asyncio.gather(
-            *[TaskSignature.get_safe(callback_id) for callback_id in callback_ids]
-        )
+        callbacks_signatures = await rapyer.afind(*callback_ids)
+        callbacks_signatures = cast(list[TaskSignature], callbacks_signatures)
+
         if any([sign is None for sign in callbacks_signatures]):
             raise MissingSignatureError(
                 f"Some callbacks not found {callback_ids}, signature can be called only once"
