@@ -5,7 +5,11 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 
 from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.consts import TASK_ID_PARAM_NAME, MAGEFLOW_TASK_INITIALS
+from mageflow.signature.consts import (
+    TASK_ID_PARAM_NAME,
+    MAGEFLOW_TASK_INITIALS,
+    REMOVED_TASK_TTL,
+)
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
@@ -169,11 +173,26 @@ def _assert_task_done(
 
 
 async def assert_redis_is_clean(redis_client):
-    __tracebackhide__ = False  # force pytest to show this frame
+    __tracebackhide__ = False
     non_persistent_keys = await extract_bad_keys_from_redis(redis_client)
+
+    if not non_persistent_keys:
+        return
+
+    # Batch all TTL checks in a single pipeline
+    async with redis_client.pipeline() as pipe:
+        for key in non_persistent_keys:
+            pipe.ttl(key)
+        ttls = await pipe.execute()
+
+    keys_with_invalid_ttl = [
+        (key, ttl)
+        for key, ttl in zip(non_persistent_keys, ttls)
+        if ttl == -1 or ttl > REMOVED_TASK_TTL
+    ]
     assert (
-        len(non_persistent_keys) == 0
-    ), f"Not all redis keys were cleaned: {non_persistent_keys}"
+        len(keys_with_invalid_ttl) == 0
+    ), f"Keys without proper TTL (should be <= {REMOVED_TASK_TTL}s): {keys_with_invalid_ttl}"
 
 
 def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=False):
