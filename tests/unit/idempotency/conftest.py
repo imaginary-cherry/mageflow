@@ -1,6 +1,7 @@
-from dataclasses import dataclass
-from unittest.mock import MagicMock
+from dataclasses import dataclass, field
+from unittest.mock import MagicMock, patch
 
+import pytest
 import pytest_asyncio
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
@@ -12,6 +13,16 @@ from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, Swa
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata, SwarmItemDoneSetup
+
+
+@dataclass
+class FailingBatchTaskRunTracker:
+    called_instances: list = field(default_factory=list)
+    fail_on_call: int = 0
+    should_fail: bool = True
+
+    def reset_failure(self):
+        self.should_fail = False
 
 
 @dataclass
@@ -185,3 +196,20 @@ async def batch_item_run_setup_at_max_concurrency(publish_state):
         original_task=original_task,
         msg=msg,
     )
+
+
+@pytest.fixture
+def failing_mock_batch_task_run():
+    tracker = FailingBatchTaskRunTracker()
+
+    async def track_calls_with_failure(self, *args, **kwargs):
+        tracker.called_instances.append(self)
+        if tracker.should_fail and tracker.fail_on_call > 0:
+            if len(tracker.called_instances) >= tracker.fail_on_call:
+                raise RuntimeError("Simulated aio_run_no_wait failure")
+        return None
+
+    with patch.object(
+        BatchItemTaskSignature, "aio_run_no_wait", new=track_calls_with_failure
+    ):
+        yield tracker

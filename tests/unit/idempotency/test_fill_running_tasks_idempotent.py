@@ -17,33 +17,6 @@ from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
 
 
-@dataclass
-class FailingBatchTaskRunTracker:
-    called_instances: list = field(default_factory=list)
-    fail_on_call: int = 0
-    should_fail: bool = True
-
-    def reset_failure(self):
-        self.should_fail = False
-
-
-@pytest.fixture
-def failing_mock_batch_task_run():
-    tracker = FailingBatchTaskRunTracker()
-
-    async def track_calls_with_failure(self, *args, **kwargs):
-        tracker.called_instances.append(self)
-        if tracker.should_fail and tracker.fail_on_call > 0:
-            if len(tracker.called_instances) >= tracker.fail_on_call:
-                raise RuntimeError("Simulated aio_run_no_wait failure")
-        return None
-
-    with patch.object(
-        BatchItemTaskSignature, "aio_run_no_wait", new=track_calls_with_failure
-    ):
-        yield tracker
-
-
 @pytest_asyncio.fixture()
 async def original_tasks():
     swarm_tasks = [
@@ -103,21 +76,20 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
 @pytest.mark.asyncio
 async def test_retry_does_not_double_append_to_publish_state_idempotent(
-    publish_state, mock_batch_task_run
+    mock_batch_task_run,
 ):
     # Arrange
     original_tasks = [
         TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
         for i in range(5)
     ]
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=0,
         config=SwarmConfig(max_concurrency=5),
-        publishing_state_id=publish_state.key,
     )
     await rapyer.ainsert(swarm_signature, *original_tasks)
+    publish_state = await PublishState.aget(swarm_signature.publishing_state_id)
 
     batch_tasks = [
         await swarm_signature.add_task(original_task)
@@ -142,21 +114,20 @@ async def test_retry_does_not_double_append_to_publish_state_idempotent(
 
 @pytest.mark.asyncio
 async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
-    publish_state, mock_batch_task_run
+    mock_batch_task_run,
 ):
     # Arrange
     original_tasks = [
         TaskSignature(task_name=f"task_{chr(65 + i)}", model_validators=ContextMessage)
         for i in range(5)
     ]
-    swarm_signature = SwarmTaskSignature(
+    swarm_signature = await mageflow.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        current_running_tasks=0,
         config=SwarmConfig(max_concurrency=5),
-        publishing_state_id=publish_state.key,
     )
     await rapyer.ainsert(swarm_signature, *original_tasks)
+    publish_state = await PublishState.aget(swarm_signature.publishing_state_id)
 
     batch_tasks = [
         await swarm_signature.add_task(original_task)
