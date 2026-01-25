@@ -8,7 +8,7 @@ import mageflow
 from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.workflows import MageflowWorkflow
-from tests.integration.hatchet.models import ContextMessage
+from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 
 
@@ -23,13 +23,13 @@ class CompletedSwarmWithSuccessCallback:
 async def completed_swarm_with_success_callback():
     # Arrange
     success_callback = await mageflow.sign(
-        "unittest_success_callback_task", model_validators=ContextMessage
+        "unittest_success_callback_task", model_validators=MessageWithResult
     )
     error_callback = await mageflow.sign(
-        "unittest_error_callback_task", model_validators=ContextMessage
+        "unittest_error_callback_task", model_validators=MessageWithResult
     )
     error_callback2 = await mageflow.sign(
-        "unittest_error_callback_task", model_validators=ContextMessage
+        "unittest_error_callback_task", model_validators=MessageWithResult
     )
 
     swarm_task = await mageflow.swarm(
