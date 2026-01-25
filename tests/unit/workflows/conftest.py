@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 import pytest_asyncio
 
 import mageflow
 from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
-from mageflow.workflows import MageflowWorkflow
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 
@@ -52,15 +50,3 @@ async def completed_swarm_with_success_callback():
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     return CompletedSwarmWithSuccessCallback(swarm_task=swarm_task, ctx=ctx, msg=msg)
-
-
-@pytest.fixture
-def mock_workflow_run():
-    captured_workflows = []
-
-    async def capture_and_mock(self, *args, **kwargs):
-        captured_workflows.append(self)
-
-    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
-        mock.captured_workflows = captured_workflows
-        yield mock

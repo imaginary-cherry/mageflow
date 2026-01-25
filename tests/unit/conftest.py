@@ -18,6 +18,7 @@ from mageflow.swarm.consts import (
 )
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
+from mageflow.workflows import MageflowWorkflow
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.change_status.conftest import ChainTestData
 
@@ -240,3 +241,15 @@ async def swarm_task(empty_swarm: SwarmTaskSignature):
 async def swarm_with_ready_task(swarm_task: SwarmTaskSignature):
     await swarm_task.tasks_left_to_run.aappend(swarm_task.tasks[0])
     yield swarm_task
+
+
+@pytest.fixture
+def mock_workflow_run():
+    captured_workflows = []
+
+    async def capture_and_mock(self, *args, **kwargs):
+        captured_workflows.append(self)
+
+    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
+        mock.captured_workflows = captured_workflows
+        yield mock
