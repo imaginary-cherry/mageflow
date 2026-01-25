@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
+import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
 
@@ -213,3 +214,27 @@ def failing_mock_batch_task_run():
         BatchItemTaskSignature, "aio_run_no_wait", new=track_calls_with_failure
     ):
         yield tracker
+
+
+async def swarm_with_running_tasks(
+    original_tasks: list[TaskSignature],
+    task_to_run: int = None,
+    max_concurrency: int = 5,
+) -> tuple[SwarmTaskSignature, PublishState, list[str]]:
+    swarm_signature = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=max_concurrency),
+    )
+    await rapyer.ainsert(swarm_signature, *original_tasks)
+    publish_state = await PublishState.aget(swarm_signature.publishing_state_id)
+    tasks_to_run = task_to_run or len(original_tasks)
+
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
+    ]
+    task_keys = [task.key for task in batch_tasks]
+    task_keys = task_keys[:tasks_to_run]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
+    return swarm_signature, publish_state, task_keys
