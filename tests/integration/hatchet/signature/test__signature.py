@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 import mageflow
+from mageflow.utils.models import return_value_field
 from tests.integration.hatchet.assertions import (
     assert_task_done,
     assert_redis_is_clean,
@@ -79,7 +80,7 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
     success_tasks = {task.key: task for task in success_callbacks}
     for success_id in main_signature.success_callbacks:
         task = success_tasks[success_id]
-        input_values = {task.return_value_field(): message.model_dump(mode="json")}
+        input_values = {return_value_field(task): message.model_dump(mode="json")}
         input_values.update(task.kwargs)
         assert_signature_done(runs, success_id, **input_values)
     for error_id in main_signature.error_callbacks:
