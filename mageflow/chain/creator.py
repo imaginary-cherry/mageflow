@@ -1,7 +1,7 @@
 import asyncio
 
 from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
-from mageflow.chain.messages import ChainSuccessTaskCommandMessage
+from mageflow.chain.messages import ChainCallbackMessage
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
@@ -35,14 +35,14 @@ async def chain(
     callback_kwargs = dict(chain_task_id=chain_task_signature.key)
     on_chain_error = TaskSignature(
         task_name=ON_CHAIN_ERROR,
-        task_identifiers=callback_kwargs,
-        model_validators=ChainSuccessTaskCommandMessage,
+        kwargs=callback_kwargs,
+        model_validators=ChainCallbackMessage,
         return_field_name="chain_results",
     )
     on_chain_success = TaskSignature(
         task_name=ON_CHAIN_END,
-        task_identifiers=callback_kwargs,
-        model_validators=ChainSuccessTaskCommandMessage,
+        kwargs=callback_kwargs,
+        model_validators=ChainCallbackMessage,
         return_field_name="chain_results",
     )
     await _chain_task_to_previous_success(tasks, on_chain_error, on_chain_success)

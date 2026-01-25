@@ -5,7 +5,7 @@ from hatchet_sdk.runnables.types import ConcurrencyExpression, ConcurrencyLimitS
 
 from mageflow.callbacks import register_task
 from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
-from mageflow.chain.messages import ChainSuccessTaskCommandMessage
+from mageflow.chain.messages import ChainCallbackMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
 from mageflow.swarm.consts import (
     ON_SWARM_ERROR,
@@ -28,12 +28,15 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
     # Chain tasks
     hatchet_chain_done = hatchet.task(
         name=ON_CHAIN_END,
-        input_validator=ChainSuccessTaskCommandMessage,
+        input_validator=ChainCallbackMessage,
         retries=3,
         execution_timeout=timedelta(minutes=5),
     )
     hatchet_chain_error = hatchet.task(
-        name=ON_CHAIN_ERROR, retries=3, execution_timeout=timedelta(minutes=5)
+        name=ON_CHAIN_ERROR,
+        retries=3,
+        execution_timeout=timedelta(minutes=5),
+        input_validator=ChainCallbackMessage,
     )
     chain_done_task = hatchet_chain_done(chain_end_task)
     on_chain_error_task = hatchet_chain_error(chain_error_task)

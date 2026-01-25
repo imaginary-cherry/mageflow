@@ -1,26 +1,20 @@
 import asyncio
 
 from hatchet_sdk import Context
-from hatchet_sdk.runnables.types import EmptyModel
 
-from mageflow.chain.consts import CHAIN_TASK_ID_NAME
-from mageflow.chain.messages import ChainSuccessTaskCommandMessage
+from mageflow.chain.messages import ChainCallbackMessage
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 
 
-async def chain_end_task(msg: ChainSuccessTaskCommandMessage, ctx: Context) -> None:
+async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
     try:
         task_data = HatchetInvoker(msg, ctx).task_ctx
-        chain_task_id = task_data[CHAIN_TASK_ID_NAME]
         current_task_id = task_data[TASK_ID_PARAM_NAME]
 
-        chain_task_signature, current_task = await asyncio.gather(
-            ChainTaskSignature.get_safe(chain_task_id),
-            TaskSignature.get_safe(current_task_id),
-        )
+        chain_task_signature = await ChainTaskSignature.get_safe(msg.chain_task_id)
         ctx.log(f"Chain task done {chain_task_signature.task_name}")
 
         # Calling error callback from a chain task - This is done before deletion because a deletion error should not disturb the workflow
@@ -29,7 +23,8 @@ async def chain_end_task(msg: ChainSuccessTaskCommandMessage, ctx: Context) -> N
 
         # Remove tasks
         await asyncio.gather(
-            chain_task_signature.remove(with_success=False), current_task.remove()
+            chain_task_signature.remove(with_success=False),
+            TaskSignature.adelete(current_task_id),
         )
     except Exception as e:
         ctx.log(f"MAJOR - infrastructure error in chain end task: {e}")
@@ -37,15 +32,11 @@ async def chain_end_task(msg: ChainSuccessTaskCommandMessage, ctx: Context) -> N
 
 
 # This task needs to be added as a workflow
-async def chain_error_task(msg: EmptyModel, ctx: Context) -> None:
+async def chain_error_task(msg: ChainCallbackMessage, ctx: Context):
     try:
         task_data = HatchetInvoker(msg, ctx).task_ctx
-        chain_task_id = task_data[CHAIN_TASK_ID_NAME]
         current_task_id = task_data[TASK_ID_PARAM_NAME]
-        chain_signature, current_task = await asyncio.gather(
-            ChainTaskSignature.get_safe(chain_task_id),
-            TaskSignature.get_safe(current_task_id),
-        )
+        chain_signature = await ChainTaskSignature.get_safe(msg.chain_task_id)
         ctx.log(
             f"Chain task failed {chain_signature.task_name} on task id - {current_task_id}"
         )
@@ -55,9 +46,9 @@ async def chain_error_task(msg: EmptyModel, ctx: Context) -> None:
         ctx.log(f"Chain task error {chain_signature.task_name}")
 
         # Remove tasks
-        await chain_signature.remove_references()
         await asyncio.gather(
-            chain_signature.remove(with_error=False), current_task.remove()
+            chain_signature.remove(with_error=False),
+            TaskSignature.adelete(current_task_id),
         )
         ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
     except Exception as e:
