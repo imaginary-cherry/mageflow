@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from typing import Generator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -9,7 +8,6 @@ from pytest import FixtureRequest
 import mageflow
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.model import BatchItemTaskSignature, SwarmConfig, SwarmTaskSignature
-from mageflow.workflows import MageflowWorkflow
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -17,14 +15,6 @@ from tests.integration.hatchet.models import ContextMessage
 class SwarmWithCapacityData:
     swarm: SwarmTaskSignature
     swarm_kwargs: dict
-
-
-@pytest.fixture
-def mock_workflow_run() -> Generator[AsyncMock, None, None]:
-    with patch.object(
-        MageflowWorkflow, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock:
-        yield mock
 
 
 @pytest_asyncio.fixture
@@ -71,7 +61,7 @@ async def create_batch_item_with_task(
 )
 async def test_batch_item_aio_run_no_wait_no_capacity_sanity(
     swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: AsyncMock,
+    mock_workflow_run: list,
     test_message: ContextMessage,
 ):
     # Arrange
@@ -84,7 +74,7 @@ async def test_batch_item_aio_run_no_wait_no_capacity_sanity(
 
     # Assert
     reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    mock_workflow_run.assert_not_called()
+    assert len(mock_workflow_run) == 0
     message_data = test_message.model_dump(mode="json")
     expected_kwargs = {
         **task_kwargs,
@@ -106,7 +96,7 @@ async def test_batch_item_aio_run_no_wait_no_capacity_sanity(
 )
 async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
     swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: AsyncMock,
+    mock_fill_running_tasks: AsyncMock,
     test_message: ContextMessage,
 ):
     # Arrange
@@ -119,7 +109,7 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
 
     # Assert
     reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    mock_workflow_run.assert_called_once()
+    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
     expected_kwargs = {
         **task_kwargs,
         **batch_item.kwargs,
@@ -130,7 +120,7 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
 
 @pytest.mark.asyncio
 async def test_batch_item_kwargs_merge_order_sanity(
-    mock_workflow_run: AsyncMock, test_message: ContextMessage
+    mock_fill_running_tasks: AsyncMock, test_message: ContextMessage
 ):
     # Arrange
     swarm_kwargs = {"shared_key": "swarm_value", "swarm_only": "swarm"}
@@ -162,14 +152,14 @@ async def test_batch_item_kwargs_merge_order_sanity(
         "shared_key": "swarm_value",  # swarm overwrites task (must be after batch_item_kwargs)
     }
     assert reloaded_original_task.kwargs == expected_kwargs
-    mock_workflow_run.assert_called_once()
+    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("swarm_with_capacity", [[1, 1]], indirect=True)
 async def test_batch_item_no_capacity_includes_message_kwargs_sanity(
     swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: AsyncMock,
+    mock_workflow_run: list,
     test_message: ContextMessage,
 ):
     # Arrange
@@ -193,7 +183,7 @@ async def test_batch_item_no_capacity_includes_message_kwargs_sanity(
         **message_data,
     }
     assert reloaded_original_task.kwargs == expected_kwargs
-    mock_workflow_run.assert_not_called()
+    assert len(mock_workflow_run) == 0
 
 
 @pytest.mark.asyncio
