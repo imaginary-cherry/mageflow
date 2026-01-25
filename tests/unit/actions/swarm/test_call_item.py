@@ -34,15 +34,6 @@ async def create_swarm_with_kwargs(task_name, kwargs):
     )
 
 
-async def run_batch_item_with_mock(batch_item, message):
-    """Run batch item with mocked add_to_running_tasks returning False"""
-    with patch.object(
-        SwarmTaskSignature, "add_to_running_tasks", new_callable=AsyncMock
-    ) as mock_add_to_running:
-        mock_add_to_running.return_value = False
-        await batch_item.aio_run_no_wait(message)
-
-
 def assert_kwargs_merged(actual_kwargs, expected_parts, message):
     """Assert that kwargs are properly merged from expected parts and message"""
     message_data = message.model_dump(mode="json")
@@ -68,7 +59,7 @@ async def test_simple_task_kwargs_saved_sanity(test_message, test_swarm):
     batch_item = await swarm_signature.add_task(original_task)
 
     # Act
-    await run_batch_item_with_mock(batch_item, test_message)
+    await batch_item.aio_run_no_wait(test_message)
 
     # Assert
     reloaded_original_task = await TaskSignature.get_safe(original_task.key)
@@ -91,7 +82,7 @@ async def test_swarm_item_kwargs_saved_in_swarm_object_sanity(test_message):
     batch_item = await outer_swarm.add_task(inner_swarm)
 
     # Act
-    await run_batch_item_with_mock(batch_item, test_message)
+    await batch_item.aio_run_no_wait(test_message)
 
     # Assert - kwargs should be saved in the swarm object
     reloaded_inner_swarm = await SwarmTaskSignature.get_safe(inner_swarm.key)
@@ -150,7 +141,7 @@ async def test_nested_chain_kwargs_saved_in_first_task_of_first_chain_sanity(
     batch_item = await swarm_signature.add_task(nested_chain)
 
     # Act
-    await run_batch_item_with_mock(batch_item, test_message)
+    await batch_item.aio_run_no_wait(test_message)
 
     # Assert - kwargs should be saved in the first task of the first chain
     reloaded_first_chain_task1 = await TaskSignature.get_safe(first_chain_task1.key)
