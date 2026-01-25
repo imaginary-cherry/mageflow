@@ -90,9 +90,7 @@ async def create_swarm_item_test_setup(
         swarm_task.current_running_tasks = current_running
         swarm_task.tasks.extend([t.key for t in batch_tasks])
         if failed_indices:
-            swarm_task.failed_tasks.extend(
-                [batch_tasks[i].key for i in failed_indices]
-            )
+            swarm_task.failed_tasks.extend([batch_tasks[i].key for i in failed_indices])
         if finished_indices:
             swarm_task.finished_tasks.extend(
                 [batch_tasks[i].key for i in finished_indices]
