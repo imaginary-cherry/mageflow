@@ -121,7 +121,7 @@ class TaskSignature(AtomicRedisModel):
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
-        return_field = self.return_field_name
+        return_field = self.return_field_name if use_return_field else None
 
         workflow = mageflow_config.hatchet_client.workflow(
             name=task, input_validator=self.model_validators
