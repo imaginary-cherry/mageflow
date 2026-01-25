@@ -123,7 +123,7 @@ async def swarm_item_failed_setup(swarm_setup):
 async def swarm_item_done_setup(swarm_setup):
     swarm_task, batch_task, item_task, ctx = swarm_setup
     msg = SwarmResultsMessage(
-        results=42,
+        mageflow_results=42,
         swarm_task_id=swarm_task.key,
         swarm_item_id=batch_task.key,
     )
