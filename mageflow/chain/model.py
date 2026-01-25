@@ -18,7 +18,6 @@ class ChainTaskSignature(ContainerTaskSignature):
     def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_key(item) for item in v]
 
-    @property
     async def sub_tasks(self) -> list[TaskSignature]:
         sub_tasks = await rapyer.afind(*self.tasks)
         return cast(list[TaskSignature], sub_tasks)
