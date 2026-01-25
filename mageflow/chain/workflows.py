@@ -29,7 +29,7 @@ async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
         # Remove tasks
         await asyncio.gather(
             chain_task_signature.remove(with_success=False),
-            TaskSignature.adelete(current_task_id),
+            TaskSignature.adelete_by_key(current_task_id),
         )
     except Exception as e:
         ctx.log(f"MAJOR - infrastructure error in chain end task: {e}")
