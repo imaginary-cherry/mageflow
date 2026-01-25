@@ -20,7 +20,7 @@ from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
 
 from mageflow.errors import MissingSignatureError
-from mageflow.models.message import ReturnValue
+from mageflow.models.message import ReturnValue, DEFAULT_RESULT_NAME
 from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
@@ -111,12 +111,12 @@ class TaskSignature(AtomicRedisModel):
             await signature.error_callbacks.aextend(errors)
 
     def return_value_field(self) -> Optional[str]:
-        marked_field = get_marked_fields(self.model_validators, ReturnValue)
         try:
+            marked_field = get_marked_fields(self.model_validators, ReturnValue)
             return_field_name = marked_field[0][1]
-        except IndexError:
+        except (IndexError, TypeError):
             return_field_name = None
-        return return_field_name or "results"
+        return return_field_name or DEFAULT_RESULT_NAME
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params

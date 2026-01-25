@@ -1,4 +1,4 @@
-from typing import Any, Annotated
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,14 +10,14 @@ class ContextMessage(BaseModel):
 
 
 class MessageWithData(ContextMessage):
-    data: Annotated[Any, ReturnValue()]
+    data: ReturnValue[Any]
     field_int: int = 1
     field_str: str = "test"
     field_list: list[int]
 
 
 class MessageWithResult(BaseModel):
-    results: Any
+    mageflow_results: Any
 
 
 class ErrorMessage(ContextMessage):
@@ -25,7 +25,7 @@ class ErrorMessage(ContextMessage):
 
 
 class CommandMessageWithResult(ContextMessage):
-    task_result: Annotated[Any, ReturnValue()]
+    task_result: ReturnValue[Any]
 
 
 class SleepTaskMessage(ContextMessage):

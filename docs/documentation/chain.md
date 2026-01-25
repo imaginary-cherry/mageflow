@@ -71,7 +71,7 @@ async def transform_data(msg: SecondMessage) -> TransformedData:
     return TransformedData(transformed=msg.processed_data)
 
 class ThirdMessage(BaseModel):
-    transformed_data: Annotated[TransformedData, ReturnValue()]
+    transformed_data: ReturnValue[TransformedData]
     field_int: int
 
 @hatchet.task()

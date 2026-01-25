@@ -13,4 +13,4 @@ class SwarmCallbackMessage(SwarmMessage):
 
 
 class SwarmResultsMessage(SwarmCallbackMessage):
-    results: Any
+    mageflow_results: Any
