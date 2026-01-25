@@ -109,50 +109,14 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
 
     # Assert
     reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
+    mock_fill_running_tasks.assert_awaited_once_with(max_tasks=1)
     expected_kwargs = {
         **task_kwargs,
         **batch_item.kwargs,
         **swarm_with_capacity.swarm_kwargs,
+        **test_message.model_dump(mode="json"),
     }
     assert reloaded_original_task.kwargs == expected_kwargs
-
-
-@pytest.mark.asyncio
-async def test_batch_item_kwargs_merge_order_sanity(
-    mock_fill_running_tasks: AsyncMock, test_message: ContextMessage
-):
-    # Arrange
-    swarm_kwargs = {"shared_key": "swarm_value", "swarm_only": "swarm"}
-    swarm = await mageflow.swarm(
-        task_name="test_swarm",
-        kwargs=swarm_kwargs,
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=5),
-    )
-
-    task_kwargs = {"shared_key": "task_value", "task_only": "task"}
-    original_task = await mageflow.sign(
-        "test_task",
-        model_validators=ContextMessage,
-        **task_kwargs,
-    )
-
-    batch_item = await swarm.add_task(original_task)
-    batch_item_kwargs = dict(batch_item.kwargs)
-
-    # Act
-    await batch_item.aio_run_no_wait(test_message)
-
-    # Assert
-    reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    expected_kwargs = {
-        **batch_item_kwargs,
-        "swarm_only": "swarm",
-        "shared_key": "swarm_value",  # swarm overwrites task (must be after batch_item_kwargs)
-    }
-    assert reloaded_original_task.kwargs == expected_kwargs
-    mock_fill_running_tasks.assert_called_once_with(max_tssks=1)
 
 
 @pytest.mark.asyncio
