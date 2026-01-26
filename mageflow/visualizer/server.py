@@ -124,7 +124,7 @@ async def fetch_tasks_batch(task_ids: list[str]) -> list[TaskFromServer]:
 async def lifespan(app: FastAPI):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     redis_client = Redis.from_url(redis_url, decode_responses=True)
-    await rapyer.init_rapyer(redis_client)
+    await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
     yield
     await rapyer.teardown_rapyer()
 

@@ -23,7 +23,7 @@ mageflow_config = MageFlowConfigModel()
 
 
 async def init_mageflow():
-    await rapyer.init_rapyer(mageflow_config.redis_client)
+    await rapyer.init_rapyer(mageflow_config.redis_client, prefer_normal_json_dump=True)
     await register_workflows()
     await update_register_signature_models()
 
