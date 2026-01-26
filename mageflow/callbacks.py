@@ -56,7 +56,6 @@ def handle_task_callback(
                     await invoker.remove_task(with_error=False)
                 raise
             else:
-                await signature.done()
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await invoker.run_success(dumped_results["hatchet_results"])

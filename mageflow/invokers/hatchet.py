@@ -42,6 +42,7 @@ class HatchetInvoker(BaseInvoker):
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
+            await current_task.done()
             task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
