@@ -43,7 +43,7 @@ class SwarmItemDoneSetup:
 async def redis_client():
     await update_register_signature_models()
     client = fakeredis.aioredis.FakeRedis()
-    mageflow_config.redis_client = redis_client
+    mageflow_config.redis_client = client
     await client.flushall()
     try:
         yield client
