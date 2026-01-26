@@ -1,6 +1,8 @@
 import asyncio
+from typing import cast
 
 import pytest
+import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 
 import mageflow
@@ -52,9 +54,8 @@ async def test_swarm_with_three_tasks_integration_sanity(
         success_callbacks=[sign_callback1],
         kwargs=dict(base_data={"param1": "nice", "param2": ["test", 2]}),
     )
-    batch_tasks = await asyncio.gather(
-        *[mageflow.load_signature(batch_id) for batch_id in swarm.tasks]
-    )
+    batch_tasks = await rapyer.afind(swarm.tasks)
+    batch_tasks = cast(list[BatchItemTaskSignature], batch_tasks)
     await swarm.close_swarm()
     tasks = await TaskSignature.afind()
 
