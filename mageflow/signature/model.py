@@ -41,7 +41,7 @@ class TaskSignature(AtomicRedisModel):
     task_status: TaskStatus = Field(default_factory=TaskStatus)
     task_identifiers: RedisDict[Any] = Field(default_factory=dict)
 
-    Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60)
+    Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 
     @field_validator("success_callbacks", "error_callbacks", mode="before")
     @classmethod
