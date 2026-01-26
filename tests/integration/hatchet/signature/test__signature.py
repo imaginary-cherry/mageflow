@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 import mageflow
+from mageflow.signature.model import TaskSignature
 from mageflow.utils.models import return_value_field
 from tests.integration.hatchet.assertions import (
     assert_task_done,
@@ -64,7 +65,7 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
         task1_callback, base_data={"callback_data": 1}
     )
     callback_signature2 = await mageflow.sign(task1_callback)
-    success_callbacks = [callback_signature1, callback_signature2]
+    success_callbacks: list[TaskSignature] = [callback_signature1, callback_signature2]
     main_signature = await mageflow.sign(
         task2,
         success_callbacks=success_callbacks,
@@ -80,7 +81,9 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
     success_tasks = {task.key: task for task in success_callbacks}
     for success_id in main_signature.success_callbacks:
         task = success_tasks[success_id]
-        input_values = {return_value_field(task): message.model_dump(mode="json")}
+        input_values = {
+            return_value_field(task.model_validators): message.model_dump(mode="json")
+        }
         input_values.update(task.kwargs)
         assert_signature_done(runs, success_id, **input_values)
     for error_id in main_signature.error_callbacks:
@@ -230,7 +233,9 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
 ):
     # Arrange
     hatchet = hatchet_client_init.hatchet
-    message = MessageWithResult(results=CommandMessageWithResult(task_result=test_ctx))
+    message = MessageWithResult(
+        mageflow_results=CommandMessageWithResult(task_result=test_ctx)
+    )
 
     callback_sign = await mageflow.sign(task1_callback)
     return_multiple_values_sign = await mageflow.sign(
