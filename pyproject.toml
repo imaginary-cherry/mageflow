@@ -54,6 +54,9 @@ display = [
     "dash-cytoscape (>=1.0.2,<2.0.0)",
     "dash-bootstrap-components (>=2.0.4,<3.0.0)"
 ]
+mcp = [
+    "mcp>=1.0.0,<2.0.0"
+]
 
 [project.urls]
 Homepage = "https://imaginary-cherry.github.io/mageflow/"
@@ -82,15 +85,17 @@ build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
 display-tasks = "mageflow.visualizer.app:main"
+mageflow-mcp = "mageflow.mcp.server:main"
 
 [tool.coverage.run]
 source = ["mageflow"]
 concurrency = ["multiprocessing"]
 parallel = true
 omit = [
-    "*/tests/*", 
+    "*/tests/*",
     "*/test_*",
-    "mageflow/visualizer/*"
+    "mageflow/visualizer/*",
+    "mageflow/mcp/*"
 ]
 
 [tool.coverage.report]
