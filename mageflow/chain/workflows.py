@@ -1,7 +1,9 @@
 import asyncio
 
 from hatchet_sdk import Context
+from hatchet_sdk.runnables.types import EmptyModel
 
+from mageflow.chain.consts import CHAIN_TASK_ID_NAME
 from mageflow.chain.messages import ChainCallbackMessage
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.invokers.hatchet import HatchetInvoker
@@ -37,14 +39,15 @@ async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
 
 
 # This task needs to be added as a workflow
-async def chain_error_task(msg: ChainCallbackMessage, ctx: Context):
+async def chain_error_task(msg: EmptyModel, ctx: Context):
     try:
+        chain_task_id = msg.model_dump()[CHAIN_TASK_ID_NAME]
         task_data = HatchetInvoker(msg, ctx).task_ctx
         current_task_id = task_data[TASK_ID_PARAM_NAME]
-        chain_signature = await ChainTaskSignature.get_safe(msg.chain_task_id)
+        chain_signature = await ChainTaskSignature.get_safe(chain_task_id)
 
         if chain_signature is None:
-            ctx.log(f"Chain task {msg.chain_task_id} already removed, skipping")
+            ctx.log(f"Chain task {chain_task_id} already removed, skipping")
             return
 
         ctx.log(

@@ -62,8 +62,9 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
     task_data = invoker.task_ctx
     task_key = task_data[TASK_ID_PARAM_NAME]
     try:
-        swarm_task_key = task_data[SWARM_TASK_ID_PARAM_NAME]
-        swarm_item_key = task_data[SWARM_ITEM_TASK_ID_PARAM_NAME]
+        msg_data = msg.model_dump()
+        swarm_task_key = msg_data[SWARM_TASK_ID_PARAM_NAME]
+        swarm_item_key = msg_data[SWARM_ITEM_TASK_ID_PARAM_NAME]
         ctx.log(f"Swarm item failed {swarm_item_key}")
         # Check if the swarm should end
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_key)

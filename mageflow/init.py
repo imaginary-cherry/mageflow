@@ -36,7 +36,6 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
         name=ON_CHAIN_ERROR,
         retries=3,
         execution_timeout=timedelta(minutes=5),
-        input_validator=ChainCallbackMessage,
     )
     chain_done_task = hatchet_chain_done(chain_end_task)
     on_chain_error_task = hatchet_chain_error(chain_error_task)
