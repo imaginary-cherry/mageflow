@@ -19,7 +19,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         return [cls.validate_task_key(item) for item in v]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await rapyer.afind(*self.tasks)
+        sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
 
     async def workflow(self, **task_additional_params):
