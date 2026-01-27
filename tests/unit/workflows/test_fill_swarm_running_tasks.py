@@ -9,7 +9,7 @@ from mageflow.swarm.workflows import fill_swarm_running_tasks
 async def test_handle_finish_tasks_sanity_starts_next_task(
     swarm_with_ready_task: SwarmTaskSignature,
     mock_context,
-    mock_batch_task_run,
+    mock_task_run,
     mock_activate_success,
 ):
     # Arrange
@@ -19,7 +19,7 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
     await fill_swarm_running_tasks(msg, mock_context)
 
     # Assert
-    assert len(mock_batch_task_run.called_instances) == 1
+    assert len(mock_task_run.called_instances) == 1
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_with_ready_task.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 0
