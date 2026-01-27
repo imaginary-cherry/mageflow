@@ -15,6 +15,7 @@ from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 from mageflow.utils.models import return_value_field
 from mageflow.workflows import TASK_DATA_PARAM_NAME
+from pydantic import BaseModel
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -243,12 +244,14 @@ def assert_swarm_task_done(
     tasks: list[TaskSignature],
     allow_fails: bool = True,
     check_callbacks: bool = True,
+    swarm_msg: BaseModel = None,
 ):
     task_map = {task.key: task for task in tasks}
     batch_map = {batch_item.key: batch_item for batch_item in batch_items}
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
+    msg_data = swarm_msg.model_dump() if swarm_msg else {}
     for batch_id in swarm_task.tasks:
         batch_task = batch_map[batch_id]
         task = task_map[batch_task.original_task_id]
@@ -258,7 +261,7 @@ def assert_swarm_task_done(
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **(swarm_task.kwargs | task.kwargs),
+            **(swarm_task.kwargs | task.kwargs | msg_data),
         )
         swarm_runs.append(wf)
 

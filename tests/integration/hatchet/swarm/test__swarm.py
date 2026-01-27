@@ -71,7 +71,9 @@ async def test_swarm_with_three_tasks_integration_sanity(
     # Check that all subtasks were called by checking Hatchet runs
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_swarm_task_done(runs, swarm, batch_tasks, tasks, allow_fails=False)
+    assert_swarm_task_done(
+        runs, swarm, batch_tasks, tasks, allow_fails=False, swarm_msg=regular_message
+    )
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
 
