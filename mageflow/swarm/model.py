@@ -245,6 +245,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def has_published_callback(self):
         return self.task_status.status == SignatureStatus.DONE
 
+    def has_published_errors(self):
+        return self.task_status.status == SignatureStatus.FAILED
+
     async def activate_error(self, msg, **kwargs):
         full_kwargs = self.kwargs | kwargs
         return await super().activate_error(msg, **full_kwargs)

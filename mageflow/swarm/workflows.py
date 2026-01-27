@@ -96,7 +96,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
             swarm_task = await SwarmTaskSignature.get_safe(msg.swarm_task_id)
-            if swarm_task is None or swarm_task.task_status.is_failed():
+            if swarm_task is None or swarm_task.has_published_errors():
                 ctx.log(
                     f"Swarm {msg.swarm_task_id} was deleted already deleted or failed"
                 )
@@ -114,9 +114,9 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
             ctx.log(f"Swarm item no new task to run in {swarm_task.key}")
 
         # Check if the swarm should end
-        no_more_publish = not swarm_task.has_published_callback()
+        not_yet_published = not swarm_task.has_published_callback()
         is_swarm_finished_running = await swarm_task.is_swarm_done()
-        if is_swarm_finished_running and no_more_publish:
+        if is_swarm_finished_running and not_yet_published:
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
             await swarm_task.done()
             await swarm_task.activate_success(msg)
