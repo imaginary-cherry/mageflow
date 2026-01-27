@@ -37,7 +37,7 @@ async def test__task_is_cancelled__swarm_still_finish(
     for item in swarm_items:
         await item.aio_run_no_wait(regular_message, options=trigger_options)
     await swarm.close_swarm()
-    await asyncio.sleep(30)
+    await asyncio.sleep(15)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
