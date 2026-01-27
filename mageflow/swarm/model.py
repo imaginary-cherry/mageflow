@@ -58,7 +58,7 @@ class BatchItemTaskSignature(TaskSignature):
             if self.key not in swarm_task.tasks_left_to_run:
                 await swarm_task.tasks_left_to_run.aappend(self.key)
 
-            return await swarm_task.fill_running_tasks(max_tasks=1)
+            return await swarm_task.fill_running_tasks(max_tasks=1, **orig_task_kwargs)
 
     async def remove_references(self):
         orignal_task = await TaskSignature.get_safe(self.original_task_id)
@@ -196,7 +196,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
         return batch_task
 
-    async def fill_running_tasks(self, max_tasks: Optional[int] = None) -> int:
+    async def fill_running_tasks(
+        self, max_tasks: Optional[int] = None, **pub_kwargs
+    ) -> list[TaskSignature]:
         async with self.alock() as swarm_task:
             publish_state = await PublishState.aget(swarm_task.publishing_state_id)
             task_ids_to_run = list(publish_state.task_ids)
@@ -208,7 +210,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 if max_tasks is not None:
                     resource_to_run = min(max_tasks, resource_to_run)
                 if resource_to_run <= 0:
-                    return 0
+                    return []
                 num_of_task_to_run = min(
                     resource_to_run, len(swarm_task.tasks_left_to_run)
                 )
@@ -225,15 +227,15 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 original_tasks = await rapyer.afind(*original_task_ids)
                 original_tasks = cast(list[TaskSignature], original_tasks)
                 publish_coroutine = [
-                    next_task.aio_run_no_wait(EmptyModel())
+                    next_task.aio_run_no_wait(EmptyModel(), **pub_kwargs)
                     for next_task in original_tasks
                 ]
                 await asyncio.gather(*publish_coroutine)
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
                     swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
-                return len(tasks)
-            return 0
+                return original_tasks
+            return []
 
     async def is_swarm_done(self):
         done_tasks = self.finished_tasks + self.failed_tasks
