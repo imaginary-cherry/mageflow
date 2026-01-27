@@ -77,7 +77,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
     await main_swarm.aio_run_no_wait(msg, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(120)
+    await asyncio.sleep(40)
     runs = await get_runs(hatchet, ctx_metadata)
 
     # Check good chains were successful
