@@ -13,6 +13,7 @@ async def test_crash_at_get_swarm_no_state_change_retry_succeeds_idempotent(
 ):
     # Arrange
     setup = batch_item_run_setup
+    swarm_task = setup.swarm_task
 
     # Act
     with patch.object(SwarmTaskSignature, "get_safe", side_effect=RuntimeError):
@@ -20,15 +21,17 @@ async def test_crash_at_get_swarm_no_state_change_retry_succeeds_idempotent(
             await setup.batch_task.aio_run_no_wait(setup.msg)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
-    assert reloaded_swarm == setup.swarm_task
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert reloaded_swarm == swarm_task
 
     # Act
     await setup.batch_task.aio_run_no_wait(setup.msg)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
-    assert reloaded_swarm == setup.swarm_task
+    swarm_copy = swarm_task.copy()
+    swarm_copy.tasks_left_to_run.append(setup.batch_task.key)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    assert reloaded_swarm == swarm_task
     mock_fill_running_tasks.assert_awaited_once_with(max_tasks=1)
 
 
