@@ -54,7 +54,7 @@ async def test_swarm_with_three_tasks_integration_sanity(
         success_callbacks=[sign_callback1],
         kwargs=dict(base_data={"param1": "nice", "param2": ["test", 2]}),
     )
-    batch_tasks = await rapyer.afind(swarm.tasks)
+    batch_tasks = await rapyer.afind(*swarm.tasks)
     batch_tasks = cast(list[BatchItemTaskSignature], batch_tasks)
     await swarm.close_swarm()
     tasks = await TaskSignature.afind()
