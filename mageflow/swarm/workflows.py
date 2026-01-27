@@ -17,8 +17,7 @@ from mageflow.swarm.model import SwarmTaskSignature
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
     try:
         ctx.log(f"Swarm task started {msg}")
-        task_data = HatchetInvoker(msg, ctx).task_ctx
-        swarm_task_id = task_data[SWARM_TASK_ID_PARAM_NAME]
+        swarm_task_id = msg.model_dump()[SWARM_TASK_ID_PARAM_NAME]
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
         if swarm_task.has_swarm_started:
             ctx.log(f"Swarm task started but already running {msg}")
