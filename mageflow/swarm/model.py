@@ -140,11 +140,6 @@ class SwarmTaskSignature(ContainerTaskSignature):
         self.task_name = task_name
         return workflow
 
-    def task_ctx(self) -> dict:
-        original_ctx = super().task_ctx()
-        swarm_ctx = {SWARM_TASK_ID_PARAM_NAME: self.key}
-        return original_ctx | swarm_ctx
-
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
             TaskSignature.safe_change_status(task, status) for task in self.tasks
