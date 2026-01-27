@@ -3,7 +3,8 @@ from unittest.mock import patch
 import pytest
 
 import mageflow
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
+from mageflow.signature.model import TaskSignature
+from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -100,6 +101,7 @@ async def test_fill_running_tasks_sanity(
     tasks_to_queue = batch_tasks[:num_tasks_left]
     task_keys_to_queue = [task.key for task in tasks_to_queue]
     await swarm_signature.tasks_left_to_run.aextend(task_keys_to_queue)
+    original_tasks_in_queue = [task.original_task_id for task in tasks_to_queue]
 
     # Act
     # Track which instances the method was called on
@@ -109,7 +111,7 @@ async def test_fill_running_tasks_sanity(
         called_instances.append(self)
         return None  # Return what the original method would return
 
-    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
+    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls):
         await swarm_signature.fill_running_tasks()
 
     # Assert
@@ -121,7 +123,7 @@ async def test_fill_running_tasks_sanity(
     # Check all IDs are from our expected tasks (tasks that were queued)
     for task_id in called_task_ids:
         assert (
-            task_id in task_keys_to_queue
+            task_id in original_tasks_in_queue
         ), f"Unexpected task ID: {task_id} not in queued tasks"
 
     # Check for duplicates
