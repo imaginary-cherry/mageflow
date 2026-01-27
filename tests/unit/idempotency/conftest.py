@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -74,7 +74,7 @@ async def failed_swarm_setup():
         swarm_task.failed_tasks.append(batch_task.key)
         swarm_task.current_running_tasks += 1
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     return FailedSwarmSetup(
@@ -105,7 +105,7 @@ async def completed_swarm_setup():
     async with swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(is_swarm_closed=True)
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     return CompletedSwarmSetup(
@@ -200,7 +200,7 @@ async def batch_item_run_setup_at_max_concurrency(publish_state):
 
 
 @pytest.fixture
-def failing_mock_batch_task_run():
+def failing_mock_task_run():
     tracker = FailingBatchTaskRunTracker()
 
     async def track_calls_with_failure(self, *args, **kwargs):
@@ -210,9 +210,7 @@ def failing_mock_batch_task_run():
                 raise RuntimeError("Simulated aio_run_no_wait failure")
         return None
 
-    with patch.object(
-        BatchItemTaskSignature, "aio_run_no_wait", new=track_calls_with_failure
-    ):
+    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls_with_failure):
         yield tracker
 
 
