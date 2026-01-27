@@ -55,6 +55,9 @@ class BatchItemTaskSignature(TaskSignature):
             kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
             # For tasks are just represent larger tasks (like chain)
             await original_task.aupdate_real_task_kwargs(**kwargs)
+            if self.key not in swarm_task.tasks_left_to_run:
+                await swarm_task.tasks_left_to_run.aappend(self.key)
+
             return await swarm_task.fill_running_tasks(max_tasks=1)
 
     async def remove_references(self):
