@@ -80,7 +80,7 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
         retries=4,
         concurrency=ConcurrencyExpression(
             expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
-            max_runs=1,
+            max_runs=2,
             limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
         ),
     )
