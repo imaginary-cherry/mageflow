@@ -6,6 +6,7 @@ from hatchet_sdk.runnables.types import EmptyModel
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
+from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,
@@ -95,12 +96,15 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
             swarm_task = await SwarmTaskSignature.get_safe(msg.swarm_task_id)
-            if swarm_task is None:
-                ctx.log(f"Swarm {msg.swarm_task_id} was deleted already deleted")
+            if swarm_task is None or swarm_task.task_status.is_failed():
+                ctx.log(
+                    f"Swarm {msg.swarm_task_id} was deleted already deleted or failed"
+                )
                 return
             await swarm_task.interrupt()
             await swarm_task.activate_error(EmptyModel())
             await swarm_task.remove(with_error=False)
+            await swarm_task.failed()
             return
 
         num_task_started = await swarm_task.fill_running_tasks()
