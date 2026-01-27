@@ -191,18 +191,12 @@ def mock_swarm_remove():
         yield mock_remove
 
 
-def create_mock_context_with_metadata(
-    task_id=None, swarm_task_id=None, swarm_item_id=None
-):
+def create_mock_context_with_metadata(task_id=None):
     ctx = MagicMock(spec=Context)
     ctx.log = MagicMock()
     metadata = {}
     if task_id is not None:
         metadata[TASK_ID_PARAM_NAME] = task_id
-    if swarm_task_id is not None:
-        metadata[SWARM_TASK_ID_PARAM_NAME] = swarm_task_id
-    if swarm_item_id is not None:
-        metadata[SWARM_ITEM_TASK_ID_PARAM_NAME] = swarm_item_id
     ctx.additional_metadata = {"task_data": metadata}
     return ctx
 

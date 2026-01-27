@@ -24,7 +24,9 @@ async def test_swarm_item_failed_sanity_continue_after_failure(mock_invoker_wait
         stop_after_n_failures=2,
         tasks_left_indices=[1, 2],
     )
-    msg = EmptyModel()
+    msg = EmptyModel(
+        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.batch_tasks[0].key
+    )
 
     # Act
     await swarm_item_failed(msg, setup.ctx)
@@ -51,10 +53,10 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
         num_tasks=3,
         stop_after_n_failures=2,
         failed_indices=[0],
-        batch_index_for_context=1,
     )
-    msg = EmptyModel()
-
+    msg = EmptyModel(
+        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.batch_tasks[1].key
+    )
     # Act
     await swarm_item_failed(msg, setup.ctx)
 
@@ -72,9 +74,10 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
         num_tasks=3,
         stop_after_n_failures=None,
         failed_indices=[0, 1],
-        batch_index_for_context=2,
     )
-    msg = EmptyModel()
+    msg = EmptyModel(
+        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.batch_tasks[2].key
+    )
 
     # Act
     await swarm_item_failed(msg, setup.ctx)
@@ -108,12 +111,8 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_task.key,
-    )
-    msg = EmptyModel()
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
+    msg = EmptyModel(swarm_task_id=swarm_task.key, swarm_item_id=batch_task.key)
 
     # Act
     await swarm_item_failed(msg, ctx)
@@ -127,13 +126,7 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 async def test_swarm_item_failed_missing_task_key_edge_case(mock_context):
     # Arrange
     ctx = mock_context
-    ctx.additional_metadata = {
-        "task_data": {
-            SWARM_TASK_ID_PARAM_NAME: "some_swarm",
-            SWARM_ITEM_TASK_ID_PARAM_NAME: "some_item",
-        }
-    }
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id="some_swarm", swarm_item_id="some_item")
 
     # Act & Assert
     with pytest.raises(KeyError):
@@ -165,15 +158,16 @@ async def test_swarm_item_failed_concurrent_failures_edge_case():
         swarm_task.tasks.extend([t.key for t in batch_tasks])
 
     contexts = [
-        create_mock_context_with_metadata(
-            task_id=item_tasks[i].key,
+        create_mock_context_with_metadata(task_id=item_tasks[i].key) for i in range(3)
+    ]
+
+    msgs = [
+        EmptyModel(
             swarm_task_id=swarm_task.key,
             swarm_item_id=batch_tasks[i].key,
         )
         for i in range(3)
     ]
-
-    msgs = [EmptyModel() for _ in range(3)]
 
     # Act
     await asyncio.gather(

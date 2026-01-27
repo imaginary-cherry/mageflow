@@ -74,16 +74,16 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
 @pytest.mark.asyncio
 async def test_retry_does_not_double_append_to_publish_state_idempotent(
-    mock_task_run,
+    publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
-    original_tasks = [
-        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(5)
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
     ]
-    swarm_signature, publish_state, prepopulated_keys = await swarm_with_running_tasks(
-        original_tasks, 3
-    )
+    task_keys = [task.key for task in batch_tasks]
+    original_task_keys = [task.original_task_id for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys[:3])
 
     # Act
     await swarm_signature.fill_running_tasks()
@@ -91,21 +91,20 @@ async def test_retry_does_not_double_append_to_publish_state_idempotent(
     # Assert
     assert len(mock_task_run.called_instances) == 3
     called_task_ids = [instance.key for instance in mock_task_run.called_instances]
-    assert set(called_task_ids) == set(prepopulated_keys)
+    assert set(called_task_ids) == set(original_task_keys[:3])
 
 
 @pytest.mark.asyncio
 async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
-    mock_task_run,
+    publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
-    original_tasks = [
-        TaskSignature(task_name=f"task_{chr(65 + i)}", model_validators=ContextMessage)
-        for i in range(5)
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
     ]
-    swarm_signature, publish_state, task_keys = await swarm_with_running_tasks(
-        original_tasks, 3
-    )
+    task_keys = [task.key for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     await publish_state.task_ids.aextend(task_keys[:3])
 
@@ -119,16 +118,15 @@ async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
 
 @pytest.mark.asyncio
 async def test_two_consecutive_calls_same_result_idempotent(
-    publish_state, mock_task_run
+    publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
-    original_tasks = [
-        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(5)
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
     ]
-    swarm_signature, publish_state, task_keys = await swarm_with_running_tasks(
-        original_tasks, max_concurrency=3
-    )
+    task_keys = [task.key for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     # Act
     result1 = await swarm_signature.fill_running_tasks()
@@ -144,15 +142,16 @@ async def test_two_consecutive_calls_same_result_idempotent(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_calls_single_execution_idempotent():
+async def test_concurrent_calls_single_execution_idempotent(
+    publish_state, swarm_signature, original_tasks
+):
     # Arrange
-    original_tasks = [
-        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(5)
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
     ]
-    swarm_signature, publish_state, task_keys = await swarm_with_running_tasks(
-        original_tasks
-    )
+    task_keys = [task.key for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     called_instances = []
     call_lock = asyncio.Lock()
@@ -196,6 +195,7 @@ async def test_various_batch_sizes_idempotent(
     prepopulated_count,
     max_concurrency,
     expected_remaining,
+    publish_state,
     mock_task_run,
 ):
     # Arrange
@@ -203,9 +203,21 @@ async def test_various_batch_sizes_idempotent(
         TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
         for i in range(total_tasks)
     ]
-    swarm_signature, publish_state, task_keys = await swarm_with_running_tasks(
-        original_tasks, max_concurrency=max_concurrency
+    await rapyer.ainsert(*original_tasks)
+    swarm_signature = SwarmTaskSignature(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        current_running_tasks=0,
+        config=SwarmConfig(max_concurrency=max_concurrency),
+        publishing_state_id=publish_state.key,
     )
+    await rapyer.ainsert(swarm_signature)
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
+    ]
+    task_keys = [task.key for task in batch_tasks]
+    await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     if prepopulated_count > 0:
         await publish_state.task_ids.aextend(task_keys[:prepopulated_count])
