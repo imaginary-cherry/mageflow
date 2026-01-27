@@ -245,6 +245,7 @@ def assert_swarm_task_done(
     allow_fails: bool = True,
     check_callbacks: bool = True,
     swarm_msg: BaseModel = None,
+    **swarm_kwargs,
 ):
     task_map = {task.key: task for task in tasks}
     batch_map = {batch_item.key: batch_item for batch_item in batch_items}
@@ -261,7 +262,7 @@ def assert_swarm_task_done(
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **(swarm_task.kwargs | task.kwargs | msg_data),
+            **(swarm_task.kwargs | task.kwargs | msg_data | swarm_kwargs),
         )
         swarm_runs.append(wf)
 

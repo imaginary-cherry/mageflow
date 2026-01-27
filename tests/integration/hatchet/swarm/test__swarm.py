@@ -49,10 +49,11 @@ async def test_swarm_with_three_tasks_integration_sanity(
     )
     await sign_callback1.kwargs.aupdate(base_data={"1": 2})
     swarm_tasks = [sign_task1, sign_task_with_data, sign_task3]
+    swarm_kwargs = dict(base_data={"param1": "nice", "param2": ["test", 2]})
     swarm = await mageflow.swarm(
         tasks=swarm_tasks,
         success_callbacks=[sign_callback1],
-        kwargs=dict(base_data={"param1": "nice", "param2": ["test", 2]}),
+        kwargs=swarm_kwargs,
     )
     batch_tasks = await rapyer.afind(*swarm.tasks)
     batch_tasks = cast(list[BatchItemTaskSignature], batch_tasks)
@@ -61,7 +62,7 @@ async def test_swarm_with_three_tasks_integration_sanity(
 
     # Act
     # Test individual tasks directly to verify they work with the message format
-    regular_message = ContextMessage(base_data=test_ctx)
+    regular_message = ContextMessage(test_ctx=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for all tasks to complete
@@ -72,7 +73,13 @@ async def test_swarm_with_three_tasks_integration_sanity(
     runs = await get_runs(hatchet, ctx_metadata)
 
     assert_swarm_task_done(
-        runs, swarm, batch_tasks, tasks, allow_fails=False, swarm_msg=regular_message
+        runs,
+        swarm,
+        batch_tasks,
+        tasks,
+        allow_fails=False,
+        swarm_msg=regular_message,
+        **swarm_kwargs,
     )
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
