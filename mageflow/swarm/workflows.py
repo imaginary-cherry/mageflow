@@ -25,6 +25,7 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
 
         invoker = HatchetInvoker(msg, ctx)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
+        await swarm_task.tasks_left_to_run.aextend(swarm_task.tasks)
         await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception:
