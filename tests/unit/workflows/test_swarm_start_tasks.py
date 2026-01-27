@@ -24,8 +24,8 @@ async def test_swarm_start_tasks_sanity_basic_flow(mock_invoker_wait_task):
         tasks=original_tasks,
     )
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
-    msg = EmptyModel()
+    ctx = create_mock_context_with_metadata()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
     expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
@@ -51,7 +51,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
         tasks=original_tasks,
     )
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = EmptyModel()
     expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
@@ -80,7 +80,7 @@ async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_
     async with swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(current_running_tasks=1)
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = EmptyModel()
 
     # Act
@@ -106,7 +106,7 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
         tasks=original_tasks,
     )
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = EmptyModel()
 
     # Act
@@ -125,7 +125,7 @@ async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_ta
         config=SwarmConfig(max_concurrency=2),
     )
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = EmptyModel()
 
     # Act & Assert
@@ -147,8 +147,8 @@ async def test_swarm_start_tasks_missing_swarm_task_id_edge_case(mock_context):
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_swarm_not_found_edge_case():
     # Arrange
-    ctx = create_mock_context_with_metadata(swarm_task_id="nonexistent_swarm")
-    msg = EmptyModel()
+    ctx = create_mock_context_with_metadata()
+    msg = EmptyModel(swarm_task_id="nonexistent_swarm")
 
     # Act & Assert
     with pytest.raises(Exception):
@@ -166,7 +166,7 @@ async def test_swarm_start_tasks_task_not_found_edge_case():
 
     await swarm_task.tasks.aextend(["nonexistent_task_1", "nonexistent_task_2"])
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = EmptyModel()
 
     # Act & Assert

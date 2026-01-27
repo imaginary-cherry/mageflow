@@ -48,7 +48,6 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
         max_concurrency=2,
         stop_after_n_failures=None,
         finished_indices=[0],
-        batch_index_for_context=1,
     )
     async with setup.swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(is_swarm_closed=True)
@@ -99,10 +98,7 @@ async def test_swarm_item_done_nonexistent_batch_task_edge_case():
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = 1
 
-    ctx = create_mock_context_with_metadata(
-        task_id="some_task",
-        swarm_task_id=swarm_task.key,
-    )
+    ctx = create_mock_context_with_metadata(task_id="some_task")
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id=swarm_task.key,
@@ -119,11 +115,7 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id="nonexistent_swarm",
-        swarm_item_id="some_item",
-    )
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id="nonexistent_swarm",
@@ -154,11 +146,7 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_task.key,
-    )
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id=swarm_task.key,

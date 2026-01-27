@@ -216,11 +216,7 @@ async def swarm_setup():
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_task.key,
-    )
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
     return [swarm_task, batch_task, item_task, ctx]
 
 

@@ -56,7 +56,7 @@ async def completed_swarm_with_success_callback():
     async with swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(is_swarm_closed=True)
 
-    ctx = create_mock_context_with_metadata(swarm_task_id=swarm_task.key)
+    ctx = create_mock_context_with_metadata()
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     return CompletedSwarmWithSuccessCallback(swarm_task=swarm_task, ctx=ctx, msg=msg)
@@ -70,7 +70,6 @@ async def create_swarm_item_test_setup(
     tasks_left_indices: list[int] | None = None,
     failed_indices: list[int] | None = None,
     finished_indices: list[int] | None = None,
-    batch_index_for_context: int = 0,
 ) -> SwarmTestSetup:
     swarm_task = await mageflow.swarm(
         task_name="test_swarm",
@@ -102,11 +101,7 @@ async def create_swarm_item_test_setup(
         )
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
-    ctx = create_mock_context_with_metadata(
-        task_id=item_task.key,
-        swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_tasks[batch_index_for_context].key if batch_tasks else None,
-    )
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
 
     return SwarmTestSetup(
         swarm_task=swarm_task,
