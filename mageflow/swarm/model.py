@@ -3,16 +3,13 @@ from typing import Self, Any, Optional, cast
 
 import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
-from pydantic import Field, field_validator, BaseModel
-from rapyer import AtomicRedisModel
-from rapyer.types import RedisList, RedisInt
-
 from mageflow.errors import (
     MissingSignatureError,
     MissingSwarmItemError,
     TooManyTasksError,
     SwarmIsCanceledError,
 )
+from mageflow.signature.consts import REMOVED_TASK_TTL
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
@@ -32,6 +29,9 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
+from pydantic import Field, field_validator, BaseModel
+from rapyer import AtomicRedisModel
+from rapyer.types import RedisList, RedisInt
 
 
 class BatchItemTaskSignature(TaskSignature):
@@ -123,7 +123,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
-        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
+        await self.kwargs.aupdate(**msg.model_dump(mode="json", exclude_unset=True))
         workflow = await self.workflow(use_return_field=False)
         return await workflow.aio_run_no_wait(msg, **kwargs)
 
@@ -298,3 +298,13 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 return
             swarm_task.failed_tasks.append(batch_item_key)
             swarm_task.current_running_tasks -= 1
+
+    async def remove_task(self):
+        batch_tasks = await BatchItemTaskSignature.afind(*self.tasks)
+        publish_state = await PublishState.aget(self.publishing_state_id)
+        async with self.apipeline():
+            # TODO - this should be removed once we use foreign key
+            await publish_state.aset_ttl(REMOVED_TASK_TTL)
+            for batch_task in batch_tasks:
+                await batch_task.remove_task()
+            return await super().remove_task()
