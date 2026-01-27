@@ -357,13 +357,15 @@ async def test_swarm_fill_running_tasks_with_success_task(
 
     # Act
     # Run only the first task directly
-    await first_swarm_item.aio_run_no_wait(EmptyModel(), options=trigger_options)
+    published_tasks = await first_swarm_item.aio_run_no_wait(
+        EmptyModel(), options=trigger_options
+    )
     await asyncio.sleep(13)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(original_first_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_signature(published_tasks[0], runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
@@ -407,13 +409,15 @@ async def test_swarm_fill_running_tasks_with_failed_task(
 
     # Act
     # Run only the first (failing) task directly
-    await first_swarm_item.aio_run_no_wait(regular_message, options=trigger_options)
+    published_tasks = await first_swarm_item.aio_run_no_wait(
+        regular_message, options=trigger_options
+    )
     await asyncio.sleep(13)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(original_first_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_signature(published_tasks[0], runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
