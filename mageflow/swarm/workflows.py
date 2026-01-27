@@ -1,6 +1,8 @@
+from typing import cast
+
+import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
-
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
@@ -11,7 +13,7 @@ from mageflow.swarm.consts import (
     SWARM_ACTION_FILL,
 )
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 
 
 async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
@@ -26,6 +28,13 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
         invoker = HatchetInvoker(msg, ctx)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
         await swarm_task.tasks_left_to_run.aextend(swarm_task.tasks)
+        tasks = await rapyer.afind(*swarm_task.tasks)
+        tasks = cast(list[BatchItemTaskSignature], tasks)
+        original_tasks = await rapyer.afind(*[task.original_task_id for task in tasks])
+        original_tasks = cast(list[TaskSignature], original_tasks)
+        async with swarm_task.apipeline():
+            for task in original_tasks:
+                await task.aupdate_real_task_kwargs(**swarm_task.kwargs)
         await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception:
