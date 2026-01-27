@@ -36,12 +36,11 @@ async def chain(
     on_chain_error = TaskSignature(
         task_name=ON_CHAIN_ERROR,
         kwargs=callback_kwargs,
-        model_validators=ChainCallbackMessage,
-        return_field_name="chain_results",
     )
     on_chain_success = TaskSignature(
         task_name=ON_CHAIN_END,
         kwargs=callback_kwargs,
+        model_validators=ChainCallbackMessage,
         return_field_name="chain_results",
     )
     await _chain_task_to_previous_success(tasks, on_chain_error, on_chain_success)
