@@ -26,7 +26,7 @@ pytest.register_assert_rewrite("tests.assertions")
 
 
 @dataclass
-class BatchTaskRunTracker:
+class TaskRunTracker:
     called_instances: list
 
 
@@ -114,7 +114,19 @@ def mock_batch_task_run():
         return None
 
     with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
-        yield BatchTaskRunTracker(called_instances=called_instances)
+        yield TaskRunTracker(called_instances=called_instances)
+
+
+@pytest.fixture
+def mock_task_run():
+    called_instances = []
+
+    async def track_calls(self, *args, **kwargs):
+        called_instances.append(self)
+        return None
+
+    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls):
+        yield TaskRunTracker(called_instances=called_instances)
 
 
 @pytest.fixture

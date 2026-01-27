@@ -41,7 +41,7 @@ async def swarm_signature(publish_state):
 
 @pytest.mark.asyncio
 async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idempotent(
-    publish_state, swarm_signature, original_tasks, mock_batch_task_run
+    publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
     batch_tasks = [
@@ -49,6 +49,7 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
         for original_task in original_tasks
     ]
     task_keys = [task.key for task in batch_tasks]
+    original_task_keys = [task.original_task_id for task in batch_tasks]
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     await publish_state.task_ids.aextend(task_keys[:3])
@@ -58,11 +59,9 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
     # Assert
     # Check the tasks were executed
-    assert len(mock_batch_task_run.called_instances) == 3
-    called_task_ids = [
-        instance.key for instance in mock_batch_task_run.called_instances
-    ]
-    assert set(called_task_ids) == set(task_keys[:3])
+    assert len(mock_task_run.called_instances) == 3
+    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
+    assert set(called_task_ids) == set(original_task_keys[:3])
 
     # Check the tasks were deleted from the swarm left to run
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
@@ -75,7 +74,7 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
 
 @pytest.mark.asyncio
 async def test_retry_does_not_double_append_to_publish_state_idempotent(
-    mock_batch_task_run,
+    mock_task_run,
 ):
     # Arrange
     original_tasks = [
@@ -90,16 +89,14 @@ async def test_retry_does_not_double_append_to_publish_state_idempotent(
     await swarm_signature.fill_running_tasks()
 
     # Assert
-    assert len(mock_batch_task_run.called_instances) == 3
-    called_task_ids = [
-        instance.key for instance in mock_batch_task_run.called_instances
-    ]
+    assert len(mock_task_run.called_instances) == 3
+    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
     assert set(called_task_ids) == set(prepopulated_keys)
 
 
 @pytest.mark.asyncio
 async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
-    mock_batch_task_run,
+    mock_task_run,
 ):
     # Arrange
     original_tasks = [
@@ -122,7 +119,7 @@ async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
 
 @pytest.mark.asyncio
 async def test_two_consecutive_calls_same_result_idempotent(
-    publish_state, mock_batch_task_run
+    publish_state, mock_task_run
 ):
     # Arrange
     original_tasks = [
@@ -140,7 +137,7 @@ async def test_two_consecutive_calls_same_result_idempotent(
     # Assert
     assert result1 == 3
     assert result2 == 2
-    assert len(mock_batch_task_run.called_instances) == 5
+    assert len(mock_task_run.called_instances) == 5
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.tasks_left_to_run == []
@@ -199,7 +196,7 @@ async def test_various_batch_sizes_idempotent(
     prepopulated_count,
     max_concurrency,
     expected_remaining,
-    mock_batch_task_run,
+    mock_task_run,
 ):
     # Arrange
     original_tasks = [
@@ -226,7 +223,7 @@ async def test_various_batch_sizes_idempotent(
 
 @pytest.mark.asyncio
 async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempotent(
-    failing_mock_batch_task_run,
+    failing_mock_task_run,
 ):
     # Arrange
     original_tasks = [
@@ -238,7 +235,7 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
     )
     publish_state_key = swarm_signature.publishing_state_id
 
-    failing_mock_batch_task_run.fail_on_call = 3
+    failing_mock_task_run.fail_on_call = 3
 
     # Act
     with pytest.raises(RuntimeError):
@@ -251,12 +248,12 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
     assert len(first_run_task_ids) == 3
     assert reloaded_swarm.tasks_left_to_run == task_keys
 
-    failing_mock_batch_task_run.reset_failure()
+    failing_mock_task_run.reset_failure()
     await swarm_signature.fill_running_tasks()
 
     # Assert
     all_called_keys = [
-        instance.key for instance in failing_mock_batch_task_run.called_instances
+        instance.key for instance in failing_mock_task_run.called_instances
     ]
     unique_task_keys = set(all_called_keys)
     assert len(unique_task_keys) == 3
