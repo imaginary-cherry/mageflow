@@ -11,7 +11,6 @@ from mageflow.swarm.consts import (
     ON_SWARM_ERROR,
     ON_SWARM_END,
     ON_SWARM_START,
-    SWARM_ITEM_TASK_ID_PARAM_NAME,
     SWARM_FILL_TASK,
     SWARM_TASK_ID_PARAM_NAME,
 )
@@ -50,7 +49,7 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
         retries=3,
         execution_timeout=timedelta(minutes=5),
         concurrency=ConcurrencyExpression(
-            expression=f"input.{SWARM_ITEM_TASK_ID_PARAM_NAME}",
+            expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
             max_runs=1,
             limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
         ),
