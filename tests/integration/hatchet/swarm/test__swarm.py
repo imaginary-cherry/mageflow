@@ -245,7 +245,7 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     # Get all workflow runs for this test
@@ -315,7 +315,7 @@ async def test_swarm_run_finish_at_fail__still_finish_successfully(
     # Act
     regular_message = ContextMessage()
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
