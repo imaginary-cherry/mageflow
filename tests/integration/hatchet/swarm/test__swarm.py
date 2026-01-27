@@ -122,7 +122,7 @@ async def test_swarm_with_mixed_success_failed_tasks_integration_edge_case(
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for tasks to complete
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     # Get all workflow runs for this test
