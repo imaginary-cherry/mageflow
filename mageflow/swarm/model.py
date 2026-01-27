@@ -131,8 +131,11 @@ class SwarmTaskSignature(ContainerTaskSignature):
         # Use on swarm start task name for wf
         task_name = self.task_name
         self.task_name = ON_SWARM_START
+        additional_swarm_params = {SWARM_TASK_ID_PARAM_NAME: self.key}
         workflow = await super().workflow(
-            **task_additional_params, use_return_field=use_return_field
+            **task_additional_params,
+            **additional_swarm_params,
+            use_return_field=use_return_field,
         )
         self.task_name = task_name
         return workflow
