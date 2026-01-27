@@ -3,10 +3,10 @@ from typing import cast
 import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
+
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.consts import (
     SWARM_TASK_ID_PARAM_NAME,
     SWARM_ITEM_TASK_ID_PARAM_NAME,

@@ -1,10 +1,11 @@
 from typing import ClassVar
 
-from mageflow.signature.types import TaskIdentifierType
 from pydantic import Field
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.types import RedisList
+
+from mageflow.signature.types import TaskIdentifierType
 
 
 class PublishState(AtomicRedisModel):

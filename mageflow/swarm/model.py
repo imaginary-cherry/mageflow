@@ -3,6 +3,10 @@ from typing import Self, Any, Optional, cast
 
 import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
+from pydantic import Field, field_validator, BaseModel
+from rapyer import AtomicRedisModel
+from rapyer.types import RedisList, RedisInt
+
 from mageflow.errors import (
     MissingSignatureError,
     MissingSwarmItemError,
@@ -29,9 +33,6 @@ from mageflow.swarm.consts import (
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
-from pydantic import Field, field_validator, BaseModel
-from rapyer import AtomicRedisModel
-from rapyer.types import RedisList, RedisInt
 
 
 class BatchItemTaskSignature(TaskSignature):
