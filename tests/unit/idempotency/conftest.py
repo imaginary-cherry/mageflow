@@ -120,7 +120,7 @@ async def completed_swarm_setup():
 @pytest_asyncio.fixture
 async def swarm_item_failed_setup(swarm_setup):
     swarm_task, batch_task, item_task, ctx = swarm_setup
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key, swarm_item_id=batch_task.key)
 
     return SwarmItemFailedSetup(
         swarm_task=swarm_task,
