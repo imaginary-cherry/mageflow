@@ -129,6 +129,17 @@ def mock_task_run():
         yield TaskRunTracker(called_instances=called_instances)
 
 
+def assert_task_were_published(
+    task_run_tracker: TaskRunTracker, expected_signatures: list[TaskSignature | str]
+):
+    assert len(task_run_tracker.called_instances) == len(expected_signatures)
+    called_task_ids = [instance.key for instance in task_run_tracker.called_instances]
+    expected_keys = [
+        task if isinstance(task, str) else task.key for task in expected_signatures
+    ]
+    assert set(called_task_ids) == set(expected_keys)
+
+
 @pytest.fixture
 def mock_task_aio_run_no_wait():
     with patch.object(

@@ -4,14 +4,11 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 import rapyer
-
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import (
-    SwarmTaskSignature,
-    SwarmConfig,
-)
+from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
 from mageflow.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
+from tests.unit.conftest import assert_task_were_published
 
 
 @pytest_asyncio.fixture()
@@ -38,7 +35,7 @@ async def swarm_signature(publish_state):
 
 
 @pytest.mark.asyncio
-async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idempotent(
+async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tasks_added_to_publish_state(
     publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
@@ -49,21 +46,23 @@ async def test_retry_with_prepopulated_publish_state_executes_and_cleans_up_idem
     task_keys = [task.key for task in batch_tasks]
     original_task_keys = [task.original_task_id for task in batch_tasks]
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
-
-    await publish_state.task_ids.aextend(task_keys[:3])
+    expected_num_of_tasks_left = (
+        len(swarm_signature.tasks_left_to_run) - swarm_signature.config.max_concurrency
+    )
 
     # Act
+    with pytest.raises(RuntimeError):
+        with patch.object(BatchItemTaskSignature, "afind", side_effect=RuntimeError):
+            await swarm_signature.fill_running_tasks()
     await swarm_signature.fill_running_tasks()
 
     # Assert
     # Check the tasks were executed
-    assert len(mock_task_run.called_instances) == 3
-    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
-    assert set(called_task_ids) == set(original_task_keys[:3])
+    assert_task_were_published(mock_task_run, original_task_keys[:3])
 
     # Check the tasks were deleted from the swarm left to run
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert reloaded_swarm.tasks_left_to_run == task_keys[3:]
+    assert len(reloaded_swarm.tasks_left_to_run) == expected_num_of_tasks_left
 
     # Check the publish state was cleared
     reloaded_publish_state = await PublishState.aget(publish_state.key)
