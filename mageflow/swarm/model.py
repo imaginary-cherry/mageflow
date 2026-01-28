@@ -215,10 +215,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 num_of_task_to_run = min(
                     resource_to_run, len(swarm_task.tasks_left_to_run)
                 )
-                task_ids_to_run = list(
-                    swarm_task.tasks_left_to_run[:num_of_task_to_run]
-                )
-                await publish_state.task_ids.aextend(task_ids_to_run)
+                async with swarm_task.apipeline():
+                    task_ids_to_run = swarm_task.tasks_left_to_run[:num_of_task_to_run]
+                    publish_state.task_ids.extend(task_ids_to_run)
+                    swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
 
             if task_ids_to_run:
                 tasks = await BatchItemTaskSignature.afind(*task_ids_to_run)
@@ -234,7 +234,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 await asyncio.gather(*publish_coroutine)
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
-                    swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
+                    swarm_task.current_running_tasks += num_of_task_to_run
                 return original_tasks
             return []
 
