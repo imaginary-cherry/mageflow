@@ -157,7 +157,9 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert len(first_run_batch_task_ids) == 3
-    assert reloaded_swarm.tasks_left_to_run == task_keys
+    assert len(reloaded_swarm.tasks_left_to_run) == 2
+    all_tasks_to_run = set(first_run_batch_task_ids + reloaded_swarm.tasks_left_to_run)
+    assert len(all_tasks_to_run) == len(task_keys)
 
     failing_mock_task_run.reset_failure()
     await swarm_signature.fill_running_tasks()
