@@ -27,6 +27,13 @@ class TaskRunTracker:
 
 
 @dataclass
+class WorkflowCallCapture:
+    workflow: MageflowWorkflow
+    args: tuple
+    kwargs: dict
+
+
+@dataclass
 class SwarmItemDoneSetup:
     swarm_task: SwarmTaskSignature
     batch_task: BatchItemTaskSignature
@@ -278,3 +285,14 @@ def mock_workflow_run():
     with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
         mock.captured_workflows = captured_workflows
         yield captured_workflows
+
+
+@pytest.fixture
+def mock_workflow_run_with_args():
+    captured_calls = []
+
+    async def capture_and_mock(self, *args, **kwargs):
+        captured_calls.append(WorkflowCallCapture(workflow=self, args=args, kwargs=kwargs))
+
+    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock):
+        yield captured_calls
