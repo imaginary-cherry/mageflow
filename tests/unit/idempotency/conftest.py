@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
