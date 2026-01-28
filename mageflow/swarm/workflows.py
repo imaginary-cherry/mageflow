@@ -118,6 +118,6 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         is_swarm_finished_running = await swarm_task.is_swarm_done()
         if is_swarm_finished_running and not_yet_published:
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
-            await swarm_task.done()
             await swarm_task.activate_success(msg)
+            await swarm_task.done()
             ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")
