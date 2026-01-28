@@ -177,3 +177,35 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
 
     reloaded_publish_state = await PublishState.aget(publish_state_key)
     assert list(reloaded_publish_state.task_ids) == []
+
+
+@pytest.mark.asyncio
+async def test__retry_when_swarm_task_was_changed_between_retry__publish_state_ignore_new_task(
+    publish_state, swarm_signature, original_tasks, mock_task_run
+):
+    # Arrange
+    batch_tasks = [
+        await swarm_signature.add_task(original_task)
+        for original_task in original_tasks
+    ]
+    task_keys = [task.key for task in batch_tasks]
+    max_curr = swarm_signature.config.max_concurrency
+    original_tasks_left_run = task_keys[: max_curr - 1]
+    exptectec_published_tasks = original_tasks[: max_curr - 1]
+    await swarm_signature.tasks_left_to_run.aextend(original_tasks_left_run)
+
+    # Act
+    with pytest.raises(RuntimeError):
+        with patch.object(BatchItemTaskSignature, "afind", side_effect=RuntimeError):
+            await swarm_signature.fill_running_tasks()
+    await swarm_signature.tasks_left_to_run.aappend(task_keys[max_curr])
+    await swarm_signature.fill_running_tasks()
+
+    # Assert
+    assert_task_were_published(mock_task_run, exptectec_published_tasks)
+    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
+    assert reloaded_swarm.tasks_left_to_run == [task_keys[max_curr]]
+    reloaded_pbulish_state = await PublishState.aget(
+        swarm_signature.publishing_state_id
+    )
+    assert list(reloaded_pbulish_state.task_ids) == []
