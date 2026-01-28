@@ -12,10 +12,6 @@ from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.startup import update_register_signature_models, mageflow_config
-from mageflow.swarm.consts import (
-    SWARM_TASK_ID_PARAM_NAME,
-    SWARM_ITEM_TASK_ID_PARAM_NAME,
-)
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
 from mageflow.workflows import MageflowWorkflow
