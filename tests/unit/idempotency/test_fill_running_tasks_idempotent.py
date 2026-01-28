@@ -115,8 +115,8 @@ async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
 
 
 @pytest.mark.asyncio
-async def test_two_consecutive_calls_same_result_idempotent(
-    publish_state, swarm_signature, original_tasks, mock_task_run
+async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource_left(
+    swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
     batch_tasks = [
@@ -131,12 +131,16 @@ async def test_two_consecutive_calls_same_result_idempotent(
     result2 = await swarm_signature.fill_running_tasks()
 
     # Assert
-    assert result1 == 3
-    assert result2 == 2
-    assert len(mock_task_run.called_instances) == 5
+    assert len(result1) == 3
+    assert len(result2) == 0
+    assert len(mock_task_run.called_instances) == 3
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert reloaded_swarm.tasks_left_to_run == []
+    assert reloaded_swarm.tasks_left_to_run == swarm_signature.tasks[-2:]
+    relaoded_pbulish_state = await PublishState.aget(
+        swarm_signature.publishing_state_id
+    )
+    assert relaoded_pbulish_state.task_ids == []
 
 
 @pytest.mark.asyncio
