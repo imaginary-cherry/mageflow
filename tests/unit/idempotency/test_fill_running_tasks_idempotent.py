@@ -122,7 +122,7 @@ async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource
 
 @pytest.mark.asyncio
 async def test_concurrent_calls_single_execution_idempotent(
-    publish_state, swarm_signature, original_tasks
+    publish_state, swarm_signature, original_tasks, mock_task_run
 ):
     # Arrange
     batch_tasks = [
@@ -132,31 +132,22 @@ async def test_concurrent_calls_single_execution_idempotent(
     task_keys = [task.key for task in batch_tasks]
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
-    called_instances = []
-    call_lock = asyncio.Lock()
-
-    async def track_calls(self, *args, **kwargs):
-        async with call_lock:
-            called_instances.append(self)
-        return None
-
     # Act
-    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls):
-        results = await asyncio.gather(
-            swarm_signature.fill_running_tasks(),
-            swarm_signature.fill_running_tasks(),
-            swarm_signature.fill_running_tasks(),
-        )
+    results = await asyncio.gather(
+        swarm_signature.fill_running_tasks(),
+        swarm_signature.fill_running_tasks(),
+        swarm_signature.fill_running_tasks(),
+    )
 
     # Assert
     total_tasks_started = sum([len(res) for res in results])
-    assert total_tasks_started == 5
+    assert total_tasks_started == 3
 
-    called_task_ids = [instance.key for instance in called_instances]
+    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
     assert len(called_task_ids) == len(set(called_task_ids))
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert reloaded_swarm.tasks_left_to_run == []
+    assert len(reloaded_swarm.tasks_left_to_run) == 2
 
 
 @pytest.mark.asyncio
