@@ -1,20 +1,16 @@
+"""
+TaskSignature model for MageFlow.
+
+This module provides the core TaskSignature abstraction that represents
+a task to be executed, supporting multiple backends through a unified interface.
+"""
+
 import asyncio
 import contextlib
 from datetime import datetime
-from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar
+from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, TYPE_CHECKING
 
 import rapyer
-from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Workflow
-from mageflow.errors import MissingSignatureError
-from mageflow.models.message import ReturnValue
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
-from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
-from mageflow.startup import mageflow_config
-from mageflow.task.model import HatchetTaskModel
-from mageflow.utils.models import get_marked_fields
-from mageflow.workflows import MageflowWorkflow
 from pydantic import (
     BaseModel,
     field_validator,
@@ -26,6 +22,18 @@ from rapyer.errors.base import KeyNotFound
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
+
+from mageflow.errors import MissingSignatureError
+from mageflow.models.message import ReturnValue
+from mageflow.signature.consts import TASK_ID_PARAM_NAME
+from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
+from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
+from mageflow.startup import mageflow_config
+from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.models import get_marked_fields
+
+if TYPE_CHECKING:
+    from mageflow.backends.base import WorkflowWrapper
 
 
 class TaskSignature(AtomicRedisModel):
@@ -121,22 +129,71 @@ class TaskSignature(AtomicRedisModel):
             return_field_name = None
         return return_field_name or "results"
 
-    async def workflow(self, use_return_field: bool = True, **task_additional_params):
+    async def workflow(
+        self, use_return_field: bool = True, **task_additional_params
+    ) -> "WorkflowWrapper":
+        """
+        Create a workflow wrapper for executing this task.
+
+        This method automatically detects which backend is configured
+        and creates the appropriate workflow wrapper.
+
+        Args:
+            use_return_field: Whether to wrap return value in a field
+            **task_additional_params: Additional parameters to pass to the task
+
+        Returns:
+            A WorkflowWrapper that can be used to execute the task
+        """
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
         return_field = self.return_value_field() if use_return_field else None
 
+        # Use the appropriate backend based on configuration
+        if mageflow_config.hatchet_client is not None:
+            return await self._create_hatchet_workflow(
+                task, total_kwargs, return_field
+            )
+        elif mageflow_config.taskiq_broker is not None:
+            return await self._create_taskiq_workflow(
+                task, total_kwargs, return_field
+            )
+        else:
+            raise RuntimeError(
+                "No backend configured. Call Mageflow() first to initialize."
+            )
+
+    async def _create_hatchet_workflow(
+        self, task_name: str, kwargs: dict, return_field: str | None
+    ) -> "WorkflowWrapper":
+        """Create a Hatchet workflow wrapper."""
+        from mageflow.backends.hatchet import HatchetWorkflowWrapper
+
         workflow = mageflow_config.hatchet_client.workflow(
-            name=task, input_validator=self.model_validators
+            name=task_name, input_validator=self.model_validators
         )
-        mageflow_wf = MageflowWorkflow(
+        return HatchetWorkflowWrapper(
             workflow,
-            workflow_params=total_kwargs,
+            workflow_params=kwargs,
             return_value_field=return_field,
             task_ctx=self.task_ctx(),
         )
-        return mageflow_wf
+
+    async def _create_taskiq_workflow(
+        self, task_name: str, kwargs: dict, return_field: str | None
+    ) -> "WorkflowWrapper":
+        """Create a TaskIQ workflow wrapper."""
+        from mageflow.backends.taskiq import TaskIQWorkflowWrapper
+
+        return TaskIQWorkflowWrapper(
+            task=None,  # Task will be looked up by name
+            broker=mageflow_config.taskiq_broker,
+            workflow_params=kwargs,
+            return_value_field=return_field,
+            task_ctx=self.task_ctx(),
+            input_validator=self.model_validators,
+        )
 
     def task_ctx(self) -> dict:
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
@@ -147,7 +204,7 @@ class TaskSignature(AtomicRedisModel):
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
-    ) -> list[Workflow]:
+    ) -> list["WorkflowWrapper"]:
         callback_ids = []
         if with_success:
             callback_ids.extend(self.success_callbacks)
@@ -262,10 +319,17 @@ class TaskSignature(AtomicRedisModel):
             await task.resume()
 
     async def resume(self):
+        """
+        Resume a paused/suspended task.
+
+        If the task was active when paused, it will be re-executed.
+        Otherwise, it will be restored to its previous status.
+        """
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.aio_run_no_wait(EmptyModel())
+            # Use empty dict as message - works for both backends
+            await self.aio_run_no_wait({})
         else:
             await self.change_status(last_status)
 

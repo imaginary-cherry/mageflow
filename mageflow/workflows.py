@@ -1,3 +1,11 @@
+"""
+Legacy workflow module for backwards compatibility.
+
+This module is deprecated. Use mageflow.backends.hatchet.HatchetWorkflowWrapper
+or mageflow.backends.taskiq.TaskIQWorkflowWrapper instead.
+"""
+
+import warnings
 from typing import Any, cast
 
 from hatchet_sdk import WorkflowRunRef
@@ -17,6 +25,11 @@ class ModelToDump(BaseModel):
 
 
 class MageflowWorkflow(Workflow):
+    """
+    DEPRECATED: Use HatchetWorkflowWrapper from mageflow.backends.hatchet instead.
+
+    This class is maintained for backwards compatibility only.
+    """
     def __init__(
         self,
         workflow: Workflow,

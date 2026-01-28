@@ -1,62 +1,52 @@
-import asyncio
-from typing import Any, TYPE_CHECKING, Union, Optional
+"""
+TaskIQ-specific invoker implementation for MageFlow.
 
-from hatchet_sdk import Context
-from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
+This module provides the TaskIQ-specific implementation of the BaseInvoker
+interface for handling task lifecycle operations.
+"""
+
+import asyncio
+from typing import Any, TYPE_CHECKING
+
 from pydantic import BaseModel
 
 from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.backends.hatchet import TASK_DATA_PARAM_NAME
+from mageflow.backends.taskiq import TASK_DATA_PARAM_NAME
 
 if TYPE_CHECKING:
     from mageflow.backends.base import TaskContext
 
 
-class HatchetInvoker(BaseInvoker):
+class TaskIQInvoker(BaseInvoker):
     """
-    Hatchet-specific invoker implementation.
+    TaskIQ-specific invoker implementation.
 
     This class handles task lifecycle operations for tasks running
-    on the Hatchet backend.
+    on the TaskIQ backend.
     """
 
-    def __init__(self, message: BaseModel, ctx: Any):
+    def __init__(self, message: BaseModel, ctx: "TaskContext"):
         """
-        Initialize the Hatchet invoker.
+        Initialize the TaskIQ invoker.
 
         Args:
             message: The input message for the task
-            ctx: Either a raw Hatchet Context or a unified TaskContext
+            ctx: The unified TaskContext from TaskIQ backend
         """
         self.message = message
-
-        # Handle both raw Hatchet Context and unified TaskContext
-        if hasattr(ctx, "additional_metadata") and hasattr(ctx, "workflow_id"):
-            # Raw Hatchet Context
-            self.task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
-            self.workflow_id = ctx.workflow_id
-
-            # Clean up context metadata
-            hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
-            hatchet_ctx_metadata.pop(TASK_DATA_PARAM_NAME, None)
-            ctx_additional_metadata.set(hatchet_ctx_metadata)
-
-            self._raw_ctx = ctx
-        else:
-            # Unified TaskContext
-            self.task_data = ctx.additional_metadata
-            self.workflow_id = ctx.workflow_id
-            self._raw_ctx = ctx.raw_context
+        self.ctx = ctx
+        self.task_data = ctx.additional_metadata
+        self.workflow_id = ctx.workflow_id
 
     @property
     def task_ctx(self) -> dict:
         """Get the task context data."""
         return self.task_data
 
-    async def start_task(self) -> Optional[TaskSignature]:
+    async def start_task(self) -> TaskSignature | None:
         """Mark task as started and update status."""
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
@@ -64,6 +54,7 @@ class HatchetInvoker(BaseInvoker):
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 return signature
+        return None
 
     async def run_success(self, result: Any) -> bool:
         """Trigger success callbacks."""
@@ -97,7 +88,7 @@ class HatchetInvoker(BaseInvoker):
 
     async def remove_task(
         self, with_success: bool = True, with_error: bool = True
-    ) -> Optional[TaskSignature]:
+    ) -> TaskSignature | None:
         """Remove task from state store."""
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
