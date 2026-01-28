@@ -2,7 +2,7 @@ import pytest
 
 from mageflow.chain.workflows import chain_error_task
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from tests.unit.assertions import assert_task_deleted, assert_task_has_short_ttl
+from tests.unit.assertions import assert_task_has_short_ttl
 from tests.unit.workflows.conftest import create_chain_test_setup
 
 
