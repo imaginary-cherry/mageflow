@@ -29,10 +29,8 @@ async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
         ctx.log(f"Chain task success {chain_task_signature.task_name}")
 
         # Remove tasks
-        await asyncio.gather(
-            chain_task_signature.remove(with_success=False),
-            TaskSignature.adelete_by_key(current_task_id),
-        )
+        await chain_task_signature.remove(with_success=False)
+        await TaskSignature.remove_from_key(current_task_id)
     except Exception as e:
         ctx.log(f"MAJOR - infrastructure error in chain end task: {e}")
         raise
@@ -59,10 +57,8 @@ async def chain_error_task(msg: EmptyModel, ctx: Context):
         ctx.log(f"Chain task error {chain_signature.task_name}")
 
         # Remove tasks
-        await asyncio.gather(
-            chain_signature.remove(with_error=False),
-            TaskSignature.adelete_by_key(current_task_id),
-        )
+        await chain_signature.remove(with_error=False),
+        await TaskSignature.remove_from_key(current_task_id)
         ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
     except Exception as e:
         ctx.log(f"MAJOR - infrastructure error in chain error task: {e}")
