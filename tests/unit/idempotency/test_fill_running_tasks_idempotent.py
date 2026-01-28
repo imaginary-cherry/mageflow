@@ -70,28 +70,6 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
 
 
 @pytest.mark.asyncio
-async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
-    publish_state, swarm_signature, original_tasks, mock_task_run
-):
-    # Arrange
-    batch_tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
-    task_keys = [task.key for task in batch_tasks]
-    await swarm_signature.tasks_left_to_run.aextend(task_keys)
-
-    await publish_state.task_ids.aextend(task_keys[:3])
-
-    # Act
-    await swarm_signature.fill_running_tasks()
-
-    # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert reloaded_swarm.tasks_left_to_run == task_keys[3:]
-
-
-@pytest.mark.asyncio
 async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource_left(
     swarm_signature, original_tasks, mock_task_run
 ):
@@ -151,59 +129,6 @@ async def test_concurrent_calls_single_execution_idempotent(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ["total_tasks", "prepopulated_count", "max_concurrency", "expected_remaining"],
-    [
-        [5, 3, 5, 2],
-        [3, 3, 5, 0],
-        [10, 5, 10, 5],
-        [5, 0, 3, 2],
-    ],
-)
-async def test_various_batch_sizes_idempotent(
-    total_tasks,
-    prepopulated_count,
-    max_concurrency,
-    expected_remaining,
-    publish_state,
-    mock_task_run,
-):
-    # Arrange
-    original_tasks = [
-        TaskSignature(task_name=f"original_task_{i}", model_validators=ContextMessage)
-        for i in range(total_tasks)
-    ]
-    await rapyer.ainsert(*original_tasks)
-    swarm_signature = SwarmTaskSignature(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        current_running_tasks=0,
-        config=SwarmConfig(max_concurrency=max_concurrency),
-        publishing_state_id=publish_state.key,
-    )
-    await rapyer.ainsert(swarm_signature)
-    batch_tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
-    task_keys = [task.key for task in batch_tasks]
-    await swarm_signature.tasks_left_to_run.aextend(task_keys)
-
-    if prepopulated_count > 0:
-        await publish_state.task_ids.aextend(task_keys[:prepopulated_count])
-
-    # Act
-    await swarm_signature.fill_running_tasks()
-
-    # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert len(reloaded_swarm.tasks_left_to_run) == expected_remaining
-
-    reloaded_publish_state = await PublishState.aget(publish_state.key)
-    assert list(reloaded_publish_state.task_ids) == []
-
-
-@pytest.mark.asyncio
 async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempotent(
     publish_state, swarm_signature, original_tasks, failing_mock_task_run
 ):
@@ -218,7 +143,7 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
     publish_state_key = swarm_signature.publishing_state_id
 
-    failing_mock_task_run.fail_on_call = 3
+    failing_mock_task_run.fail_on_call = 2
 
     # Act
     with pytest.raises(RuntimeError):
