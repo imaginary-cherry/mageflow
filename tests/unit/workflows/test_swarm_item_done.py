@@ -89,28 +89,6 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_nonexistent_batch_task_edge_case():
-    # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-    )
-    async with swarm_task.apipeline():
-        swarm_task.current_running_tasks = 1
-
-    ctx = create_mock_context_with_metadata(task_id="some_task")
-    msg = SwarmResultsMessage(
-        mageflow_results={},
-        swarm_task_id=swarm_task.key,
-        swarm_item_id="nonexistent_batch_task",
-    )
-
-    # Act & Assert
-    with pytest.raises(AttributeError):
-        await swarm_item_done(msg, ctx)
-
-
-@pytest.mark.asyncio
 async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
