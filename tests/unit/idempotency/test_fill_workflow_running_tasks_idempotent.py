@@ -6,6 +6,7 @@ from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
+from tests.unit.assertions import assert_task_has_short_ttl
 from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetup
 
 
@@ -34,11 +35,14 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
 
     # Assert - activate_error and remove were called
     mock_activate_error.assert_called()
+    await assert_task_has_short_ttl(setup.swarm_task.key)
+    await assert_task_has_short_ttl(setup.batch_task.key)
+    await assert_task_has_short_ttl(setup.batch_task.original_task_id)
 
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
-    failed_swarm_setup, mock_activate_error, mock_swarm_remove
+    failed_swarm_setup, mock_activate_error
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -57,8 +61,26 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - both activate_error and remove were called on retry
-    assert mock_activate_error.call_count == 2
-    mock_swarm_remove.assert_called_once()
+    await assert_task_has_short_ttl(setup.swarm_task.key)
+    await assert_task_has_short_ttl(setup.batch_task.key)
+    await assert_task_has_short_ttl(setup.batch_task.original_task_id)
+
+
+@pytest.mark.asyncio
+async def test__failure_swarm_retry_twice__not_removing_or_republish(
+    failed_swarm_setup, mock_activate_error, mock_swarm_remove, mock_interrupt
+):
+    # Arrange
+    setup: FailedSwarmSetup = failed_swarm_setup
+
+    # Act
+    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+
+    # Assert
+    assert mock_swarm_remove.call_count == 1
+    assert mock_activate_error.call_count == 1
+    assert mock_interrupt.call_count == 1
 
 
 @pytest.mark.asyncio

@@ -191,6 +191,14 @@ def mock_activate_error():
 
 
 @pytest.fixture
+def mock_interrupt():
+    with patch.object(
+        SwarmTaskSignature, "interrupt", new_callable=AsyncMock
+    ) as mock_error:
+        yield mock_error
+
+
+@pytest.fixture
 def mock_swarm_remove():
     with patch.object(
         SwarmTaskSignature, "remove", new_callable=AsyncMock
