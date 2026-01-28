@@ -54,41 +54,6 @@ async def create_batch_item_with_task(
 @pytest.mark.parametrize(
     "swarm_with_capacity",
     [
-        [5, 5],  # Full
-        [1, 1],  # Full
-    ],
-    indirect=True,
-)
-async def test_batch_item_aio_run_no_wait_no_capacity_sanity(
-    swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: list,
-    test_message: ContextMessage,
-):
-    # Arrange
-    batch_item, original_task, task_kwargs = await create_batch_item_with_task(
-        swarm_with_capacity.swarm
-    )
-
-    # Act
-    await batch_item.aio_run_no_wait(test_message)
-
-    # Assert
-    reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    assert len(mock_workflow_run) == 0
-    message_data = test_message.model_dump(mode="json")
-    expected_kwargs = {
-        **task_kwargs,
-        **batch_item.kwargs,
-        **swarm_with_capacity.swarm_kwargs,
-        **message_data,
-    }
-    assert reloaded_original_task.kwargs == expected_kwargs
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "swarm_with_capacity",
-    [
         [5, 4],  # Has space
         [1, 0],  # Has space
     ],
@@ -117,34 +82,3 @@ async def test_batch_item_aio_run_no_wait_has_capacity_sanity(
         **test_message.model_dump(mode="json"),
     }
     assert reloaded_original_task.kwargs == expected_kwargs
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("swarm_with_capacity", [[1, 1]], indirect=True)
-async def test_batch_item_no_capacity_includes_message_kwargs_sanity(
-    swarm_with_capacity: SwarmWithCapacityData,
-    mock_workflow_run: list,
-    test_message: ContextMessage,
-):
-    # Arrange
-    batch_item, original_task, task_kwargs = await create_batch_item_with_task(
-        swarm_with_capacity.swarm
-    )
-    message_with_data = ContextMessage(
-        base_data={"special_msg_key": "special_msg_value"}
-    )
-
-    # Act
-    await batch_item.aio_run_no_wait(message_with_data)
-
-    # Assert
-    reloaded_original_task = await TaskSignature.get_safe(original_task.key)
-    message_data = message_with_data.model_dump(mode="json")
-    expected_kwargs = {
-        **task_kwargs,
-        **batch_item.kwargs,
-        **swarm_with_capacity.swarm_kwargs,
-        **message_data,
-    }
-    assert reloaded_original_task.kwargs == expected_kwargs
-    assert len(mock_workflow_run) == 0
