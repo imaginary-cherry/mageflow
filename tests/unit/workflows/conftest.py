@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 import pytest_asyncio
 
 import mageflow
+from mageflow.chain.messages import ChainCallbackMessage
+from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
@@ -109,4 +111,63 @@ async def create_swarm_item_test_setup(
         batch_tasks=batch_tasks,
         item_task=item_task,
         ctx=ctx,
+    )
+
+
+@dataclass
+class ChainTestSetup:
+    chain_signature: ChainTaskSignature
+    chain_tasks: list[TaskSignature]
+    current_task: TaskSignature
+    success_callback: TaskSignature
+    error_callback: TaskSignature
+    ctx: MagicMock
+    msg: ChainCallbackMessage
+
+
+async def create_chain_test_setup(
+    num_chain_tasks: int = 3,
+    results: dict | None = None,
+) -> ChainTestSetup:
+    # Arrange
+    chain_tasks = [
+        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        for i in range(num_chain_tasks)
+    ]
+
+    # Arrange
+    success_callback = await mageflow.sign(
+        "chain_success_callback", model_validators=MessageWithResult
+    )
+    error_callback = await mageflow.sign(
+        "chain_error_callback", model_validators=MessageWithResult
+    )
+
+    # Arrange
+    chain_signature = await mageflow.chain(
+        [task.key for task in chain_tasks],
+        success=success_callback,
+        error=error_callback,
+    )
+
+    # Arrange
+    current_task = await mageflow.sign("current_task", model_validators=ContextMessage)
+
+    # Arrange
+    ctx = create_mock_context_with_metadata(task_id=current_task.key)
+
+    # Arrange
+    msg = ChainCallbackMessage(
+        chain_results=results or {"status": "done"},
+        chain_task_id=chain_signature.key,
+    )
+
+    return ChainTestSetup(
+        chain_signature=chain_signature,
+        chain_tasks=chain_tasks,
+        current_task=current_task,
+        success_callback=success_callback,
+        error_callback=error_callback,
+        ctx=ctx,
+        msg=msg,
     )
