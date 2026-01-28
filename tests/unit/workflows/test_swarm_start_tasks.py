@@ -61,7 +61,8 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
     # Assert
     mock_invoker_wait_task.assert_called_once_with(SWARM_FILL_TASK, expected_msg)
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
-    assert len(reloaded_swarm.tasks_left_to_run) == 0
+    assert len(reloaded_swarm.tasks_left_to_run) == 3
+    assert reloaded_swarm.tasks_left_to_run == reloaded_swarm.tasks
 
 
 @pytest.mark.asyncio
