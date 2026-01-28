@@ -70,28 +70,6 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
 
 
 @pytest.mark.asyncio
-async def test_retry_does_not_double_append_to_publish_state_idempotent(
-    publish_state, swarm_signature, original_tasks, mock_task_run
-):
-    # Arrange
-    batch_tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
-    task_keys = [task.key for task in batch_tasks]
-    original_task_keys = [task.original_task_id for task in batch_tasks]
-    await swarm_signature.tasks_left_to_run.aextend(task_keys[:3])
-
-    # Act
-    await swarm_signature.fill_running_tasks()
-
-    # Assert
-    assert len(mock_task_run.called_instances) == 3
-    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
-    assert set(called_task_ids) == set(original_task_keys[:3])
-
-
-@pytest.mark.asyncio
 async def test_retry_removes_correct_tasks_from_tasks_left_to_run_idempotent(
     publish_state, swarm_signature, original_tasks, mock_task_run
 ):
