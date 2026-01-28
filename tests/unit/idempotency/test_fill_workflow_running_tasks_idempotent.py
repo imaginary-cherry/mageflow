@@ -84,20 +84,22 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
 
 
 @pytest.mark.asyncio
-async def test_completion_path_crash_at_activate_success_retry_idempotent(
-    completed_swarm_setup, mock_batch_task_run, mock_activate_success
+async def test_on_remove_task__finish_removing_all(
+    completed_swarm_setup, mock_batch_task_run
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
-    mock_activate_success.side_effect = RuntimeError()
 
     # Act - First call crashes at activate_success
     with pytest.raises(RuntimeError):
-        await fill_swarm_running_tasks(setup.msg, setup.ctx)
+        with patch.object(
+            SwarmTaskSignature, "remove_task", side_effect=RuntimeError()
+        ):
+            await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Act - Retry succeeds
-    mock_activate_success.side_effect = None
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
-    # Assert - activate_success was called on retry
-    assert mock_activate_success.call_count == 1
+    # Assert
+    await assert_task_has_short_ttl(setup.swarm_task.key)
+    await assert_task_has_short_ttl(setup.batch_task.key)
