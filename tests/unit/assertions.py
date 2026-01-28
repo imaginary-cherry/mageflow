@@ -1,9 +1,11 @@
 from typing import TypeVar, Literal
 
 from mageflow.chain.consts import ON_CHAIN_ERROR, ON_CHAIN_END
+from mageflow.signature.consts import REMOVED_TASK_TTL
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.signature.types import TaskIdentifierType
+from mageflow.startup import mageflow_config
 from mageflow.swarm.model import SwarmTaskSignature
 
 T = TypeVar("T", bound=TaskSignature)
@@ -164,3 +166,9 @@ async def assert_container_status_change(
     reloaded = await TaskSignature.get_safe(container_key)
     assert reloaded.task_status.status == new_status
     assert reloaded.task_status.last_status == old_status
+
+
+async def assert_task_has_short_ttl(task_key: str):
+    redis_client = mageflow_config.redis_client
+    ttl = await redis_client.ttl(task_key)
+    assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"
