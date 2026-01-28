@@ -52,7 +52,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
     expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
@@ -81,7 +81,7 @@ async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_
         await locked_swarm.aupdate(current_running_tasks=1)
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
@@ -107,7 +107,7 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
@@ -126,7 +126,7 @@ async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_ta
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
 
     # Act & Assert
     await swarm_start_tasks(msg, ctx)
@@ -167,7 +167,7 @@ async def test_swarm_start_tasks_task_not_found_edge_case():
     await swarm_task.tasks.aextend(["nonexistent_task_1", "nonexistent_task_2"])
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel()
+    msg = EmptyModel(swarm_task_id=swarm_task.key)
 
     # Act & Assert
     with pytest.raises(Exception):
