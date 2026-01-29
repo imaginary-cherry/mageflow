@@ -9,6 +9,7 @@ from mageflow.signature.creator import (
     lock_task,
     resume,
     pause,
+    remove,
 )
 from mageflow.signature.status import TaskStatus
 from mageflow.swarm.creator import swarm
@@ -19,6 +20,7 @@ __all__ = [
     "resume_task",
     "lock_task",
     "resume",
+    "remove",
     "pause",
     "sign",
     "init_mageflow_hatchet_tasks",

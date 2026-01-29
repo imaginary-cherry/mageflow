@@ -33,7 +33,7 @@ def handle_task_callback(
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             invoker = HatchetInvoker(message, ctx)
-            task_model = await HatchetTaskModel.get(ctx.action.job_name)
+            task_model = await HatchetTaskModel.aget(ctx.action.job_name)
             if not await invoker.should_run_task():
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)
@@ -51,6 +51,7 @@ def handle_task_callback(
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except (Exception, asyncio.CancelledError) as e:
                 if not task_model.should_retry(ctx.attempt_number, e):
+                    await signature.failed()
                     await invoker.run_error()
                     await invoker.remove_task(with_error=False)
                 raise

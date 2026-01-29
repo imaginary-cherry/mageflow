@@ -78,8 +78,8 @@ def task_with_data(msg):
 
 
 @hatchet.task(name="task2-with-res", input_validator=MessageWithResult)
-def task2_with_result(msg):
-    return msg.results
+def task2_with_result(msg: MessageWithResult):
+    return msg.mageflow_results
 
 
 @hatchet.task(name="task3", input_validator=ContextMessage)

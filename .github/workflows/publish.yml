@@ -45,7 +45,27 @@ jobs:
     
     - name: Install project
       run: poetry install --no-interaction
-    
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "18"
+        cache: "npm"
+        cache-dependency-path: app/package-lock.json
+
+    - name: Install React dependencies
+      run: npm ci
+      working-directory: app
+
+    - name: Build React app
+      run: npm run build
+      working-directory: app
+
+    - name: Copy React build to static directory
+      run: |
+        mkdir -p mageflow/visualizer/static
+        cp -r app/build/* mageflow/visualizer/static/
+
     - name: Build package
       run: |
         poetry build

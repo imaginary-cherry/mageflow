@@ -178,7 +178,7 @@ swarm = await mageflow.swarm(
 ```
 
 ## Swarm Callback
-The swarm will trigger callbacks when all tasks completed. The callback will recieve a list of all the tasks results (see [ReturnValue Annotation](callbacks.md#setting-success-callbacks) docs).
+The swarm will trigger callbacks when all tasks completed. The callback will receive a list of all the tasks results (see [ReturnValue Annotation](callbacks.md#setting-success-callbacks) docs).
 
 ## Example Use Cases
 

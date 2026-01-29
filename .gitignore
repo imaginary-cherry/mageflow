@@ -217,3 +217,12 @@ future-features
 .claude
 /junit.xml
 .jbeval
+
+# Mageflow visualizer static build (generated during CI)
+mageflow/visualizer/static/*
+!mageflow/visualizer/static/.gitkeep
+app/node_modules/
+frontend/node_modules/
+/app/.idea/
+/scripts
+/frontend/.idea/

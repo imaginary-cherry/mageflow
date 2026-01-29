@@ -3,5 +3,13 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class SwarmResultsMessage(BaseModel):
-    results: Any
+class SwarmMessage(BaseModel):
+    swarm_task_id: str
+
+
+class SwarmCallbackMessage(SwarmMessage):
+    swarm_item_id: str
+
+
+class SwarmResultsMessage(SwarmCallbackMessage):
+    mageflow_results: Any

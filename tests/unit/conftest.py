@@ -1,25 +1,52 @@
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 
 import fakeredis
-import mageflow
 import pytest
 import pytest_asyncio
 import rapyer
-from hatchet_sdk import Hatchet, ClientConfig
-from mageflow.chain.model import ChainTaskSignature
+from hatchet_sdk import Hatchet, ClientConfig, Context
+
+import mageflow
+from mageflow.invokers.hatchet import HatchetInvoker
+from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.startup import update_register_signature_models, mageflow_config
-from tests.integration.hatchet.worker import ContextMessage
+from mageflow.swarm.messages import SwarmResultsMessage
+from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
+from mageflow.workflows import MageflowWorkflow
+from tests.integration.hatchet.models import ContextMessage
+from tests.unit.change_status.conftest import ChainTestData
 
 pytest.register_assert_rewrite("tests.assertions")
+
+
+@dataclass
+class TaskRunTracker:
+    called_instances: list
+
+
+@dataclass
+class WorkflowCallCapture:
+    workflow: MageflowWorkflow
+    args: tuple
+    kwargs: dict
+
+
+@dataclass
+class SwarmItemDoneSetup:
+    swarm_task: SwarmTaskSignature
+    batch_task: BatchItemTaskSignature
+    item_task: TaskSignature
+    ctx: MagicMock
+    msg: SwarmResultsMessage
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def redis_client():
     await update_register_signature_models()
     client = fakeredis.aioredis.FakeRedis()
-    mageflow_config.redis_client = redis_client
+    mageflow_config.redis_client = client
     await client.flushall()
     try:
         yield client
@@ -59,33 +86,11 @@ def mock_aio_run_no_wait():
         yield mock_aio_run
 
 
-@dataclass
-class ChainTestData:
-    task_signatures: list
-    chain_signature: ChainTaskSignature
-
-
 @pytest_asyncio.fixture
 async def chain_with_tasks():
-    chain_task_signature_1 = TaskSignature(
-        task_name="chain_task_1", model_validators=ContextMessage
-    )
-    await chain_task_signature_1.save()
-
-    chain_task_signature_2 = TaskSignature(
-        task_name="chain_task_2", model_validators=ContextMessage
-    )
-    await chain_task_signature_2.save()
-
-    chain_task_signature_3 = TaskSignature(
-        task_name="chain_task_3", model_validators=ContextMessage
-    )
-    await chain_task_signature_3.save()
-
     task_signatures = [
-        chain_task_signature_1,
-        chain_task_signature_2,
-        chain_task_signature_3,
+        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        for i in range(1, 4)
     ]
 
     chain_signature = await mageflow.chain([task.key for task in task_signatures])
@@ -93,3 +98,201 @@ async def chain_with_tasks():
     return ChainTestData(
         task_signatures=task_signatures, chain_signature=chain_signature
     )
+
+
+@pytest.fixture
+def mock_close_swarm():
+    with patch.object(
+        SwarmTaskSignature, "close_swarm", new_callable=AsyncMock
+    ) as mock_close:
+        yield mock_close
+
+
+@pytest.fixture
+def mock_batch_task_run():
+    called_instances = []
+
+    async def track_calls(self, *args, **kwargs):
+        called_instances.append(self)
+        return None
+
+    with patch.object(BatchItemTaskSignature, "aio_run_no_wait", new=track_calls):
+        yield TaskRunTracker(called_instances=called_instances)
+
+
+@pytest.fixture
+def mock_task_run():
+    called_instances = []
+
+    async def track_calls(self, *args, **kwargs):
+        called_instances.append(self)
+        return None
+
+    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls):
+        yield TaskRunTracker(called_instances=called_instances)
+
+
+def assert_task_were_published(
+    task_run_tracker: TaskRunTracker, expected_signatures: list[TaskSignature | str]
+):
+    assert len(task_run_tracker.called_instances) == len(expected_signatures)
+    called_task_ids = [instance.key for instance in task_run_tracker.called_instances]
+    expected_keys = [
+        task if isinstance(task, str) else task.key for task in expected_signatures
+    ]
+    assert set(called_task_ids) == set(expected_keys)
+
+
+@pytest.fixture
+def mock_task_aio_run_no_wait():
+    with patch.object(
+        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
+    ) as mock_run:
+        yield mock_run
+
+
+@pytest.fixture
+def mock_invoker_wait_task():
+    with patch.object(HatchetInvoker, "wait_task", new_callable=AsyncMock) as mock_fill:
+        yield mock_fill
+
+
+@pytest.fixture
+def mock_fill_running_tasks():
+    with patch.object(
+        SwarmTaskSignature, "fill_running_tasks", new_callable=AsyncMock
+    ) as mock_fill:
+        yield mock_fill
+
+
+@pytest.fixture
+def mock_handle_finish_tasks_error():
+    with patch.object(
+        HatchetInvoker, "wait_task", side_effect=RuntimeError("Finish tasks error")
+    ) as mock_finish:
+        yield mock_finish
+
+
+@pytest.fixture
+def mock_activate_success():
+    with patch.object(
+        SwarmTaskSignature, "activate_success", new_callable=AsyncMock
+    ) as mock_success:
+        yield mock_success
+
+
+@pytest.fixture
+def mock_activate_success_error():
+    with patch.object(
+        SwarmTaskSignature, "activate_success", side_effect=RuntimeError()
+    ) as mock_success:
+        yield mock_success
+
+
+@pytest.fixture
+def mock_activate_error():
+    with patch.object(
+        SwarmTaskSignature, "activate_error", new_callable=AsyncMock
+    ) as mock_error:
+        yield mock_error
+
+
+@pytest.fixture
+def mock_interrupt():
+    with patch.object(
+        SwarmTaskSignature, "interrupt", new_callable=AsyncMock
+    ) as mock_error:
+        yield mock_error
+
+
+@pytest.fixture
+def mock_swarm_remove():
+    with patch.object(
+        SwarmTaskSignature, "remove", new_callable=AsyncMock
+    ) as mock_remove:
+        yield mock_remove
+
+
+def create_mock_context_with_metadata(task_id=None):
+    ctx = MagicMock(spec=Context)
+    ctx.log = MagicMock()
+    metadata = {}
+    if task_id is not None:
+        metadata[TASK_ID_PARAM_NAME] = task_id
+    ctx.additional_metadata = {"task_data": metadata}
+    return ctx
+
+
+@pytest_asyncio.fixture
+async def swarm_setup():
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=1),
+    )
+    swarm_item_task = await mageflow.sign("item_task")
+    batch_task = await swarm_task.add_task(swarm_item_task)
+    async with swarm_task.apipeline():
+        swarm_task.current_running_tasks += 1
+        swarm_task.tasks.append(batch_task.key)
+
+    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+
+    ctx = create_mock_context_with_metadata(task_id=item_task.key)
+    return [swarm_task, batch_task, item_task, ctx]
+
+
+@pytest.fixture
+def mock_context():
+    ctx = MagicMock(spec=Context)
+    ctx.log = MagicMock()
+    ctx.additional_metadata = {}
+    return ctx
+
+
+@pytest_asyncio.fixture
+async def empty_swarm():
+    swarm_task = await mageflow.swarm(
+        task_name="test_swarm",
+        model_validators=ContextMessage,
+        config=SwarmConfig(max_concurrency=2),
+        is_swarm_closed=False,
+    )
+    yield swarm_task
+
+
+@pytest_asyncio.fixture
+async def swarm_task(empty_swarm: SwarmTaskSignature):
+    swarm_task = empty_swarm
+    task = await mageflow.sign("item_task")
+    await swarm_task.add_task(task)
+    return swarm_task
+
+
+@pytest_asyncio.fixture
+async def swarm_with_ready_task(swarm_task: SwarmTaskSignature):
+    await swarm_task.tasks_left_to_run.aappend(swarm_task.tasks[0])
+    yield swarm_task
+
+
+@pytest.fixture
+def mock_workflow_run():
+    captured_workflows = []
+
+    async def capture_and_mock(self, *args, **kwargs):
+        captured_workflows.append(self)
+
+    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
+        mock.captured_workflows = captured_workflows
+        yield captured_workflows
+
+
+@pytest.fixture
+def mock_workflow_run_with_args():
+    captured_calls = []
+
+    async def capture_and_mock(self, *args, **kwargs):
+        captured_calls.append(WorkflowCallCapture(workflow=self, args=args, kwargs=kwargs))
+
+    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock):
+        yield captured_calls

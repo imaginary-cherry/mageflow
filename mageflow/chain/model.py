@@ -1,14 +1,16 @@
 import asyncio
+from typing import cast
 
 import rapyer
 from pydantic import field_validator, Field
 
 from mageflow.errors import MissingSignatureError
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature, TaskIdentifierType
 from mageflow.signature.status import SignatureStatus
 
 
-class ChainTaskSignature(TaskSignature):
+class ChainTaskSignature(ContainerTaskSignature):
     tasks: list[TaskIdentifierType] = Field(default_factory=list)
 
     @field_validator("tasks", mode="before")
@@ -16,22 +18,15 @@ class ChainTaskSignature(TaskSignature):
     def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_key(item) for item in v]
 
+    async def sub_tasks(self) -> list[TaskSignature]:
+        sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
+        return cast(list[TaskSignature], sub_tasks)
+
     async def workflow(self, **task_additional_params):
         first_task = await TaskSignature.get_safe(self.tasks[0])
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
         return await first_task.workflow(**task_additional_params)
-
-    async def delete_chain_tasks(self, with_errors=True, with_success=True):
-        signatures = await asyncio.gather(
-            *[TaskSignature.get_safe(signature_id) for signature_id in self.tasks],
-            return_exceptions=True,
-        )
-        signatures = [sign for sign in signatures if isinstance(sign, TaskSignature)]
-        delete_tasks = [
-            signature.remove(with_errors, with_success) for signature in signatures
-        ]
-        await asyncio.gather(*delete_tasks)
 
     async def aupdate_real_task_kwargs(self, **kwargs):
         first_task = await rapyer.aget(self.tasks[0])

@@ -5,11 +5,17 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 
 from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.consts import TASK_ID_PARAM_NAME, MAGEFLOW_TASK_INITIALS
+from mageflow.signature.consts import (
+    TASK_ID_PARAM_NAME,
+    MAGEFLOW_TASK_INITIALS,
+    REMOVED_TASK_TTL,
+)
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.utils.models import return_value_field
 from mageflow.workflows import TASK_DATA_PARAM_NAME
+from pydantic import BaseModel
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -168,11 +174,26 @@ def _assert_task_done(
 
 
 async def assert_redis_is_clean(redis_client):
-    __tracebackhide__ = False  # force pytest to show this frame
+    __tracebackhide__ = False
     non_persistent_keys = await extract_bad_keys_from_redis(redis_client)
+
+    if not non_persistent_keys:
+        return
+
+    # Batch all TTL checks in a single pipeline
+    async with redis_client.pipeline() as pipe:
+        for key in non_persistent_keys:
+            pipe.ttl(key)
+        ttls = await pipe.execute()
+
+    keys_with_invalid_ttl = [
+        (key, ttl)
+        for key, ttl in zip(non_persistent_keys, ttls)
+        if ttl == -1 or ttl > REMOVED_TASK_TTL
+    ]
     assert (
-        len(non_persistent_keys) == 0
-    ), f"Not all redis keys were cleaned: {non_persistent_keys}"
+        len(keys_with_invalid_ttl) == 0
+    ), f"Keys without proper TTL (should be <= {REMOVED_TASK_TTL}s): {keys_with_invalid_ttl}"
 
 
 def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=False):
@@ -223,12 +244,15 @@ def assert_swarm_task_done(
     tasks: list[TaskSignature],
     allow_fails: bool = True,
     check_callbacks: bool = True,
+    swarm_msg: BaseModel = None,
+    **swarm_kwargs,
 ):
     task_map = {task.key: task for task in tasks}
     batch_map = {batch_item.key: batch_item for batch_item in batch_items}
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
+    msg_data = swarm_msg.model_dump() if swarm_msg else {}
     for batch_id in swarm_task.tasks:
         batch_task = batch_map[batch_id]
         task = task_map[batch_task.original_task_id]
@@ -238,7 +262,7 @@ def assert_swarm_task_done(
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **(swarm_task.kwargs | task.kwargs),
+            **(swarm_task.kwargs | task.kwargs | msg_data | swarm_kwargs),
         )
         swarm_runs.append(wf)
 
@@ -281,7 +305,7 @@ def assert_chain_done(
     for chain_task_id in chain_signature.tasks:
         task = task_map[chain_task_id]
         if output_value:
-            input_params = {task.return_value_field(): output_value}
+            input_params = {return_value_field(task.model_validators): output_value}
         task_wf = _assert_task_done(chain_task_id, wf_by_signature, input_params)
         output_value = task_wf.output["hatchet_results"]
 
@@ -289,7 +313,7 @@ def assert_chain_done(
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
             task = task_map[chain_success]
-            input_params = {task.return_value_field(): output_value}
+            input_params = {return_value_field(task.model_validators): output_value}
             _assert_task_done(chain_success, wf_by_signature, input_params)
 
 

@@ -1,3 +1,4 @@
 TASK_ID_PARAM_NAME = "task_id"
 
 MAGEFLOW_TASK_INITIALS = "mageflow_"
+REMOVED_TASK_TTL = 5 * 60
