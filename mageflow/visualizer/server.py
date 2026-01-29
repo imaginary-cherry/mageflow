@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import rapyer
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.container import ContainerTaskSignature
@@ -162,24 +163,17 @@ def register_api_routes(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer", lifespan=lifespan)
     static_dir = get_static_dir()
+    index_file = static_dir / "index.html"
 
-    app.mount("/static", StaticFiles(directory=static_dir / "static"), name="static")
     register_api_routes(app)
 
-    @app.get("/")
-    async def root():
-        return FileResponse(static_dir / "index.html")
+    @app.exception_handler(StarletteHTTPException)
+    async def spa_fallback(request: Request, exc: StarletteHTTPException):
+        if exc.status_code == 404 and not request.url.path.startswith("/api"):
+            return FileResponse(index_file)
+        raise exc
 
-    @app.get("/{path:path}")
-    async def catch_all(path: str):
-        try:
-            file_path = (static_dir / path).resolve()
-            file_path.relative_to(static_dir.resolve())
-        except ValueError:
-            return FileResponse(static_dir / "index.html")
-        if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(static_dir / "index.html")
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="spa")
 
     return app
 
