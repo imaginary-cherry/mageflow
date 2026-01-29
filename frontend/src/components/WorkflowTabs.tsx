@@ -6,7 +6,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { useRootTaskIds, useTask } from '../selectors';
-import { useActiveRootId, useIsRootActive } from '../selectors/uiSelectors';
+import { useIsRootActive } from '../selectors/uiSelectors';
 import { useGraphStore } from '../stores/graphStore';
 import './WorkflowTabs.css';
 

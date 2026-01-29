@@ -21,7 +21,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { useGraphStore } from '../stores/graphStore';
-import { useActiveRootId, useExpandedNodeIds } from '../selectors';
+import { useActiveRootId } from '../selectors';
 import { useAllEdges } from '../selectors/edgeSelectors';
 import {
   useLayout,
@@ -49,7 +49,6 @@ const nodeTypes: NodeTypes = {
 export function GraphCanvas() {
   const tasks = useGraphStore((state) => state.tasks);
   const activeRootId = useActiveRootId();
-  const expandedNodeIds = useExpandedNodeIds();
   const storeEdges = useAllEdges();
   const setViewport = useGraphStore((state) => state.actions.setViewport);
 

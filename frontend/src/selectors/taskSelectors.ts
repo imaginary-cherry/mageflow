@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { shallow } from 'zustand/shallow';
 import { useGraphStore } from '../stores/graphStore';
-import { Task, TaskStatus, Edge } from '../types';
+import { Task, TaskStatus } from '../types';
 
 // ============================================================================
 // Single Task Selectors
