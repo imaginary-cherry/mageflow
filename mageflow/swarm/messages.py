@@ -9,7 +9,6 @@ class SwarmMessage(BaseModel):
 
 class SwarmCallbackMessage(SwarmMessage):
     swarm_item_id: str
-    swarm_task_id: str
 
 
 class SwarmResultsMessage(SwarmCallbackMessage):
