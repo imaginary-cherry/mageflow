@@ -172,7 +172,9 @@ def create_app() -> FastAPI:
 
     @app.get("/{path:path}")
     async def catch_all(path: str):
-        file_path = static_dir / path
+        file_path = (static_dir / path).resolve()
+        if not file_path.is_relative_to(static_dir.resolve()):
+            return FileResponse(static_dir / "index.html")
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
         return FileResponse(static_dir / "index.html")
