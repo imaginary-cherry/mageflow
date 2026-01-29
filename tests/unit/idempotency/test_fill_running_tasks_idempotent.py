@@ -138,7 +138,6 @@ async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempote
         for original_task in original_tasks
     ]
     task_keys = [task.key for task in batch_tasks]
-    original_task_keys = [task.original_task_id for task in batch_tasks]
     batch_to_original = {task.key: task.original_task_id for task in batch_tasks}
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
     publish_state_key = swarm_signature.publishing_state_id
