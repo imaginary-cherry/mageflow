@@ -57,7 +57,7 @@ async def chain_error_task(msg: EmptyModel, ctx: Context):
         ctx.log(f"Chain task error {chain_signature.task_name}")
 
         # Remove tasks
-        await chain_signature.remove(with_error=False),
+        await chain_signature.remove(with_error=False)
         await TaskSignature.remove_from_key(current_task_id)
         ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
     except Exception as e:
