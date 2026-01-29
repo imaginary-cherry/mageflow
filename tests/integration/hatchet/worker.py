@@ -1,7 +1,10 @@
 import asyncio
 import json
 import os
+import random
 from datetime import datetime
+
+from hatchet_sdk.runnables.types import EmptyModel
 
 from mageflow.signature.model import TaskSignature
 
@@ -25,6 +28,7 @@ from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.startup import mageflow_config
 from tests.integration.hatchet.models import (
     ContextMessage,
+    StepOutput,
     MessageWithData,
     MessageWithResult,
     CommandMessageWithResult,
@@ -146,6 +150,55 @@ async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 
 
+basic_workflow = hatchet.workflow(name="basic_workflow", input_validator=ContextMessage)
+
+
+@basic_workflow.task()
+def start(input: ContextMessage, ctx: Context) -> StepOutput:
+    return StepOutput(random_number=random.randint(1, 100))
+
+
+@basic_workflow.task(parents=[start], wait_for=[SleepCondition(timedelta(seconds=10))])
+def wait_for_sleep(input: EmptyModel, ctx: Context) -> StepOutput:
+    return StepOutput(random_number=random.randint(1, 100))
+
+
+workflow_with_callbacks = hatchet.workflow(name="workflow_with_callbacks")
+
+
+@workflow_with_callbacks.task()
+def start_workflow(input: EmptyModel, ctx: Context) -> StepOutput:
+    return StepOutput(random_number=2)
+
+
+@workflow_with_callbacks.on_success_task()
+def on_success_wf(input: EmptyModel, ctx: Context):
+    return 5
+
+
+@workflow_with_callbacks.on_failure_task()
+def on_failure_wf(input: EmptyModel, ctx: Context):
+    return 12
+
+
+wf_with_fail_callbacks = hatchet.workflow(name="wf_with_fail_callbacks")
+
+
+@wf_with_fail_callbacks.task()
+def start_wf_fail(input: EmptyModel, ctx: Context) -> StepOutput:
+    return StepOutput(random_number=2)
+
+
+@wf_with_fail_callbacks.on_success_task()
+def on_success_wf(input: EmptyModel, ctx: Context):
+    raise ValueError("Test exception")
+
+
+@wf_with_fail_callbacks.on_failure_task()
+def on_failure_wf(input: EmptyModel, ctx: Context):
+    raise ValueError("Test exception")
+
+
 workflows = [
     task1,
     task2,
@@ -163,6 +216,9 @@ workflows = [
     retry_once,
     retry_to_failure,
     cancel_retry,
+    basic_workflow,
+    workflow_with_callbacks,
+    wf_with_fail_callbacks,
 ]
 
 

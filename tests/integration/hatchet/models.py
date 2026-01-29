@@ -35,3 +35,7 @@ class CommandMessageWithResult(ContextMessage):
 class SleepTaskMessage(ContextMessage):
     sleep_time: int = 2
     result: Any = None
+
+
+class StepOutput(BaseModel):
+    random_number: int
