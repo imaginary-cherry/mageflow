@@ -254,7 +254,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return await super().activate_error(msg, **full_kwargs)
 
     async def activate_success(self, msg, **kwargs):
-        results = await self.tasks_results.load()
+        results = await self.tasks_results.aload()
         tasks_results = [res for res in results]
 
         await super().activate_success(tasks_results, **kwargs)
