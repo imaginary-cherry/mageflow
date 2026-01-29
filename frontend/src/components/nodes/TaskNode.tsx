@@ -7,8 +7,8 @@
 
 import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { useTask, useTaskStatus } from '../../selectors';
-import { useIsTaskSelected, useIsNodeExpanded } from '../../selectors';
+import { useTask } from '../../selectors';
+import { useIsTaskSelected } from '../../selectors';
 import { useGraphStore } from '../../stores/graphStore';
 import { useDimensionCalculator } from '../../hooks';
 import { TaskStatus } from '../../types';
