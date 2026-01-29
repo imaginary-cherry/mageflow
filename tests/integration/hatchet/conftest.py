@@ -15,6 +15,7 @@ from typing import Generator, Callable, AsyncGenerator
 import psutil
 import pytest
 import pytest_asyncio
+import rapyer
 import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -58,10 +59,13 @@ async def hatchet() -> AsyncGenerator[Hatchet, None]:
 async def hatchet_client_init(
     real_redis, hatchet
 ) -> AsyncGenerator[HatchetInitData, None]:
+    await rapyer.init_rapyer(real_redis, prefer_normal_json_dump=True)
     hatchet = Mageflow(hatchet, real_redis)
     worker_data = HatchetInitData(redis_client=real_redis, hatchet=hatchet)
 
     yield worker_data
+
+    await rapyer.teardown_rapyer()
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session", autouse=True)

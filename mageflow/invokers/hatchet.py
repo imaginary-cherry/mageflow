@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from hatchet_sdk import Context
+from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
 
@@ -13,6 +13,9 @@ from mageflow.workflows import TASK_DATA_PARAM_NAME
 
 
 class HatchetInvoker(BaseInvoker):
+    # TODO - This should be in init, and the entire class created via factory in mageflow_config
+    client: Hatchet = None
+
     def __init__(self, message: BaseModel, ctx: Context):
         self.message = message
         self.task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
@@ -28,10 +31,11 @@ class HatchetInvoker(BaseInvoker):
     async def start_task(self) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
-            async with TaskSignature.lock_from_key(task_id) as signature:
+            async with TaskSignature.alock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 return signature
+        return None
 
     async def run_success(self, result: Any) -> bool:
         success_publish_tasks = []
@@ -39,6 +43,7 @@ class HatchetInvoker(BaseInvoker):
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_success_workflows = current_task.activate_success(result)
+            await current_task.done()
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
         if success_publish_tasks:
@@ -67,6 +72,7 @@ class HatchetInvoker(BaseInvoker):
             signature = await TaskSignature.get_safe(task_id)
             if signature:
                 await signature.remove(with_error, with_success)
+        return None
 
     async def should_run_task(self) -> bool:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
@@ -81,3 +87,9 @@ class HatchetInvoker(BaseInvoker):
             await signature.handle_inactive_task(self.message)
             return False
         return True
+
+    async def wait_task(
+        self, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+    ):
+        wf = self.client.workflow(name=task_name, input_validator=validator)
+        return await wf.aio_run(msg)

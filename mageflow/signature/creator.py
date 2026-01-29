@@ -64,6 +64,7 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
 
 load_signature = TaskSignature.get_safe
 resume_task = TaskSignature.resume_from_key
-lock_task = TaskSignature.lock_from_key
+lock_task = TaskSignature.alock_from_key
 resume = TaskSignature.resume_from_key
 pause = TaskSignature.pause_from_key
+remove = TaskSignature.remove_from_key

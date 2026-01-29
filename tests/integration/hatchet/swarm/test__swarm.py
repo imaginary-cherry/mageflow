@@ -1,7 +1,8 @@
 import asyncio
+from typing import cast
 
 import pytest
-from hatchet_sdk.clients.rest import V1TaskStatus
+import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 
 import mageflow
@@ -14,7 +15,6 @@ from tests.integration.hatchet.assertions import (
     assert_signature_done,
     map_wf_by_id,
     assert_overlaps_leq_k_workflows,
-    is_wf_done,
     find_sub_calls_by_signature,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
@@ -49,20 +49,20 @@ async def test_swarm_with_three_tasks_integration_sanity(
     )
     await sign_callback1.kwargs.aupdate(base_data={"1": 2})
     swarm_tasks = [sign_task1, sign_task_with_data, sign_task3]
+    swarm_kwargs = dict(base_data={"param1": "nice", "param2": ["test", 2]})
     swarm = await mageflow.swarm(
         tasks=swarm_tasks,
         success_callbacks=[sign_callback1],
-        kwargs=dict(base_data={"param1": "nice", "param2": ["test", 2]}),
+        kwargs=swarm_kwargs,
     )
-    batch_tasks = await asyncio.gather(
-        *[mageflow.load_signature(batch_id) for batch_id in swarm.tasks]
-    )
+    batch_tasks = await rapyer.afind(*swarm.tasks)
+    batch_tasks = cast(list[BatchItemTaskSignature], batch_tasks)
     await swarm.close_swarm()
     tasks = await TaskSignature.afind()
 
     # Act
     # Test individual tasks directly to verify they work with the message format
-    regular_message = ContextMessage(base_data=test_ctx)
+    regular_message = ContextMessage(test_ctx=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for all tasks to complete
@@ -72,7 +72,15 @@ async def test_swarm_with_three_tasks_integration_sanity(
     # Check that all subtasks were called by checking Hatchet runs
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_swarm_task_done(runs, swarm, batch_tasks, tasks, allow_fails=False)
+    assert_swarm_task_done(
+        runs,
+        swarm,
+        batch_tasks,
+        tasks,
+        allow_fails=False,
+        swarm_msg=regular_message,
+        **swarm_kwargs,
+    )
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
 
@@ -95,7 +103,7 @@ async def test_swarm_with_mixed_success_failed_tasks_integration_edge_case(
     )
 
     # Create task signatures: 3 success tasks only
-    fail_tasks = await sign_fail_task.duplicate_many(3)
+    fail_tasks = await sign_fail_task.aduplicate_many(3)
     await sign_fail_task.remove()
 
     swarm_callback_sig = await mageflow.sign(callback_with_redis)
@@ -114,7 +122,7 @@ async def test_swarm_with_mixed_success_failed_tasks_integration_edge_case(
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for tasks to complete
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     # Get all workflow runs for this test
@@ -237,7 +245,7 @@ async def test_swarm_mixed_task__not_enough_fails__swarm_finish_successfully(
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     # Get all workflow runs for this test
@@ -260,7 +268,7 @@ async def test_swarm_run_concurrently(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    swarm_tasks = await sign_task2.duplicate_many(8)
+    swarm_tasks = await sign_task2.aduplicate_many(8)
     max_concurrency = 4
     swarm = await mageflow.swarm(
         tasks=swarm_tasks,
@@ -271,7 +279,7 @@ async def test_swarm_run_concurrently(
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(60)
+    await asyncio.sleep(40)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
@@ -307,7 +315,7 @@ async def test_swarm_run_finish_at_fail__still_finish_successfully(
     # Act
     regular_message = ContextMessage()
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(60)
+    await asyncio.sleep(20)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
@@ -332,7 +340,7 @@ async def test_swarm_fill_running_tasks_with_success_task(
     regular_message = ContextMessage(base_data=test_ctx)
 
     # Create 4 tasks for the swarm
-    swarm_tasks = await sign_task1.duplicate_many(4)
+    swarm_tasks = await sign_task1.aduplicate_many(4)
 
     # Create swarm with max_concurrency=3
     swarm = await mageflow.swarm(
@@ -349,13 +357,15 @@ async def test_swarm_fill_running_tasks_with_success_task(
 
     # Act
     # Run only the first task directly
-    await first_swarm_item.aio_run_no_wait(EmptyModel(), options=trigger_options)
+    published_tasks = await first_swarm_item.aio_run_no_wait(
+        EmptyModel(), options=trigger_options
+    )
     await asyncio.sleep(13)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(original_first_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_signature(published_tasks[0], runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
@@ -399,13 +409,15 @@ async def test_swarm_fill_running_tasks_with_failed_task(
 
     # Act
     # Run only the first (failing) task directly
-    await first_swarm_item.aio_run_no_wait(regular_message, options=trigger_options)
+    published_tasks = await first_swarm_item.aio_run_no_wait(
+        regular_message, options=trigger_options
+    )
     await asyncio.sleep(13)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(original_first_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_signature(published_tasks[0], runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (

@@ -1,0 +1,18 @@
+import abc
+import asyncio
+from abc import ABC
+from typing import Self
+
+from mageflow.signature.model import TaskSignature
+
+
+class ContainerTaskSignature(TaskSignature, ABC):
+    @abc.abstractmethod
+    async def sub_tasks(self) -> list[Self]:
+        pass
+
+    async def remove_references(self):
+        sub_tasks = await self.sub_tasks()
+        await asyncio.gather(
+            *[task.remove() for task in sub_tasks], return_exceptions=True
+        )

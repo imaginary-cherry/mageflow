@@ -77,10 +77,11 @@ async def test__swarm_with_swarms_and_chains__sanity(
     await main_swarm.aio_run_no_wait(msg, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(120)
+    await asyncio.sleep(40)
     runs = await get_runs(hatchet, ctx_metadata)
 
     # Check good chains were successful
+    msg_dump = msg.model_dump(mode="json", exclude_unset=True)
     for chain in chain_tasks:
         # basic chain check
         assert_chain_done(runs, chain, tasks, check_callbacks=False)
@@ -91,7 +92,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
 
         # Check the first task is called with msg params
         first_task = tasks_map[chain.tasks[0]]
-        assert_signature_done(runs, first_task, **msg.model_dump(mode="json"))
+        assert_signature_done(runs, first_task, **msg_dump)
 
         # Check error was not called
         for error in chain.error_callbacks:
@@ -110,7 +111,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
     first_task = tasks_map[batch_items_map[base_swarm.tasks[0]].original_task_id]
     assert_signature_done(runs, first_task, base_data=test_ctx)
     second_task = tasks_map[batch_items_map[base_swarm.tasks[1]].original_task_id]
-    assert_signature_done(runs, second_task, **msg.model_dump(mode="json"))
+    assert_signature_done(runs, second_task, **msg_dump)
 
     # Check final success was called
     assert_signature_done(runs, final_swarm_success)

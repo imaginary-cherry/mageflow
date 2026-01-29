@@ -1,20 +1,11 @@
 import asyncio
 import contextlib
 from datetime import datetime
-from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar
+from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
-from mageflow.errors import MissingSignatureError
-from mageflow.models.message import ReturnValue
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
-from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
-from mageflow.startup import mageflow_config
-from mageflow.task.model import HatchetTaskModel
-from mageflow.utils.models import get_marked_fields
-from mageflow.workflows import MageflowWorkflow
 from pydantic import (
     BaseModel,
     field_validator,
@@ -23,22 +14,34 @@ from pydantic import (
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
+from rapyer.fields import SafeLoad
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 from rapyer.utils.redis import acquire_lock
 from typing_extensions import deprecated
 
+from mageflow.errors import MissingSignatureError
+from mageflow.models.message import DEFAULT_RESULT_NAME
+from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
+from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
+from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
+from mageflow.startup import mageflow_config
+from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.models import return_value_field
+from mageflow.workflows import MageflowWorkflow
+
 
 class TaskSignature(AtomicRedisModel):
     task_name: str
-    kwargs: RedisDict = Field(default_factory=dict)
+    kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
-    model_validators: Optional[Any] = None
+    model_validators: SafeLoad[Optional[Any]] = None
+    return_field_name: str = DEFAULT_RESULT_NAME
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
-    task_identifiers: RedisDict = Field(default_factory=dict)
+    task_identifiers: RedisDict[Any] = Field(default_factory=dict)
 
-    Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60)
+    Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 
     @field_validator("success_callbacks", "error_callbacks", mode="before")
     @classmethod
@@ -66,14 +69,16 @@ class TaskSignature(AtomicRedisModel):
         error_callbacks: list[TaskIdentifierType | Self] = None,
         **kwargs,
     ) -> Self:
+        return_field_name = return_value_field(task.input_validator)
         signature = cls(
             task_name=task.name,
             model_validators=task.input_validator,
+            return_field_name=return_field_name,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
             **kwargs,
         )
-        await signature.save()
+        await signature.asave()
         return signature
 
     @classmethod
@@ -90,17 +95,16 @@ class TaskSignature(AtomicRedisModel):
         if not model_validators:
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
+        return_field_name = return_value_field(model_validators)
 
         signature = cls(
-            task_name=task_name, model_validators=model_validators, **kwargs
+            task_name=task_name,
+            return_field_name=return_field_name,
+            model_validators=model_validators,
+            **kwargs,
         )
-        await signature.save()
+        await signature.asave()
         return signature
-
-    @classmethod
-    async def delete_signature(cls, task_key: TaskIdentifierType):
-        result = await mageflow_config.redis_client.remove(task_key)
-        return result
 
     async def add_callbacks(
         self, success: list[Self] = None, errors: list[Self] = None
@@ -109,23 +113,15 @@ class TaskSignature(AtomicRedisModel):
             success = [self.validate_task_key(s) for s in success]
         if errors:
             errors = [self.validate_task_key(e) for e in errors]
-        async with self.pipeline() as signature:
+        async with self.apipeline() as signature:
             await signature.success_callbacks.aextend(success)
             await signature.error_callbacks.aextend(errors)
-
-    def return_value_field(self) -> Optional[str]:
-        marked_field = get_marked_fields(self.model_validators, ReturnValue)
-        try:
-            return_field_name = marked_field[0][1]
-        except IndexError:
-            return_field_name = None
-        return return_field_name or "results"
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
-        return_field = self.return_value_field() if use_return_field else None
+        return_field = self.return_field_name if use_return_field else None
 
         workflow = mageflow_config.hatchet_client.workflow(
             name=task, input_validator=self.model_validators
@@ -153,9 +149,9 @@ class TaskSignature(AtomicRedisModel):
             callback_ids.extend(self.success_callbacks)
         if with_error:
             callback_ids.extend(self.error_callbacks)
-        callbacks_signatures = await asyncio.gather(
-            *[TaskSignature.get_safe(callback_id) for callback_id in callback_ids]
-        )
+        callbacks_signatures = await rapyer.afind(*callback_ids)
+        callbacks_signatures = cast(list[TaskSignature], callbacks_signatures)
+
         if any([sign is None for sign in callbacks_signatures]):
             raise MissingSignatureError(
                 f"Some callbacks not found {callback_ids}, signature can be called only once"
@@ -185,42 +181,35 @@ class TaskSignature(AtomicRedisModel):
             **kwargs,
         )
 
-    @classmethod
-    async def try_remove(cls, task_key: TaskIdentifierType, **kwargs):
-        try:
-            task = await cls.get_safe(task_key)
-            await task.remove(**kwargs)
-        except Exception as e:
-            pass
+    async def remove_task(self):
+        await self.aset_ttl(REMOVED_TASK_TTL)
+
+    async def remove_branches(self, success: bool = True, errors: bool = True):
+        keys_to_remove = []
+        if errors:
+            keys_to_remove.extend([error_id for error_id in self.error_callbacks])
+        if success:
+            keys_to_remove.extend([success_id for success_id in self.success_callbacks])
+
+        signatures = cast(list[TaskSignature], await rapyer.afind(*keys_to_remove))
+        await asyncio.gather(*[signature.remove() for signature in signatures])
+
+    async def remove_references(self):
+        pass
 
     async def remove(self, with_error: bool = True, with_success: bool = True):
         return await self._remove(with_error, with_success)
 
     async def _remove(self, with_error: bool = True, with_success: bool = True):
-        addition_tasks_to_delete = []
-        if with_error:
-            addition_tasks_to_delete.extend(
-                [error_id for error_id in self.error_callbacks]
-            )
-        if with_success:
-            addition_tasks_to_delete.extend(
-                [success_id for success_id in self.success_callbacks]
-            )
+        await self.remove_branches(with_success, with_error)
+        await self.remove_references()
+        await self.remove_task()
 
-        signatures_to_delete = await asyncio.gather(
-            *[TaskSignature.get_safe(task_id) for task_id in addition_tasks_to_delete]
-        )
-
-        delete_tasks = [self.delete()]
-        delete_tasks.extend(
-            [
-                signature_to_delete.remove()
-                for signature_to_delete in signatures_to_delete
-                if signature_to_delete
-            ]
-        )
-
-        return await asyncio.gather(*delete_tasks)
+    @classmethod
+    async def remove_from_key(cls, task_key: TaskIdentifierType):
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
+            return await task.remove()
 
     async def handle_inactive_task(self, msg: BaseModel):
         if self.task_status.status == SignatureStatus.SUSPENDED:
@@ -231,7 +220,7 @@ class TaskSignature(AtomicRedisModel):
     async def should_run(self):
         return self.task_status.should_run()
 
-    async def change_status(self, status: SignatureStatus) -> bool:
+    async def change_status(self, status: SignatureStatus):
         await self.task_status.aupdate(
             last_status=self.task_status.status, status=status
         )
@@ -243,7 +232,7 @@ class TaskSignature(AtomicRedisModel):
     @classmethod
     async def safe_change_status(
         cls, task_id: TaskIdentifierType, status: SignatureStatus
-    ) -> bool:
+    ):
         try:
             async with lock_from_key(cls, task_id) as task:
                 return await task.change_status(status)
@@ -274,6 +263,16 @@ class TaskSignature(AtomicRedisModel):
         async with lock_from_key(cls, task_key) as task:
             await task.suspend()
 
+    async def done(self):
+        await self.task_status.aupdate(
+            last_status=self.task_status.status, status=SignatureStatus.DONE
+        )
+
+    async def failed(self):
+        await self.task_status.aupdate(
+            last_status=self.task_status.status, status=SignatureStatus.FAILED
+        )
+
     async def suspend(self):
         """
         Task suspension will try and stop the task at before it starts
@@ -289,7 +288,8 @@ class TaskSignature(AtomicRedisModel):
         """
         Task interrupt will try to aggressively take hold of the async loop and stop the task
         """
-        raise NotImplementedError()
+        # TODO - not implemented yet - implement
+        await self.suspend()
 
     @classmethod
     async def pause_from_key(
@@ -317,7 +317,7 @@ async def lock_from_key(
         redis_model = await rapyer.aget(key)
         yield redis_model
         if save_at_end:
-            await redis_model.save()
+            await redis_model.asave()
 
 
 SIGNATURES_NAME_MAPPING: dict[str, type[TaskSignature]] = {}

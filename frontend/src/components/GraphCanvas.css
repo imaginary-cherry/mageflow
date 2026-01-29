@@ -1,0 +1,130 @@
+/**
+ * GraphCanvas Styles
+ */
+
+.graph-canvas {
+  width: 100%;
+  height: 100%;
+  background: #0a0a1a;
+}
+
+/* Empty state */
+.graph-canvas--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graph-canvas__empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #666;
+  font-size: 16px;
+}
+
+.graph-canvas__empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+/* Stats panel */
+.graph-canvas__stats {
+  display: flex;
+  gap: 16px;
+  background: rgba(16, 0, 43, 0.9);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(90, 24, 154, 0.3);
+}
+
+.graph-canvas__stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.graph-canvas__stat-label {
+  color: #888;
+}
+
+.graph-canvas__stat-value {
+  color: #e0aaff;
+  font-weight: 600;
+}
+
+/* React Flow overrides */
+.graph-canvas .react-flow__background {
+  background-color: #0a0a1a;
+}
+
+.graph-canvas .react-flow__controls {
+  background: #10002b;
+  border: 1px solid rgba(90, 24, 154, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.graph-canvas .react-flow__controls-button {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(90, 24, 154, 0.2);
+  color: #888;
+  width: 32px;
+  height: 32px;
+}
+
+.graph-canvas .react-flow__controls-button:hover {
+  background: rgba(90, 24, 154, 0.2);
+  color: #e0aaff;
+}
+
+.graph-canvas .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.graph-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.graph-canvas .react-flow__minimap {
+  background: #10002b;
+  border: 1px solid rgba(90, 24, 154, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Edge styles */
+.graph-canvas .react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.graph-canvas .react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dash 0.5s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Selection */
+.graph-canvas .react-flow__node.selected {
+  outline: none;
+}
+
+/* Handle styles */
+.graph-canvas .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #5a189a;
+  border: 2px solid #7b2cbf;
+}
+
+.graph-canvas .react-flow__handle:hover {
+  background: #7b2cbf;
+}

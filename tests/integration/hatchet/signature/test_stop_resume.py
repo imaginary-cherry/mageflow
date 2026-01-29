@@ -92,7 +92,7 @@ async def test_signature_pause_with_continue_with_params(
     # Assert - 2
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(
-        runs, callback_signature, check_called_once=False, results="msg"
+        runs, callback_signature, check_called_once=False, mageflow_results="msg"
     )
 
     await assert_redis_is_clean(redis_client)

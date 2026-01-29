@@ -99,7 +99,7 @@ from mageflow.models.message import ReturnValue
 
 
 class SuccessMessage(BaseModel):
-    task_result: Annotated[Any, ReturnValue()]
+    task_result: ReturnValue[Any]
     field_int: int
     ...
 
@@ -117,11 +117,11 @@ async def success_callback(msg: SuccessMessage):
     from mageflow.models.message import ReturnValue
     
     class SuccessMessage(BaseModel):
-        task_result: Annotated[Any, ReturnValue()]
+        task_result: ReturnValue[Any]
         field_int: int
     ```
 
-    When no field is marked with ReturnValue, the return value of the function will be sent to the field named results.
+    When no field is marked with ReturnValue, the return value of the function will be sent to the field named mageflow_results.
     ```python
     class SuccessMessage(BaseModel):
         results: str  # The return value of the function will be sent here

@@ -4,10 +4,17 @@ import inspect
 import os
 import random
 from datetime import timedelta
-from typing import TypeVar, Any, overload, Unpack, Callable
+from typing import TypeVar, Any, overload, Unpack, Callable, TypedDict
 
 import redis
 from hatchet_sdk import Hatchet, Worker, Context
+from hatchet_sdk.labels import DesiredWorkerLabel
+from hatchet_sdk.rate_limit import RateLimit
+from hatchet_sdk.runnables.types import (
+    StickyStrategy,
+    ConcurrencyExpression,
+    DefaultFilter,
+)
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
@@ -16,6 +23,7 @@ from typing_extensions import override
 from mageflow.callbacks import AcceptParams, register_task, handle_task_callback
 from mageflow.chain.creator import chain
 from mageflow.init import init_mageflow_hatchet_tasks
+from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.creator import sign, TaskSignatureConvertible
 from mageflow.signature.model import TaskSignature, TaskInputType
 from mageflow.signature.types import HatchetTaskType
@@ -27,6 +35,36 @@ from mageflow.startup import (
 )
 from mageflow.swarm.creator import swarm, SignatureOptions
 from mageflow.utils.mageflow import does_task_wants_ctx
+
+Duration = timedelta | str
+
+
+class TaskOptions(TypedDict, total=False):
+    name: str | None
+    description: str | None
+    input_validator: type | None
+    on_events: list[str] | None
+    on_crons: list[str] | None
+    version: str | None
+    sticky: StickyStrategy | None
+    default_priority: int
+    concurrency: ConcurrencyExpression | list[ConcurrencyExpression] | None
+    schedule_timeout: Duration
+    execution_timeout: Duration
+    retries: int
+    rate_limits: list[RateLimit] | None
+    desired_worker_labels: dict[str, DesiredWorkerLabel] | None
+    backoff_factor: float | None
+    backoff_max_seconds: int | None
+    default_filters: list[DefaultFilter] | None
+
+
+class WorkerOptions(TypedDict, total=False):
+    slots: int
+    durable_slots: int
+    labels: dict[str, str | int] | None
+    workflows: list[BaseWorkflow[Any]] | None
+    lifespan: LifespanFn | None
 
 
 async def merge_lifespan(original_lifespan: LifespanFn):
@@ -49,7 +87,7 @@ class HatchetMageflow(Hatchet):
         self.param_config = param_config
 
     @override
-    def task(self, *, name: str | None = None, **kwargs):
+    def task(self, name: str | None = None, **kwargs: Unpack[TaskOptions]):
         """
         This is a wrapper for task, if you want to see hatchet task go to parent class
         """
@@ -64,7 +102,7 @@ class HatchetMageflow(Hatchet):
         return decorator
 
     @override
-    def durable_task(self, *, name: str | None = None, **kwargs):
+    def durable_task(self, *, name: str | None = None, **kwargs: Unpack[TaskOptions]):
         """
         This is a wrapper for durable task, if you want to see hatchet durable task go to parent class
         """
@@ -81,10 +119,11 @@ class HatchetMageflow(Hatchet):
     @override
     def worker(
         self,
+        name: str,
         *args,
         workflows: list[BaseWorkflow[Any]] | None = None,
         lifespan: LifespanFn | None = None,
-        **kwargs,
+        **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
         mageflow_flows = init_mageflow_hatchet_tasks(self.hatchet)
         workflows += mageflow_flows
@@ -93,7 +132,9 @@ class HatchetMageflow(Hatchet):
         else:
             lifespan = functools.partial(merge_lifespan, lifespan)
 
-        return super().worker(*args, workflows=workflows, lifespan=lifespan, **kwargs)
+        return super().worker(
+            name, *args, workflows=workflows, lifespan=lifespan, **kwargs
+        )
 
     async def sign(self, task: str | HatchetTaskType, **options: Any) -> TaskSignature:
         return await sign(task, **options)
@@ -185,6 +226,8 @@ def Mageflow(
     config.namespace = ""
     hatchet_caller = Hatchet(config=config, debug=hatchet_client._client.debug)
     mageflow_config.hatchet_client = hatchet_caller
+    # TODO - we should get rid of the hatchet caller, just use a unify namespace, this is hatchet pattern, use it
+    HatchetInvoker.client = hatchet_client
 
     if redis_client is None:
         redis_url = os.getenv("REDIS_URL")
