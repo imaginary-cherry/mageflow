@@ -3,8 +3,9 @@ import json
 import os
 import random
 from datetime import datetime
+from datetime import timedelta
 
-from hatchet_sdk.runnables.types import EmptyModel
+from hatchet_sdk import EmptyModel, SleepCondition
 
 from mageflow.signature.model import TaskSignature
 
