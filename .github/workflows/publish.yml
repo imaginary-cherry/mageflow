@@ -51,20 +51,20 @@ jobs:
       with:
         node-version: "18"
         cache: "npm"
-        cache-dependency-path: app/package-lock.json
+        cache-dependency-path: frontend/package-lock.json
 
-    - name: Install React dependencies
+    - name: Install frontend dependencies
       run: npm ci
-      working-directory: app
+      working-directory: frontend
 
-    - name: Build React app
+    - name: Build frontend
       run: npm run build
-      working-directory: app
+      working-directory: frontend
 
-    - name: Copy React build to static directory
+    - name: Copy frontend build to static directory
       run: |
         mkdir -p mageflow/visualizer/static
-        cp -r app/build/* mageflow/visualizer/static/
+        cp -r frontend/dist/* mageflow/visualizer/static/
 
     - name: Build package
       run: |
