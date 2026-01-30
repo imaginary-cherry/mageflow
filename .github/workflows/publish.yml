@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       id-token: write  # Required for trusted publishing
-      contents: read
+      contents: write  # Required for pushing tags
     
     steps:
     - uses: actions/checkout@v4
