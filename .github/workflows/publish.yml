@@ -66,10 +66,9 @@ jobs:
 #        mkdir -p mageflow/visualizer/static
 #        cp -r frontend/dist/* mageflow/visualizer/static/
 #
-#    - name: Build package
-#      run: |
-#        poetry build
-    
+    - name: Build package
+      run: poetry build
+
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
