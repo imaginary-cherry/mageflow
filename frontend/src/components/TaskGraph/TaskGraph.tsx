@@ -1,17 +1,18 @@
-import { useCallback, useState, useEffect } from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
-  ReactFlow,
-  Controls,
   Background,
   BackgroundVariant,
+  Controls,
   MiniMap,
-  useNodesState,
+  ReactFlow,
   useEdgesState,
+  useNodesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { Task } from '@/types/task';
-import { useTaskGraphLayout } from './useTaskGraphLayout';
+import {Task} from '@/types/task';
+import {useRootTaskIds, useTasksMap} from '@/hooks/useTaskData';
+import {useTaskGraphLayout} from './useTaskGraphLayout';
 import SimpleTaskNode from './SimpleTaskNode';
 import ContainerTaskNode from './ContainerTaskNode';
 import TaskDetailPanel from './TaskDetailPanel';
@@ -21,16 +22,32 @@ const nodeTypes = {
   containerTask: ContainerTaskNode,
 };
 
-const TaskGraph = () => {
+interface TaskGraphProps {
+  onRefetchReady?: (refetch: () => Promise<void>) => void;
+}
+
+const TaskGraph = ({ onRefetchReady }: TaskGraphProps) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { tasksMap, loading: tasksLoading, refetch } = useTasksMap();
+  const { rootIds, loading: rootIdsLoading } = useRootTaskIds();
+
+  useEffect(() => {
+    if (onRefetchReady) {
+      onRefetchReady(refetch);
+    }
+  }, [onRefetchReady, refetch]);
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
   }, []);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useTaskGraphLayout({
+    tasksMap,
+    rootTaskIds: rootIds,
     onTaskClick: handleTaskClick,
   });
+
+  const loading = tasksLoading || rootIdsLoading;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Pause, XCircle, RotateCcw, Link, Zap, Box } from 'lucide-react';
+import { useTaskClient } from '@/services';
 
 interface TaskDetailPanelProps {
   task: Task | null;
@@ -26,18 +27,19 @@ const statusColors: Record<string, string> = {
 };
 
 const TaskDetailPanel = ({ task, onClose }: TaskDetailPanelProps) => {
+  const client = useTaskClient();
   const TypeIcon = task ? typeIcons[task.type] : Box;
 
   const handlePause = () => {
-    console.log('Pause task:', task?.id);
+    if (task) client.pauseTask(task.id);
   };
 
   const handleCancel = () => {
-    console.log('Cancel task:', task?.id);
+    if (task) client.cancelTask(task.id);
   };
 
   const handleRetry = () => {
-    console.log('Retry task:', task?.id);
+    if (task) client.retryTask(task.id);
   };
 
   return (

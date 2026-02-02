@@ -4,8 +4,7 @@ import { Task, TaskStatus } from '@/types/task';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Circle, Loader2, XCircle, PauseCircle, Clock, Link, Zap, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockTasks } from '@/data/mockTasks';
-import { 
+import {
   CONTAINER_PADDING,
   CONTAINER_HEADER_HEIGHT,
   CONTAINER_FOOTER_HEIGHT,
@@ -25,6 +24,7 @@ const statusIcons: Record<TaskStatus, React.ReactNode> = {
 
 export interface ContainerNodeData extends Record<string, unknown> {
   task: Task;
+  tasksMap: Record<string, Task>;
   onTaskClick?: (task: Task) => void;
   width: number;
   height: number;
@@ -32,15 +32,15 @@ export interface ContainerNodeData extends Record<string, unknown> {
 
 const ContainerTaskNode = memo(({ data }: NodeProps) => {
   const nodeData = data as ContainerNodeData;
-  const { task, onTaskClick, width, height } = nodeData;
+  const { task, tasksMap, onTaskClick, width, height } = nodeData;
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const isChain = task.type === 'chain';
-  
+
   const childTasks = task.children_ids
-    .map(id => mockTasks[id])
+    .map(id => tasksMap[id])
     .filter(Boolean);
-  
+
   const totalPages = Math.ceil(childTasks.length / TASKS_PER_PAGE);
   const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
   const paginatedChildren = childTasks.slice(startIndex, startIndex + TASKS_PER_PAGE);
@@ -50,8 +50,7 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
     setCurrentPage(Math.max(1, Math.min(newPage, totalPages)));
   }, [totalPages]);
 
-  // Recalculate dimensions for current page
-  const currentDimensions = calculateTaskDimensions(task, mockTasks, currentPage);
+  const currentDimensions = calculateTaskDimensions(task, tasksMap, currentPage);
 
   return (
     <div
@@ -127,7 +126,7 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
           <InnerTaskRenderer
             key={child.id}
             task={child}
-            tasksMap={mockTasks}
+            tasksMap={tasksMap}
             onTaskClick={onTaskClick}
             currentPage={1}
             depth={1}
