@@ -26,12 +26,6 @@ class BaseInvoker(ABC):
         pass
 
     @abc.abstractmethod
-    async def remove_task(
-        self, with_success: bool = True, with_error: bool = True
-    ) -> TaskSignature | None:
-        pass
-
-    @abc.abstractmethod
     async def should_run_task(self) -> bool:
         pass
 
