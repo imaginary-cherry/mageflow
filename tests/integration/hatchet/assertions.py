@@ -94,12 +94,6 @@ def get_task_param(wf: V1TaskSummary, param_name: str):
     return wf.additional_metadata.get(TASK_DATA_PARAM_NAME, {}).get(param_name)
 
 
-def assert_task_done(runs: HatchetRuns, task, input_params=None, results=None):
-    __tracebackhide__ = False  # force pytest to show this frame
-    workflows_by_name = {wf.workflow_name: wf for wf in runs}
-    return _assert_task_done(task.name, workflows_by_name, input_params, results)
-
-
 def assert_signature_done(
     runs: HatchetRuns,
     task_sign: TaskSignature | TaskIdentifierType,

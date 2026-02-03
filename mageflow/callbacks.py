@@ -40,6 +40,7 @@ def handle_task_callback(
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
             try:
+                is_normal_run = invoker.is_vanilla_run()
                 signature = await invoker.start_task()
                 if send_signature:
                     kwargs["signature"] = signature
@@ -50,16 +51,19 @@ def handle_task_callback(
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except (Exception, asyncio.CancelledError) as e:
+                if is_normal_run:
+                    raise
                 if not task_model.should_retry(ctx.attempt_number, e):
+                    await invoker.task_failed()
                     await signature.failed()
-                    await invoker.run_error()
-                    await invoker.remove_task(with_error=False)
                 raise
             else:
+                if is_normal_run:
+                    return result
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
-                await invoker.run_success(dumped_results["hatchet_results"])
-                await invoker.remove_task(with_success=False)
+                await invoker.task_success(dumped_results["hatchet_results"])
+                await signature.done()
                 if wrap_res:
                     return task_results
                 else:

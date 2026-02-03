@@ -28,8 +28,15 @@ class HatchetInvoker(BaseInvoker):
     def task_ctx(self) -> dict:
         return self.task_data
 
+    @property
+    def task_id(self) -> str | None:
+        return self.task_data.get(TASK_ID_PARAM_NAME, None)
+
+    def is_vanilla_run(self):
+        return self.task_id is None
+
     async def start_task(self) -> TaskSignature | None:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             async with TaskSignature.alock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
@@ -37,45 +44,34 @@ class HatchetInvoker(BaseInvoker):
                 return signature
         return None
 
-    async def run_success(self, result: Any) -> bool:
+    async def task_success(self, result: Any):
         success_publish_tasks = []
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_success_workflows = current_task.activate_success(result)
-            await current_task.done()
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
-        if success_publish_tasks:
-            await asyncio.gather(*success_publish_tasks)
-            return True
-        return False
+            if success_publish_tasks:
+                await asyncio.gather(*success_publish_tasks)
 
-    async def run_error(self) -> bool:
+            await current_task.remove(with_success=False)
+
+    async def task_failed(self):
         error_publish_tasks = []
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
-        if error_publish_tasks:
-            await asyncio.gather(*error_publish_tasks)
-            return True
-        return False
+            if error_publish_tasks:
+                await asyncio.gather(*error_publish_tasks)
 
-    async def remove_task(
-        self, with_success: bool = True, with_error: bool = True
-    ) -> TaskSignature | None:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
-        if task_id:
-            signature = await TaskSignature.get_safe(task_id)
-            if signature:
-                await signature.remove(with_error, with_success)
-        return None
+            await current_task.remove(with_error=False)
 
     async def should_run_task(self) -> bool:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             signature = await TaskSignature.get_safe(task_id)
             if signature is None:

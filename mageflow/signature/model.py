@@ -320,5 +320,4 @@ async def lock_from_key(
             await redis_model.asave()
 
 
-SIGNATURES_NAME_MAPPING: dict[str, type[TaskSignature]] = {}
 TaskInputType: TypeAlias = TaskIdentifierType | TaskSignature
