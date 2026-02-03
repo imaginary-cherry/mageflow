@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 
 import pytest
+from hatchet_sdk.clients.rest import V1TaskStatus
 
 import mageflow
 from tests.integration.hatchet.assertions import (
@@ -12,7 +13,7 @@ from tests.integration.hatchet.assertions import (
     map_wf_by_id,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage
+from tests.integration.hatchet.models import ContextMessage, MageflowTestError
 from tests.integration.hatchet.worker import (
     timeout_task,
     error_callback,
@@ -20,6 +21,7 @@ from tests.integration.hatchet.worker import (
     retry_to_failure,
     task1_callback,
     cancel_retry,
+    fail_task,
 )
 
 
@@ -138,3 +140,31 @@ async def test__retry_but_override_with_exception__check_error_callback_is_calle
     failed_summary = assert_signature_failed(runs, cancel_retry_sign)
     assert failed_summary.retry_count == 0
     assert_signature_done(runs, error_callback_sign, base_data=test_ctx)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_check_normal_task_fails__sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    # Act
+    message = ContextMessage(base_data=test_ctx)
+    await fail_task.aio_run_no_wait(message, options=trigger_options)
+    await asyncio.sleep(3)
+
+    # Assert
+    runs = await get_runs(hatchet, ctx_metadata)
+
+    assert len(runs) == 1
+    failed_task_summary = runs[0]
+    assert failed_task_summary.status == V1TaskStatus.FAILED
+    error_class_name = MageflowTestError.__name__
+    err_msg = failed_task_summary.error_message
+    assert err_msg.startswith(
+        error_class_name
+    ), f"{err_msg} doesn't start with {error_class_name}"
