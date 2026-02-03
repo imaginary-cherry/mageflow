@@ -33,7 +33,7 @@ class HatchetInvoker(BaseInvoker):
         return self.task_data.get(TASK_ID_PARAM_NAME, None)
 
     def is_vanilla_run(self):
-        return self.task_id
+        return self.task_id is None
 
     async def start_task(self) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
