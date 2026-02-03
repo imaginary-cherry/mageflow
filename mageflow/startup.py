@@ -25,25 +25,10 @@ mageflow_config = MageFlowConfigModel()
 async def init_mageflow():
     await rapyer.init_rapyer(mageflow_config.redis_client, prefer_normal_json_dump=True)
     await register_workflows()
-    await update_register_signature_models()
 
 
 async def teardown_mageflow():
     await rapyer.teardown_rapyer()
-
-
-async def update_register_signature_models():
-    from mageflow.signature.model import SIGNATURES_NAME_MAPPING, TaskSignature
-
-    signature_classes = [
-        cls for cls in rapyer.find_redis_models() if issubclass(cls, TaskSignature)
-    ]
-    SIGNATURES_NAME_MAPPING.update(
-        {
-            signature_class.__name__: signature_class
-            for signature_class in signature_classes
-        }
-    )
 
 
 async def register_workflows():

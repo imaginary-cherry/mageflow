@@ -11,7 +11,7 @@ import mageflow
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.startup import update_register_signature_models, mageflow_config
+from mageflow.startup import mageflow_config
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature, SwarmConfig
 from mageflow.workflows import MageflowWorkflow
@@ -44,7 +44,6 @@ class SwarmItemDoneSetup:
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def redis_client():
-    await update_register_signature_models()
     client = fakeredis.aioredis.FakeRedis()
     mageflow_config.redis_client = client
     await client.flushall()
@@ -292,7 +291,9 @@ def mock_workflow_run_with_args():
     captured_calls = []
 
     async def capture_and_mock(self, *args, **kwargs):
-        captured_calls.append(WorkflowCallCapture(workflow=self, args=args, kwargs=kwargs))
+        captured_calls.append(
+            WorkflowCallCapture(workflow=self, args=args, kwargs=kwargs)
+        )
 
     with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock):
         yield captured_calls
