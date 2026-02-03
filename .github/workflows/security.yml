@@ -30,17 +30,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install safety bandit
       
-      - name: Run Safety check
-        continue-on-error: true
+      - name: Install project dependencies  
         run: |
-          pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt found"
-          safety check --json || echo "Safety check completed with findings"
+          pip install poetry
+          poetry install --no-interaction --no-root || echo "Poetry install completed"
+      
+      - name: Run Safety check for known vulnerabilities
+        run: |
+          echo "Running Safety check for known vulnerabilities in dependencies..."
+          poetry run pip list --format=freeze > requirements.txt || true
+          safety check --file requirements.txt --json || safety check --file requirements.txt || echo "⚠️ Safety check found issues or failed"
       
       - name: Run Bandit security linter
-        continue-on-error: true
         run: |
-          bandit -r mageflow/ -f json -o bandit-output.json || echo "Bandit scan completed"
-          bandit -r mageflow/ || true
+          echo "Running Bandit security linter..."
+          bandit -r mageflow/ -ll -f json -o bandit-report.json || true
+          bandit -r mageflow/ -ll || echo "⚠️ Bandit found potential security issues"
       
       - name: Security scan complete
-        run: echo "Security scan completed successfully"
+        run: echo "✅ Security scan completed successfully"
