@@ -28,7 +28,12 @@ def fetch_issues_for_milestone(owner, repo, milestone_number, token):
     return make_request(url, token)
 
 
-def generate_roadmap_markdown(milestones_data):
+def fetch_issues_without_milestone(owner, repo, token):
+    url = f"{GITHUB_API}/repos/{owner}/{repo}/issues?milestone=none&state=all&per_page=100"
+    return make_request(url, token)
+
+
+def generate_roadmap_markdown(milestones_data, future_issues):
     lines = [
         "# Roadmap",
         "",
@@ -65,6 +70,21 @@ def generate_roadmap_markdown(milestones_data):
 
         lines.append("")
 
+    if future_issues:
+        lines.append("## Future Issues")
+        lines.append("")
+        lines.append("*Issues not yet assigned to a milestone*")
+        lines.append("")
+
+        for issue in sorted(future_issues, key=lambda x: (x["state"] == "closed", x["number"])):
+            checkbox = "[x]" if issue["state"] == "closed" else "[ ]"
+            title = issue["title"]
+            url = issue["html_url"]
+            number = issue["number"]
+            lines.append(f"- {checkbox} [{title}]({url}) (#{number})")
+
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -91,7 +111,10 @@ def main():
             }
         )
 
-    markdown = generate_roadmap_markdown(milestones_data)
+    future_issues = fetch_issues_without_milestone(owner, repo, token)
+    future_issues = [i for i in future_issues if "pull_request" not in i]
+
+    markdown = generate_roadmap_markdown(milestones_data, future_issues)
     markdown = markdown.replace("{repo}", repository)
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
