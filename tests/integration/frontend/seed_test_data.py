@@ -14,9 +14,7 @@ from mageflow.swarm.state import PublishState
 TEST_PREFIX = "test_frontend_"
 
 
-async def seed_basic_task(redis_client: Redis) -> str:
-    await rapyer.init_rapyer(redis_client)
-
+async def seed_basic_task() -> str:
     task = TaskSignature(
         task_name="basic_test_task",
         kwargs={"param1": "value1", "param2": 42},
@@ -28,9 +26,7 @@ async def seed_basic_task(redis_client: Redis) -> str:
     return task.key
 
 
-async def seed_chain_task(redis_client: Redis) -> dict[str, str]:
-    await rapyer.init_rapyer(redis_client)
-
+async def seed_chain_task() -> dict[str, str]:
     task1 = TaskSignature(
         task_name="chain_step_1",
         kwargs={"step": 1},
@@ -62,9 +58,7 @@ async def seed_chain_task(redis_client: Redis) -> dict[str, str]:
     return {"chain_id": chain.key, "task1_id": task1.key, "task2_id": task2.key}
 
 
-async def seed_swarm_task(redis_client: Redis) -> dict[str, str | list[str]]:
-    await rapyer.init_rapyer(redis_client)
-
+async def seed_swarm_task() -> dict[str, str | list[str]]:
     publish_state = PublishState()
     publish_state.key = f"{TEST_PREFIX}publish_state_001"
     await publish_state.asave()
@@ -82,6 +76,8 @@ async def seed_swarm_task(redis_client: Redis) -> dict[str, str | list[str]]:
     await swarm.asave()
 
     batch_item_ids = []
+    original_task_ids = []
+    swarm_item_callback_ids = []
     for i in range(3):
         original_task = TaskSignature(
             task_name="swarm_item_task",
@@ -91,16 +87,22 @@ async def seed_swarm_task(redis_client: Redis) -> dict[str, str | list[str]]:
         )
         original_task.key = f"{TEST_PREFIX}swarm_original_{i:03d}"
         await original_task.asave()
+        original_task_ids.append(original_task.key)
 
         batch_item = await swarm.add_task(original_task)
         batch_item_ids.append(batch_item.key)
+        swarm_item_callback_ids.extend(original_task.success_callbacks)
+        swarm_item_callback_ids.extend(original_task.error_callbacks)
 
-    return {"swarm_id": swarm.key, "batch_item_ids": batch_item_ids}
+    return {
+        "swarm_id": swarm.key,
+        "batch_item_ids": batch_item_ids,
+        "original_task_ids": original_task_ids,
+        "swarm_item_callback_ids": swarm_item_callback_ids,
+    }
 
 
-async def seed_task_with_callbacks(redis_client: Redis) -> dict[str, str | list[str]]:
-    await rapyer.init_rapyer(redis_client)
-
+async def seed_task_with_callbacks() -> dict[str, str | list[str]]:
     success_callback = TaskSignature(
         task_name="on_success_callback",
         kwargs={"callback_type": "success"},
@@ -137,10 +139,13 @@ async def seed_task_with_callbacks(redis_client: Redis) -> dict[str, str | list[
     }
 
 
-async def cleanup_test_data(redis_client: Redis, prefix: str = TEST_PREFIX) -> int:
-    await rapyer.init_rapyer(redis_client)
-
-    keys = await redis_client.keys(f"{prefix}*")
+async def cleanup_test_data(
+    redis_client: Redis, prefix: str = TEST_PREFIX, clean_all: bool = False
+) -> int:
+    if clean_all:
+        keys = await redis_client.keys("*")
+    else:
+        keys = await redis_client.keys(f"*{prefix}*")
     if keys:
         await redis_client.delete(*keys)
     return len(keys)
@@ -150,10 +155,11 @@ async def seed_all(redis_url: str) -> dict:
     redis_client = Redis.from_url(redis_url, decode_responses=True)
 
     try:
-        basic_task_id = await seed_basic_task(redis_client)
-        chain_data = await seed_chain_task(redis_client)
-        swarm_data = await seed_swarm_task(redis_client)
-        callback_data = await seed_task_with_callbacks(redis_client)
+        await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
+        basic_task_id = await seed_basic_task()
+        chain_data = await seed_chain_task()
+        swarm_data = await seed_swarm_task()
+        callback_data = await seed_task_with_callbacks()
 
         return {
             "basic_task_id": basic_task_id,
@@ -162,6 +168,7 @@ async def seed_all(redis_url: str) -> dict:
             "callbacks": callback_data,
         }
     finally:
+        await rapyer.teardown_rapyer()
         await redis_client.aclose()
 
 
@@ -169,8 +176,10 @@ async def cleanup_all(redis_url: str) -> int:
     redis_client = Redis.from_url(redis_url, decode_responses=True)
 
     try:
+        await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
         return await cleanup_test_data(redis_client)
     finally:
+        await rapyer.teardown_rapyer()
         await redis_client.aclose()
 
 
@@ -183,7 +192,7 @@ async def cleanup_all(redis_url: str) -> int:
 )
 @click.option(
     "--redis-url",
-    default="redis://localhost:6379/",
+    default="redis://localhost:6379/3",
     help="Redis URL",
 )
 def main(action: str, redis_url: str):
