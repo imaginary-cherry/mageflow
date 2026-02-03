@@ -44,19 +44,18 @@ class HatchetInvoker(BaseInvoker):
                 return signature
         return None
 
-    async def run_success(self, result: Any) -> bool:
+    async def task_success(self, result: Any):
         success_publish_tasks = []
         task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_success_workflows = current_task.activate_success(result)
-            await current_task.done()
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
-        if success_publish_tasks:
-            await asyncio.gather(*success_publish_tasks)
-            return True
-        return False
+            if success_publish_tasks:
+                await asyncio.gather(*success_publish_tasks)
+
+            await current_task.remove(with_success=False)
 
     async def task_failed(self):
         error_publish_tasks = []

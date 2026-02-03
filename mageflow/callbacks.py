@@ -62,8 +62,8 @@ def handle_task_callback(
                     return result
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
-                await invoker.run_success(dumped_results["hatchet_results"])
-                await invoker.remove_task(with_success=False)
+                await invoker.task_success(dumped_results["hatchet_results"])
+                await current_task.done()
                 if wrap_res:
                     return task_results
                 else:
