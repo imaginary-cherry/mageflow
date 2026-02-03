@@ -7,34 +7,15 @@ from fastapi import FastAPI
 
 from mageflow.visualizer.server import register_api_routes
 from tests.integration.frontend.seed_test_data import (
+    ChainTestData,
+    SwarmTestData,
+    CallbackTestData,
     cleanup_test_data,
     seed_basic_task,
     seed_chain_task,
     seed_swarm_task,
     seed_task_with_callbacks,
 )
-
-
-@dataclass
-class ChainTestData:
-    chain_id: str
-    task1_id: str
-    task2_id: str
-
-
-@dataclass
-class SwarmTestData:
-    swarm_id: str
-    batch_item_ids: list[str]
-    original_task_ids: list[str]
-    swarm_item_callback_ids: list[str]
-
-
-@dataclass
-class CallbackTestData:
-    task_id: str
-    success_callback_ids: list[str]
-    error_callback_ids: list[str]
 
 
 @dataclass
@@ -80,9 +61,9 @@ async def seeded_test_data(redis_client):
 
     yield SeededTestData(
         basic_task_id=basic_task_id,
-        chain=ChainTestData(**chain_data),
-        swarm=SwarmTestData(**swarm_data),
-        callbacks=CallbackTestData(**callback_data),
+        chain=chain_data,
+        swarm=swarm_data,
+        callbacks=callback_data,
     )
 
     await cleanup_test_data(redis_client, clean_all=True)

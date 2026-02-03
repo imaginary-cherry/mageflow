@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime
 
 import click
@@ -14,6 +15,28 @@ from mageflow.swarm.state import PublishState
 TEST_PREFIX = "test_frontend_"
 
 
+@dataclass
+class ChainTestData:
+    chain_id: str
+    task1_id: str
+    task2_id: str
+
+
+@dataclass
+class SwarmTestData:
+    swarm_id: str
+    batch_item_ids: list[str]
+    original_task_ids: list[str]
+    swarm_item_callback_ids: list[str]
+
+
+@dataclass
+class CallbackTestData:
+    task_id: str
+    success_callback_ids: list[str]
+    error_callback_ids: list[str]
+
+
 async def seed_basic_task() -> str:
     task = TaskSignature(
         task_name="basic_test_task",
@@ -26,7 +49,7 @@ async def seed_basic_task() -> str:
     return task.key
 
 
-async def seed_chain_task() -> dict[str, str]:
+async def seed_chain_task() -> ChainTestData:
     task1 = TaskSignature(
         task_name="chain_step_1",
         kwargs={"step": 1},
@@ -55,10 +78,10 @@ async def seed_chain_task() -> dict[str, str]:
     chain.key = f"{TEST_PREFIX}chain_001"
     await chain.asave()
 
-    return {"chain_id": chain.key, "task1_id": task1.key, "task2_id": task2.key}
+    return ChainTestData(chain_id=chain.key, task1_id=task1.key, task2_id=task2.key)
 
 
-async def seed_swarm_task() -> dict[str, str | list[str]]:
+async def seed_swarm_task() -> SwarmTestData:
     publish_state = PublishState()
     publish_state.key = f"{TEST_PREFIX}publish_state_001"
     await publish_state.asave()
@@ -94,15 +117,15 @@ async def seed_swarm_task() -> dict[str, str | list[str]]:
         swarm_item_callback_ids.extend(original_task.success_callbacks)
         swarm_item_callback_ids.extend(original_task.error_callbacks)
 
-    return {
-        "swarm_id": swarm.key,
-        "batch_item_ids": batch_item_ids,
-        "original_task_ids": original_task_ids,
-        "swarm_item_callback_ids": swarm_item_callback_ids,
-    }
+    return SwarmTestData(
+        swarm_id=swarm.key,
+        batch_item_ids=batch_item_ids,
+        original_task_ids=original_task_ids,
+        swarm_item_callback_ids=swarm_item_callback_ids,
+    )
 
 
-async def seed_task_with_callbacks() -> dict[str, str | list[str]]:
+async def seed_task_with_callbacks() -> CallbackTestData:
     success_callback = TaskSignature(
         task_name="on_success_callback",
         kwargs={"callback_type": "success"},
@@ -132,11 +155,11 @@ async def seed_task_with_callbacks() -> dict[str, str | list[str]]:
     main_task.key = f"{TEST_PREFIX}task_with_callbacks_001"
     await main_task.asave()
 
-    return {
-        "task_id": main_task.key,
-        "success_callback_ids": [success_callback.key],
-        "error_callback_ids": [error_callback.key],
-    }
+    return CallbackTestData(
+        task_id=main_task.key,
+        success_callback_ids=[success_callback.key],
+        error_callback_ids=[error_callback.key],
+    )
 
 
 async def cleanup_test_data(
