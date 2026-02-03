@@ -4,8 +4,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from mageflow.signature.model import TaskSignature
-
 
 class BaseInvoker(ABC):
     @property
