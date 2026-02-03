@@ -70,16 +70,6 @@ class HatchetInvoker(BaseInvoker):
 
             await current_task.remove(with_error=False)
 
-    async def remove_task(
-        self, with_success: bool = True, with_error: bool = True
-    ) -> TaskSignature | None:
-        task_id = self.task_id
-        if task_id:
-            signature = await TaskSignature.get_safe(task_id)
-            if signature:
-                await signature.remove(with_error, with_success)
-        return None
-
     async def should_run_task(self) -> bool:
         task_id = self.task_id
         if task_id:
