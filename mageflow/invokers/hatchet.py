@@ -58,7 +58,7 @@ class HatchetInvoker(BaseInvoker):
             return True
         return False
 
-    async def run_error(self) -> bool:
+    async def task_failed(self):
         error_publish_tasks = []
         task_id = self.task_id
         if task_id:
@@ -66,10 +66,10 @@ class HatchetInvoker(BaseInvoker):
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
-        if error_publish_tasks:
-            await asyncio.gather(*error_publish_tasks)
-            return True
-        return False
+            if error_publish_tasks:
+                await asyncio.gather(*error_publish_tasks)
+
+            await current_task.remove(with_error=False)
 
     async def remove_task(
         self, with_success: bool = True, with_error: bool = True

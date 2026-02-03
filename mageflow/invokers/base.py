@@ -22,7 +22,7 @@ class BaseInvoker(ABC):
         pass
 
     @abc.abstractmethod
-    async def run_error(self) -> bool:
+    async def task_failed(self) -> bool:
         pass
 
     @abc.abstractmethod

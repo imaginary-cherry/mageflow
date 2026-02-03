@@ -168,3 +168,19 @@ async def test_check_normal_task_fails__sanity(
     assert err_msg.startswith(
         error_class_name
     ), f"{err_msg} doesn't start with {error_class_name}"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_retry_normal_tasks__sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    # Act
+    message = ContextMessage(base_data=test_ctx)
+    await retry_once.aio_run_no_wait(message, options=trigger_options)
+    await asyncio.sleep(10)
