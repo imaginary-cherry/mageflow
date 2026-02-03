@@ -29,6 +29,7 @@ from tests.integration.hatchet.models import (
     MessageWithResult,
     CommandMessageWithResult,
     SleepTaskMessage,
+    MageflowTestError,
 )
 
 settings = Dynaconf(
@@ -94,7 +95,7 @@ def chain_callback(msg):
 
 @hatchet.task(name="fail_task", input_validator=ContextMessage)
 def fail_task(msg):
-    raise ValueError("Test exception")
+    raise MageflowTestError("Test exception")
 
 
 @hatchet.durable_task(name="sleep_task", input_validator=SleepTaskMessage)
