@@ -134,6 +134,14 @@ async def retry_once(msg, ctx: Context):
 
 
 @hatchet.task(retries=3, execution_timeout=60)
+@hatchet.with_ctx
+async def normal_retry_once(msg, ctx: Context):
+    if ctx.attempt_number == 1:
+        raise ValueError("Test exception")
+    return msg
+
+
+@hatchet.task(retries=3, execution_timeout=60)
 @hatchet.with_signature
 async def retry_to_failure(msg, signature: TaskSignature):
     await mageflow_config.redis_client.set(
@@ -162,6 +170,7 @@ workflows = [
     return_multiple_values,
     timeout_task,
     retry_once,
+    normal_retry_once,
     retry_to_failure,
     cancel_retry,
 ]
