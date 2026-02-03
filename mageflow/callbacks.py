@@ -63,7 +63,7 @@ def handle_task_callback(
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await invoker.task_success(dumped_results["hatchet_results"])
-                await current_task.done()
+                await signature.done()
                 if wrap_res:
                     return task_results
                 else:
