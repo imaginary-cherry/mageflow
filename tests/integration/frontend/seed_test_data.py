@@ -192,7 +192,7 @@ async def cleanup_all(redis_url: str) -> int:
 )
 @click.option(
     "--redis-url",
-    default="redis://localhost:6379/3",
+    default="redis://localhost:6379/",
     help="Redis URL",
 )
 def main(action: str, redis_url: str):

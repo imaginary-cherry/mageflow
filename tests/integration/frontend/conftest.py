@@ -73,10 +73,10 @@ async def seeded_test_data(redis_client):
     await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
     await cleanup_test_data(redis_client, clean_all=True)
 
-    basic_task_id = await seed_basic_task(redis_client)
-    chain_data = await seed_chain_task(redis_client)
-    swarm_data = await seed_swarm_task(redis_client)
-    callback_data = await seed_task_with_callbacks(redis_client)
+    basic_task_id = await seed_basic_task()
+    chain_data = await seed_chain_task()
+    swarm_data = await seed_swarm_task()
+    callback_data = await seed_task_with_callbacks()
 
     yield SeededTestData(
         basic_task_id=basic_task_id,
