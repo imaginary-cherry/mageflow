@@ -16,11 +16,11 @@ class BaseInvoker(ABC):
         pass
 
     @abc.abstractmethod
-    async def task_success(self, result: Any) -> bool:
+    async def task_success(self, result: Any):
         pass
 
     @abc.abstractmethod
-    async def task_failed(self) -> bool:
+    async def task_failed(self):
         pass
 
     @abc.abstractmethod
