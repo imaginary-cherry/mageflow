@@ -202,7 +202,7 @@ async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
     await task.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, task, base_data=test_ctx, allow_fails=True)
     assert_signature_done(runs, error_callback_signature, base_data=test_ctx)
@@ -249,7 +249,7 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
     await return_multiple_values_sign.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, return_multiple_values_sign, **message.model_dump())
     assert_signature_done(
