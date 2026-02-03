@@ -183,4 +183,4 @@ async def test_retry_normal_tasks__sanity(
     # Act
     message = ContextMessage(base_data=test_ctx)
     await retry_once.aio_run_no_wait(message, options=trigger_options)
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
