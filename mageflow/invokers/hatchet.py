@@ -28,6 +28,13 @@ class HatchetInvoker(BaseInvoker):
     def task_ctx(self) -> dict:
         return self.task_data
 
+    @property
+    def task_id(self) -> str | None:
+        return self.task_data.get(TASK_ID_PARAM_NAME, None)
+
+    def is_vanilla_run(self):
+        return self.task_id
+
     async def start_task(self) -> TaskSignature | None:
         task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
         if task_id:
