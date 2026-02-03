@@ -36,7 +36,7 @@ class HatchetInvoker(BaseInvoker):
         return self.task_id is None
 
     async def start_task(self) -> TaskSignature | None:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             async with TaskSignature.alock_from_key(task_id) as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
@@ -46,7 +46,7 @@ class HatchetInvoker(BaseInvoker):
 
     async def run_success(self, result: Any) -> bool:
         success_publish_tasks = []
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_success_workflows = current_task.activate_success(result)
@@ -60,7 +60,7 @@ class HatchetInvoker(BaseInvoker):
 
     async def run_error(self) -> bool:
         error_publish_tasks = []
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
             task_error_workflows = current_task.activate_error(self.message)
@@ -74,7 +74,7 @@ class HatchetInvoker(BaseInvoker):
     async def remove_task(
         self, with_success: bool = True, with_error: bool = True
     ) -> TaskSignature | None:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             signature = await TaskSignature.get_safe(task_id)
             if signature:
@@ -82,7 +82,7 @@ class HatchetInvoker(BaseInvoker):
         return None
 
     async def should_run_task(self) -> bool:
-        task_id = self.task_data.get(TASK_ID_PARAM_NAME, None)
+        task_id = self.task_id
         if task_id:
             signature = await TaskSignature.get_safe(task_id)
             if signature is None:
