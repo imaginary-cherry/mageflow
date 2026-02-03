@@ -1,12 +1,12 @@
 import asyncio
 
 import pytest
+from hatchet_sdk.clients.rest import V1TaskStatus
 
 import mageflow
 from mageflow.signature.model import TaskSignature
 from mageflow.utils.models import return_value_field
 from tests.integration.hatchet.assertions import (
-    assert_task_done,
     assert_redis_is_clean,
     assert_signature_done,
     get_runs,
@@ -221,10 +221,13 @@ async def test__call_signed_task_with_normal_workflow__check_task_is_done(
     await task1_callback.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(10)
+    await asyncio.sleep(3)
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_task_done(runs, task1_callback, results=message.model_dump())
+    assert len(runs) == 1
+    task_summary = runs[0]
+    assert task_summary.status == V1TaskStatus.COMPLETED
+    assert task_summary.output == message.model_dump()
 
 
 @pytest.mark.asyncio(loop_scope="session")
