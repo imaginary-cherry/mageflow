@@ -25,13 +25,13 @@ from mageflow.swarm.workflows import (
 
 def init_mageflow_hatchet_tasks(hatchet: Hatchet):
     # Chain tasks
-    hatchet_chain_done = hatchet.task(
+    hatchet_chain_done = hatchet.durable_task(
         name=ON_CHAIN_END,
         input_validator=ChainCallbackMessage,
         retries=3,
         execution_timeout=timedelta(minutes=5),
     )
-    hatchet_chain_error = hatchet.task(
+    hatchet_chain_error = hatchet.durable_task(
         name=ON_CHAIN_ERROR,
         input_validator=ChainErrorMessage,
         retries=3,
