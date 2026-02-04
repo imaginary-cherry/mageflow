@@ -74,6 +74,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
     async with SwarmTaskSignature.alock_from_key(
         msg.swarm_task_id, action=SWARM_ACTION_FILL
     ) as swarm_task:
+        invoker = HatchetInvoker.from_no_task(msg, msg.swarm_task_id)
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
             swarm_task = await SwarmTaskSignature.get_safe(msg.swarm_task_id)
@@ -83,9 +84,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
                 )
                 return
             await swarm_task.interrupt()
-            await swarm_task.activate_error(EmptyModel())
-            await swarm_task.remove(with_error=False)
-            await swarm_task.failed()
+            await invoker.task_failed(EmptyModel(), "Swarm failed too much")
             return
 
         num_task_started = await swarm_task.fill_running_tasks()
@@ -99,6 +98,5 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         is_swarm_finished_running = await swarm_task.is_swarm_done()
         if is_swarm_finished_running and not_yet_published:
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
-            await swarm_task.activate_success(msg)
-            await swarm_task.done()
+            await invoker.task_success(EmptyModel())
             ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")
