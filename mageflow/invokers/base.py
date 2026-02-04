@@ -84,13 +84,21 @@ class BaseInvoker(ABC):
     @classmethod
     @abc.abstractmethod
     async def wait_task(
-        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+        cls,
+        task_name: str,
+        msg: BaseModel,
+        validator: type[BaseModel] = None,
+        **request_kwargs,
     ):
         pass
 
     @classmethod
     @abc.abstractmethod
     async def run_task(
-        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+        cls,
+        task_name: str,
+        msg: BaseModel,
+        validator: type[BaseModel] = None,
+        **request_kwargs,
     ):
         pass
