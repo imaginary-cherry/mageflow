@@ -15,13 +15,22 @@ class HatchetInvoker(BaseInvoker):
     # TODO - This should be in init, and the entire class created via factory in mageflow_config
     client: Hatchet = None
 
-    def __init__(self, message: BaseModel, ctx: Context):
+    def __init__(self, message: BaseModel, task_data: dict, workflow_id: Optional[str]):
         self.message = message
-        self.task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
-        self.workflow_id = ctx.workflow_id
+        self.task_data = task_data
+        self.workflow_id = workflow_id
+
+    @classmethod
+    def from_task_data(cls, message: BaseModel, ctx: Context) -> "HatchetInvoker":
+        task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
         hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
         hatchet_ctx_metadata.pop(TASK_DATA_PARAM_NAME, None)
         ctx_additional_metadata.set(hatchet_ctx_metadata)
+        return cls(message, task_data, ctx.workflow_id)
+
+    @classmethod
+    def from_no_task(cls, message: BaseModel, task_data: dict) -> "HatchetInvoker":
+        return cls(message, task_data, None)
 
     @property
     def task_ctx(self) -> dict:

@@ -8,12 +8,13 @@ from pydantic import BaseModel
 
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
+from mageflow.signature.status import SignatureStatus
 
 
 class BaseInvoker(ABC):
-    @property
+    @classmethod
     @abc.abstractmethod
-    def task_ctx(self) -> dict:
+    def from_task_data(cls, *args, **kwargs) -> "BaseInvoker":
         pass
 
     @abc.abstractmethod
