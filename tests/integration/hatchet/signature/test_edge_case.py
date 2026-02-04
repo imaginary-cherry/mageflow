@@ -40,6 +40,7 @@ async def test__timeout_task__call_error_callback(
     error_sign = await mageflow.sign(error_callback)
     timeout_sign = await mageflow.sign(timeout_task, error_callbacks=[error_sign])
     message = ContextMessage(base_data=test_ctx)
+    expected_task_input = message.model_dump(mode="json", exclude_unset=True)
 
     # Act
     await timeout_sign.aio_run_no_wait(message, options=trigger_options)
@@ -47,7 +48,7 @@ async def test__timeout_task__call_error_callback(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_signature_done(runs, error_sign, **message.model_dump(mode="json"))
+    assert_signature_done(runs, error_sign, **expected_task_input)
 
 
 @pytest.mark.asyncio(loop_scope="session")
