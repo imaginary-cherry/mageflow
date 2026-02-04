@@ -184,24 +184,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
             original_task_id=task.key,
         )
 
-        swarm_identifiers = {
-            SWARM_TASK_ID_PARAM_NAME: self.key,
-            SWARM_ITEM_TASK_ID_PARAM_NAME: batch_task.key,
-        }
-        on_success_swarm_item = await TaskSignature.from_task_name(
-            task_name=ON_SWARM_END,
-            kwargs=swarm_identifiers,
-            input_validator=SwarmResultsMessage,
-        )
-        on_error_swarm_item = await TaskSignature.from_task_name(
-            task_name=ON_SWARM_ERROR,
-            kwargs=swarm_identifiers,
-        )
-        task.success_callbacks.append(on_success_swarm_item.key)
-        task.error_callbacks.append(on_error_swarm_item.key)
-        await task.asave()
-        await batch_task.asave()
-        await self.tasks.aappend(batch_task.key)
+        async with self.apipeline():
+            task.signature_container_id = self.key
+            await batch_task.asave()
+            self.tasks.append(batch_task.key)
 
         if close_on_max_task and not self.config.can_add_task(self):
             await self.close_swarm()
