@@ -148,10 +148,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def has_swarm_started(self):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
-    async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
+    async def aio_run_no_wait(
+        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+    ):
         await self.kwargs.aupdate(**msg.model_dump(mode="json", exclude_unset=True))
-        workflow = await self.workflow(use_return_field=False)
-        return await workflow.aio_run_no_wait(msg, **kwargs)
+        workflow = await self.workflow(use_return_field=False, **kwargs)
+        return await workflow.aio_run_no_wait(msg, options)
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         # Use on swarm start task name for wf
