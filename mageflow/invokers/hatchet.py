@@ -29,7 +29,8 @@ class HatchetInvoker(BaseInvoker):
         return cls(message, task_data, ctx.workflow_id)
 
     @classmethod
-    def from_no_task(cls, message: BaseModel, task_data: dict) -> "HatchetInvoker":
+    def from_no_task(cls, message: BaseModel, task_id: str) -> "HatchetInvoker":
+        task_data = {TASK_ID_PARAM_NAME: task_id}
         return cls(message, task_data, None)
 
     async def task_signature(self) -> Optional[TaskSignature]:

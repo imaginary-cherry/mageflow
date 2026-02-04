@@ -7,9 +7,7 @@ from mageflow.signature.consts import TASK_ID_PARAM_NAME
 
 async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
     try:
-        invoker = HatchetInvoker.from_no_task(
-            msg, {TASK_ID_PARAM_NAME: msg.chain_task_id}
-        )
+        invoker = HatchetInvoker.from_no_task(msg, msg.chain_task_id)
         chain_task_signature = await invoker.task_signature()
 
         if chain_task_signature is None:
@@ -29,9 +27,7 @@ async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):
 # This task needs to be added as a workflow
 async def chain_error_task(msg: ChainErrorMessage, ctx: Context):
     try:
-        invoker = HatchetInvoker.from_no_task(
-            msg, {TASK_ID_PARAM_NAME: msg.chain_task_id}
-        )
+        invoker = HatchetInvoker.from_no_task(msg, msg.chain_task_id)
         chain_signature = await invoker.task_signature()
 
         if chain_signature is None:
