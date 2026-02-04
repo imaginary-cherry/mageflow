@@ -26,6 +26,7 @@ from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTy
 from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
 from mageflow.startup import mageflow_config
 from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.hatchet import extract_hatchet_validator
 from mageflow.utils.models import return_value_field
 from mageflow.workflows import MageflowWorkflow
 
@@ -69,10 +70,11 @@ class TaskSignature(AtomicRedisModel):
         error_callbacks: list[TaskIdentifierType | Self] = None,
         **kwargs,
     ) -> Self:
-        return_field_name = return_value_field(task.input_validator)
+        validator = extract_hatchet_validator(task)
+        return_field_name = return_value_field(validator)
         signature = cls(
             task_name=task.name,
-            model_validators=task.input_validator,
+            model_validators=validator,
             return_field_name=return_field_name,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
