@@ -2,6 +2,7 @@ import asyncio
 from typing import Self, Any, Optional, cast
 
 import rapyer
+from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
@@ -39,7 +40,9 @@ class BatchItemTaskSignature(TaskSignature):
     swarm_id: TaskIdentifierType
     original_task_id: TaskIdentifierType
 
-    async def aio_run_no_wait(self, msg: BaseModel, **orig_task_kwargs):
+    async def aio_run_no_wait(
+        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **orig_task_kwargs
+    ):
         async with self.alock() as swarm_item:
             swarm_task = await SwarmTaskSignature.get_safe(self.swarm_id)
             original_task = await TaskSignature.get_safe(self.original_task_id)
@@ -59,7 +62,9 @@ class BatchItemTaskSignature(TaskSignature):
             if self.key not in swarm_task.tasks_left_to_run:
                 await swarm_task.tasks_left_to_run.aappend(self.key)
 
-            return await swarm_task.fill_running_tasks(max_tasks=1, **orig_task_kwargs)
+            return await swarm_task.fill_running_tasks(
+                max_tasks=1, options=options, **orig_task_kwargs
+            )
 
     async def remove_references(self):
         orignal_task = await TaskSignature.get_safe(self.original_task_id)
