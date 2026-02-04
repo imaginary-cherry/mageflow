@@ -26,8 +26,6 @@ from mageflow.signature.status import SignatureStatus
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.consts import (
     BATCH_TASK_NAME_INITIALS,
-    SWARM_TASK_ID_PARAM_NAME,
-    SWARM_ITEM_TASK_ID_PARAM_NAME,
     ON_SWARM_END,
     ON_SWARM_ERROR,
     ON_SWARM_START,
