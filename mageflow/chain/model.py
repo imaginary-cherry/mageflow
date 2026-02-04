@@ -1,10 +1,13 @@
 import asyncio
-from typing import cast
+from typing import cast, Any
 
 import rapyer
-from pydantic import field_validator, Field
+from pydantic import field_validator, Field, BaseModel
 
+from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
+from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.errors import MissingSignatureError
+from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature, TaskIdentifierType
 from mageflow.signature.status import SignatureStatus
@@ -18,11 +21,30 @@ class ChainTaskSignature(ContainerTaskSignature):
     def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_key(item) for item in v]
 
-    def on_sub_task_done(self):
-        pass
+    async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
+        sub_task_idx = self.tasks.index(sub_task.key)
+        # If this is the last task, activate chain success callbacks
+        if sub_task_idx == len(self.tasks) - 1:
+            chain_end_msg = ChainCallbackMessage(
+                chain_results=results, chain_task_id=self.key
+            )
+            await HatchetInvoker.run_task(ON_CHAIN_END, chain_end_msg)
+        else:
+            next_task_key = self.tasks[sub_task_idx + 1]
+            next_task = await rapyer.aget(next_task_key)
+            next_task = cast(TaskSignature, next_task)
+            await next_task.asend_callback(results)
 
-    def on_sub_task_error(self):
-        pass
+    async def on_sub_task_error(
+        self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
+    ):
+        chain_err_msg = ChainErrorMessage(
+            chain_task_id=self.key,
+            error=str(error),
+            original_msg=original_msg.model_dump(mode="json"),
+            error_task_key=sub_task.key,
+        )
+        await HatchetInvoker.run_task(ON_CHAIN_ERROR, chain_err_msg)
 
     async def sub_tasks(self) -> list[TaskSignature]:
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
