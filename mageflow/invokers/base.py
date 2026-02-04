@@ -27,8 +27,16 @@ class BaseInvoker(ABC):
     async def should_run_task(self) -> bool:
         pass
 
+    @classmethod
     @abc.abstractmethod
     async def wait_task(
-        self, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+    ):
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    async def run_task(
+        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
     ):
         pass

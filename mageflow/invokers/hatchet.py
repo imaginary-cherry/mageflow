@@ -84,8 +84,18 @@ class HatchetInvoker(BaseInvoker):
             return False
         return True
 
+    @classmethod
     async def wait_task(
-        self, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
     ):
-        wf = self.client.workflow(name=task_name, input_validator=validator)
+        validator = validator or type(msg)
+        wf = cls.client.workflow(name=task_name, input_validator=validator)
         return await wf.aio_run(msg)
+
+    @classmethod
+    async def run_task(
+        cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+    ):
+        validator = validator or type(msg)
+        wf = cls.client.workflow(name=task_name, input_validator=validator)
+        return await wf.aio_run_no_wait(msg)
