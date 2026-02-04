@@ -32,7 +32,7 @@ from mageflow.swarm.consts import (
     ON_SWARM_ERROR,
     ON_SWARM_START,
 )
-from mageflow.swarm.messages import SwarmResultsMessage, SwarmErrorMessage
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmErrorMessage, SwarmMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
 
@@ -137,10 +137,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
     ):
         swarm_error_msg = SwarmErrorMessage(
-            swarm_task_id=self.key,
-            swarm_item_id=sub_task.key,
-            error=str(error),
-            original_msg=original_msg,
+            swarm_task_id=self.key, swarm_item_id=sub_task.key, error=str(error)
         )
         await HatchetInvoker.run_task(ON_SWARM_ERROR, swarm_error_msg)
 
