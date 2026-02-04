@@ -41,8 +41,11 @@ def handle_task_callback(
                 return {"Error": "Task should have been canceled"}
             is_normal_run = invoker.is_vanilla_run()
             signature = await invoker.start_task()
+
+            # Add params if user requires
             if send_signature:
                 kwargs["signature"] = signature
+
             try:
                 if expected_params == AcceptParams.JUST_MESSAGE:
                     result = await flexible_call(func, message)
