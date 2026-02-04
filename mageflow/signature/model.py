@@ -107,17 +107,6 @@ class TaskSignature(AtomicRedisModel):
         await signature.asave()
         return signature
 
-    async def add_callbacks(
-        self, success: list[Self] = None, errors: list[Self] = None
-    ):
-        if success:
-            success = [self.validate_task_key(s) for s in success]
-        if errors:
-            errors = [self.validate_task_key(e) for e in errors]
-        async with self.apipeline() as signature:
-            await signature.success_callbacks.aextend(success)
-            await signature.error_callbacks.aextend(errors)
-
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
