@@ -57,20 +57,6 @@ class HatchetInvoker(BaseInvoker):
                 return signature
         return None
 
-    async def should_run_task(self) -> bool:
-        task_id = self.task_id
-        if task_id:
-            signature = await TaskSignature.get_safe(task_id)
-            if signature is None:
-                return False
-            should_task_run = await signature.should_run()
-            if should_task_run:
-                return True
-            await signature.task_status.aupdate(last_status=SignatureStatus.ACTIVE)
-            await signature.handle_inactive_task(self.message)
-            return False
-        return True
-
     @classmethod
     async def wait_task(
         cls, task_name: str, msg: BaseModel, validator: type[BaseModel] = None

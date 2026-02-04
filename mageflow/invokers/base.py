@@ -68,9 +68,18 @@ class BaseInvoker(ABC):
             await current_task.failed()
             await current_task.remove(with_error=False)
 
-    @abc.abstractmethod
-    async def should_run_task(self) -> bool:
-        pass
+    async def should_run_task(self, message: BaseModel) -> bool:
+        signature = await self.task_signature()
+        if signature:
+            if signature is None:
+                return False
+            should_task_run = await signature.should_run()
+            if should_task_run:
+                return True
+            await signature.task_status.aupdate(last_status=SignatureStatus.ACTIVE)
+            await signature.handle_inactive_task(message)
+            return False
+        return True
 
     @classmethod
     @abc.abstractmethod
