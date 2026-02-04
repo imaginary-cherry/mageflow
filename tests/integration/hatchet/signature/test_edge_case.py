@@ -262,6 +262,6 @@ async def test__suspended_task_with_retries__does_not_retry(
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
     task_summary = wf_by_task_id[retry_task_sign.key]
-    assert task_summary.retry_count == 0, (
-        f"Expected retry_count=0, got {task_summary.retry_count}"
-    )
+    assert (
+        task_summary.retry_count == 0
+    ), f"Expected retry_count=0, got {task_summary.retry_count}"
