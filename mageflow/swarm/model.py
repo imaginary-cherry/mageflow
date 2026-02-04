@@ -119,6 +119,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
         original_keys = [item.original_task_id for item in batch_items]
         return cast(list[TaskSignature], await rapyer.afind(*original_keys))
 
+    def on_sub_task_done(self):
+        pass
+
+    def on_sub_task_error(self):
+        pass
+
     @property
     def has_swarm_started(self):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks

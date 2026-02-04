@@ -40,6 +40,7 @@ class TaskSignature(AtomicRedisModel):
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
     task_identifiers: RedisDict[Any] = Field(default_factory=dict)
+    signature_container_id: Optional[str] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 

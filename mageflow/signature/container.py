@@ -16,3 +16,11 @@ class ContainerTaskSignature(TaskSignature, ABC):
         await asyncio.gather(
             *[task.remove() for task in sub_tasks], return_exceptions=True
         )
+
+    @abc.abstractmethod
+    async def on_sub_task_error(self):
+        pass
+
+    @abc.abstractmethod
+    async def on_sub_task_done(self):
+        pass
