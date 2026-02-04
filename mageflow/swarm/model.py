@@ -254,8 +254,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 ]
                 original_tasks = await rapyer.afind(*original_task_ids)
                 original_tasks = cast(list[TaskSignature], original_tasks)
+                full_kwargs = swarm_task.kwargs | pub_kwargs
                 publish_coroutine = [
-                    next_task.aio_run_no_wait(EmptyModel(), **pub_kwargs)
+                    next_task.aio_run_no_wait(EmptyModel(), **full_kwargs)
                     for next_task in original_tasks
                 ]
                 await asyncio.gather(*publish_coroutine)

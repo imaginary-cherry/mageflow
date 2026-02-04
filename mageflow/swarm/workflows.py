@@ -33,9 +33,6 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
         tasks = cast(list[BatchItemTaskSignature], tasks)
         original_tasks = await rapyer.afind(*[task.original_task_id for task in tasks])
         original_tasks = cast(list[TaskSignature], original_tasks)
-        async with swarm_task.apipeline():
-            for task in original_tasks:
-                await task.aupdate_real_task_kwargs(**swarm_task.kwargs)
         await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception:
