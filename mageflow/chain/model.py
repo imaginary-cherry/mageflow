@@ -33,7 +33,7 @@ class ChainTaskSignature(ContainerTaskSignature):
             next_task_key = self.tasks[sub_task_idx + 1]
             next_task = await rapyer.aget(next_task_key)
             next_task = cast(TaskSignature, next_task)
-            await next_task.asend_callback(results)
+            await next_task.asend_callback(results, **self.kwargs)
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
