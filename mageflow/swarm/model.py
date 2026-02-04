@@ -148,7 +148,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
     ):
         await self.kwargs.aupdate(**msg.model_dump(mode="json", exclude_unset=True))
         start_swarm_msg = SwarmMessage(swarm_task_id=self.key)
-        await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, options=options)
+        params = dict(options=options) if options else {}
+        await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, **params)
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
