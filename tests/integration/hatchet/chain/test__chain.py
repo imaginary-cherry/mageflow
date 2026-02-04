@@ -53,7 +53,7 @@ async def test_chain_integration(
     await chain_signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
 
     assert_chain_done(runs, chain_signature, chain_tasks + [success_chain_signature])
@@ -92,7 +92,7 @@ async def test_chain_fail(
     await chain_signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
     runs_task_ids = [wf.task_id for wf in runs]
 
