@@ -11,6 +11,7 @@ async def chain(
     name: str = None,
     error: TaskInputType = None,
     success: TaskInputType = None,
+    **kwargs,
 ) -> ChainTaskSignature:
     if len(tasks) < 2:
         raise ValueError(
@@ -26,6 +27,7 @@ async def chain(
         success_callbacks=[success] if success else [],
         error_callbacks=[error] if error else [],
         tasks=tasks,
+        kwargs=kwargs,
     )
     async with first_task.apipeline():
         for task in tasks:
