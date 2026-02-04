@@ -1,14 +1,11 @@
-import asyncio
-from typing import Any, cast
+from typing import Optional
 
-import rapyer
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
 
 from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.workflows import TASK_DATA_PARAM_NAME
@@ -30,6 +27,11 @@ class HatchetInvoker(BaseInvoker):
     def task_ctx(self) -> dict:
         return self.task_data
 
+    async def task_signature(self) -> Optional[TaskSignature]:
+        if self.task_id:
+            return await TaskSignature.get_safe(self.task_id)
+        return None
+
     @property
     def task_id(self) -> str | None:
         return self.task_data.get(TASK_ID_PARAM_NAME, None)
@@ -45,53 +47,6 @@ class HatchetInvoker(BaseInvoker):
                 await signature.task_status.aupdate(worker_task_id=self.workflow_id)
                 return signature
         return None
-
-    async def task_success(self, result: Any):
-        success_publish_tasks = []
-        task_id = self.task_id
-        if task_id:
-            current_task = await TaskSignature.get_safe(task_id)
-            container_id = current_task.signature_container_id
-            if container_id:
-                container_signature = await rapyer.aget(container_id)
-                container_signature = cast(ContainerTaskSignature, container_signature)
-                success_publish_tasks.append(
-                    container_signature.on_sub_task_done(current_task, result)
-                )
-
-            task_success_workflows = current_task.activate_success(result)
-            success_publish_tasks.append(asyncio.create_task(task_success_workflows))
-
-            if success_publish_tasks:
-                await asyncio.gather(*success_publish_tasks)
-
-            await current_task.done()
-            await current_task.remove(with_success=False)
-
-    async def task_failed(self, error: Exception):
-        task_id = self.task_id
-        if task_id:
-            error_publish_tasks = []
-
-            current_task = await TaskSignature.get_safe(task_id)
-            container_id = current_task.signature_container_id
-            if container_id:
-                container_signature = await rapyer.aget(container_id)
-                container_signature = cast(ContainerTaskSignature, container_signature)
-                error_publish_tasks.append(
-                    container_signature.on_sub_task_error(
-                        current_task, error, self.message
-                    )
-                )
-
-            task_error_workflows = current_task.activate_error(self.message)
-            error_publish_tasks.append(asyncio.create_task(task_error_workflows))
-
-            if error_publish_tasks:
-                await asyncio.gather(*error_publish_tasks)
-
-            await current_task.failed()
-            await current_task.remove(with_error=False)
 
     async def should_run_task(self) -> bool:
         task_id = self.task_id
