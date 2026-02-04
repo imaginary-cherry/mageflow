@@ -76,13 +76,15 @@ async def test_chain_fail(
         hatchet_client_init.hatchet,
     )
     message = ContextMessage(base_data=test_ctx)
+    base_data = {"fail": True}
 
     chain_success_error_callback = await mageflow.sign(error_callback)
     success_chain_signature = await mageflow.sign(chain_callback)
+    fail_sign = await mageflow.sign(fail_task, base_data=base_data)
 
     # Act
     chain_signature = await mageflow.chain(
-        [sign_task1, fail_task, task3],
+        [sign_task1, fail_sign, task3],
         success=success_chain_signature,
         error=chain_success_error_callback,
     )
@@ -98,7 +100,7 @@ async def test_chain_fail(
     assert task3.id not in runs_task_ids
 
     # Check that callback was called
-    assert_signature_done(runs, chain_success_error_callback)
+    assert_signature_done(runs, chain_success_error_callback, base_data=base_data)
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
