@@ -146,7 +146,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
     async def aio_run_no_wait(
         self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
     ):
-        await self.kwargs.aupdate(**msg.model_dump(mode="json", exclude_unset=True))
+        dump = msg.model_dump(mode="json", exclude_unset=True)
+        dump |= kwargs
+        await self.kwargs.aupdate(**dump)
         start_swarm_msg = SwarmMessage(swarm_task_id=self.key)
         params = dict(options=options) if options else {}
         await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, **params)
