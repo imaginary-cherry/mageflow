@@ -39,11 +39,11 @@ def handle_task_callback(
                 await asyncio.sleep(10)
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
+            is_normal_run = invoker.is_vanilla_run()
+            signature = await invoker.start_task()
+            if send_signature:
+                kwargs["signature"] = signature
             try:
-                is_normal_run = invoker.is_vanilla_run()
-                signature = await invoker.start_task()
-                if send_signature:
-                    kwargs["signature"] = signature
                 if expected_params == AcceptParams.JUST_MESSAGE:
                     result = await flexible_call(func, message)
                 elif expected_params == AcceptParams.NO_CTX:
