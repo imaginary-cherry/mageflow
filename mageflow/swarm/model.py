@@ -14,6 +14,7 @@ from mageflow.errors import (
     TooManyTasksError,
     SwarmIsCanceledError,
 )
+from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import REMOVED_TASK_TTL
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.creator import (
@@ -31,7 +32,7 @@ from mageflow.swarm.consts import (
     ON_SWARM_ERROR,
     ON_SWARM_START,
 )
-from mageflow.swarm.messages import SwarmResultsMessage
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmErrorMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
 
@@ -124,11 +125,24 @@ class SwarmTaskSignature(ContainerTaskSignature):
         original_keys = [item.original_task_id for item in batch_items]
         return cast(list[TaskSignature], await rapyer.afind(*original_keys))
 
-    def on_sub_task_done(self):
-        pass
+    async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
+        swarm_done_msg = SwarmResultsMessage(
+            swarm_task_id=self.key,
+            swarm_item_id=sub_task.key,
+            mageflow_results=results,
+        )
+        await HatchetInvoker.run_task(ON_SWARM_END, swarm_done_msg)
 
-    def on_sub_task_error(self):
-        pass
+    async def on_sub_task_error(
+        self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
+    ):
+        swarm_error_msg = SwarmErrorMessage(
+            swarm_task_id=self.key,
+            swarm_item_id=sub_task.key,
+            error=str(error),
+            original_msg=original_msg,
+        )
+        await HatchetInvoker.run_task(ON_SWARM_ERROR, swarm_error_msg)
 
     @property
     def has_swarm_started(self):
