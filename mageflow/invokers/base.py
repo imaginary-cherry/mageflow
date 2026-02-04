@@ -20,7 +20,7 @@ class BaseInvoker(ABC):
         pass
 
     @abc.abstractmethod
-    async def task_failed(self):
+    async def task_failed(self, error: Exception):
         pass
 
     @abc.abstractmethod

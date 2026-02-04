@@ -57,7 +57,7 @@ def handle_task_callback(
                 if is_normal_run:
                     raise
                 if not task_model.should_retry(ctx.attempt_number, e):
-                    await invoker.task_failed()
+                    await invoker.task_failed(e)
                     await signature.failed()
                 raise
             else:

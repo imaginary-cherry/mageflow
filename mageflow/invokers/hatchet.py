@@ -55,7 +55,9 @@ class HatchetInvoker(BaseInvoker):
             if container_id:
                 container_signature = await rapyer.aget(container_id)
                 container_signature = cast(ContainerTaskSignature, container_signature)
-                success_publish_tasks.append(container_signature.on_sub_task_done())
+                success_publish_tasks.append(
+                    container_signature.on_sub_task_done(current_task, result)
+                )
 
             task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
@@ -65,7 +67,7 @@ class HatchetInvoker(BaseInvoker):
 
             await current_task.remove(with_success=False)
 
-    async def task_failed(self):
+    async def task_failed(self, error: Exception):
         task_id = self.task_id
         if task_id:
             error_publish_tasks = []
@@ -75,7 +77,11 @@ class HatchetInvoker(BaseInvoker):
             if container_id:
                 container_signature = await rapyer.aget(container_id)
                 container_signature = cast(ContainerTaskSignature, container_signature)
-                error_publish_tasks.append(container_signature.on_sub_task_error())
+                error_publish_tasks.append(
+                    container_signature.on_sub_task_error(
+                        current_task, error, self.message
+                    )
+                )
 
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
