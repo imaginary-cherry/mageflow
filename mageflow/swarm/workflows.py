@@ -17,10 +17,10 @@ from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
 from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
 
 
-async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
+async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
     try:
         ctx.log(f"Swarm task started {msg}")
-        swarm_task_id = msg.model_dump()[SWARM_TASK_ID_PARAM_NAME]
+        swarm_task_id = msg.swarm_task_id
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
         if swarm_task.has_swarm_started:
             ctx.log(f"Swarm task started but already running {msg}")
@@ -36,7 +36,7 @@ async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
         async with swarm_task.apipeline():
             for task in original_tasks:
                 await task.aupdate_real_task_kwargs(**swarm_task.kwargs)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg, validator=SwarmMessage)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception:
         ctx.log(f"MAJOR - Error in swarm start tasks")
@@ -60,7 +60,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
 
         # Publish next tasks
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg, validator=SwarmMessage)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
@@ -81,7 +81,7 @@ async def swarm_item_failed(msg: EmptyModel, ctx: Context):
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_key)
         await swarm_task.task_failed(swarm_item_key)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg, validator=SwarmMessage)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
