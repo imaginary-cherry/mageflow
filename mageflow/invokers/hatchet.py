@@ -1,12 +1,14 @@
 import asyncio
-from typing import Any
+from typing import Any, cast
 
+import rapyer
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
 
 from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.workflows import TASK_DATA_PARAM_NAME
@@ -49,6 +51,12 @@ class HatchetInvoker(BaseInvoker):
         task_id = self.task_id
         if task_id:
             current_task = await TaskSignature.get_safe(task_id)
+            container_id = current_task.signature_container_id
+            if container_id:
+                container_signature = await rapyer.aget(container_id)
+                container_signature = cast(ContainerTaskSignature, container_signature)
+                success_publish_tasks.append(container_signature.on_sub_task_done())
+
             task_success_workflows = current_task.activate_success(result)
             success_publish_tasks.append(asyncio.create_task(task_success_workflows))
 
@@ -58,10 +66,17 @@ class HatchetInvoker(BaseInvoker):
             await current_task.remove(with_success=False)
 
     async def task_failed(self):
-        error_publish_tasks = []
         task_id = self.task_id
         if task_id:
+            error_publish_tasks = []
+
             current_task = await TaskSignature.get_safe(task_id)
+            container_id = current_task.signature_container_id
+            if container_id:
+                container_signature = await rapyer.aget(container_id)
+                container_signature = cast(ContainerTaskSignature, container_signature)
+                error_publish_tasks.append(container_signature.on_sub_task_error())
+
             task_error_workflows = current_task.activate_error(self.message)
             error_publish_tasks.append(asyncio.create_task(task_error_workflows))
 
