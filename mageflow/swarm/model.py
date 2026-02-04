@@ -57,7 +57,7 @@ class BatchItemTaskSignature(TaskSignature):
             kwargs = deep_merge(kwargs, swarm_task.kwargs.clone())
             kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
             # For tasks are just represent larger tasks (like chain)
-            await original_task.aupdate_real_task_kwargs(**kwargs)
+            await original_task.kwargs.aupdate(**kwargs)
             if self.key not in swarm_task.tasks_left_to_run:
                 await swarm_task.tasks_left_to_run.aappend(self.key)
 

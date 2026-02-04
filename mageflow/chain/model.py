@@ -63,12 +63,6 @@ class ChainTaskSignature(ContainerTaskSignature):
         full_kwargs = self.kwargs | kwargs
         return await super().aio_run_no_wait(msg, options, **full_kwargs)
 
-    async def aupdate_real_task_kwargs(self, **kwargs):
-        first_task = await rapyer.aget(self.tasks[0])
-        if not isinstance(first_task, TaskSignature):
-            raise RuntimeError(f"First task from chain {self.key} must be a signature")
-        return await first_task.aupdate_real_task_kwargs(**kwargs)
-
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
             TaskSignature.safe_change_status(task, status) for task in self.tasks
