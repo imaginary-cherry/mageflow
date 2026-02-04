@@ -32,10 +32,6 @@ class HatchetInvoker(BaseInvoker):
     def from_no_task(cls, message: BaseModel, task_data: dict) -> "HatchetInvoker":
         return cls(message, task_data, None)
 
-    @property
-    def task_ctx(self) -> dict:
-        return self.task_data
-
     async def task_signature(self) -> Optional[TaskSignature]:
         if self.task_id:
             return await TaskSignature.get_safe(self.task_id)
