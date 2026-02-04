@@ -209,30 +209,91 @@ T = TypeVar("T")
 
 @overload
 def Mageflow(
-    hatchet_client: Hatchet, redis_client: Redis | str = None
+    hatchet_client: Hatchet,
+    redis_client: Redis | str = None,
+    param_config: AcceptParams = AcceptParams.NO_CTX,
 ) -> HatchetMageflow: ...
+
+
+@overload
+def Mageflow(
+    taskiq_broker: Any,
+    redis_client: Redis | str = None,
+    param_config: AcceptParams = AcceptParams.NO_CTX,
+) -> Any: ...
 
 
 def Mageflow(
     hatchet_client: T = None,
+    taskiq_broker: Any = None,
     redis_client: Redis | str = None,
     param_config: AcceptParams = AcceptParams.NO_CTX,
 ) -> T:
-    if hatchet_client is None:
-        hatchet_client = Hatchet()
+    """
+    Create a Mageflow client for the specified backend.
 
-    # Create a hatchet client with empty namespace for creating wf
-    config = hatchet_client._client.config.model_copy(deep=True)
-    config.namespace = ""
-    hatchet_caller = Hatchet(config=config, debug=hatchet_client._client.debug)
-    mageflow_config.hatchet_client = hatchet_caller
-    # TODO - we should get rid of the hatchet caller, just use a unify namespace, this is hatchet pattern, use it
-    HatchetInvoker.client = hatchet_client
+    This factory function is the ONLY place where backend type is determined.
+    All other code uses the configured backend without type checking.
 
+    Usage:
+        # With Hatchet
+        from hatchet_sdk import Hatchet
+        mage = Mageflow(hatchet_client=Hatchet())
+
+        # With TaskIQ
+        from taskiq_redis import ListQueueBroker
+        mage = Mageflow(taskiq_broker=ListQueueBroker(...))
+
+    Args:
+        hatchet_client: Hatchet client instance
+        taskiq_broker: TaskIQ broker instance
+        redis_client: Redis client or URL for state management
+        param_config: Default parameter configuration for tasks
+
+    Returns:
+        HatchetMageflow or TaskIQMageflow depending on which client was passed
+    """
+    from mageflow.backends.protocol import BackendType
+
+    # Configure Redis (common to all backends)
     if redis_client is None:
         redis_url = os.getenv("REDIS_URL")
+        if redis_url is None:
+            raise ValueError(
+                "redis_client must be provided or REDIS_URL environment variable must be set"
+            )
         redis_client = redis.asyncio.from_url(redis_url, decode_responses=True)
     if isinstance(redis_client, str):
         redis_client = redis.asyncio.from_url(redis_client, decode_responses=True)
     mageflow_config.redis_client = redis_client
-    return HatchetMageflow(hatchet_client, redis_client, param_config)
+
+    # =========================================================================
+    # BACKEND TYPE DETECTION - The ONLY place this happens
+    # =========================================================================
+
+    if taskiq_broker is not None:
+        # TaskIQ backend
+        from mageflow.backends.taskiq_client import TaskIQMageflow
+
+        mageflow_config.backend_type = BackendType.TASKIQ
+
+        client = TaskIQMageflow(taskiq_broker, redis_client, param_config)
+        mageflow_config.task_trigger = client._task_trigger
+
+        return client
+
+    else:
+        # Hatchet backend (default)
+        if hatchet_client is None:
+            hatchet_client = Hatchet()
+
+        mageflow_config.backend_type = BackendType.HATCHET
+
+        # Create a hatchet client with empty namespace for creating workflows
+        config = hatchet_client._client.config.model_copy(deep=True)
+        config.namespace = ""
+        hatchet_caller = Hatchet(config=config, debug=hatchet_client._client.debug)
+        mageflow_config.hatchet_client = hatchet_caller
+        HatchetInvoker.client = hatchet_client
+
+        return HatchetMageflow(hatchet_client, redis_client, param_config)

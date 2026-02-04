@@ -1,12 +1,14 @@
+from typing import Any
+
 import rapyer
-from hatchet_sdk import Hatchet
-from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 from redis.asyncio.client import Redis
 
+from mageflow.backends.protocol import BackendType
 from mageflow.task.model import HatchetTaskModel
 
-REGISTERED_TASKS: list[tuple[Standalone, str]] = []
+# Registry for decorated tasks: (task_object, mageflow_task_name)
+REGISTERED_TASKS: list[tuple[Any, str]] = []
 
 
 class ConfigModel(BaseModel):
@@ -15,7 +17,16 @@ class ConfigModel(BaseModel):
 
 
 class MageFlowConfigModel(ConfigModel):
-    hatchet_client: Hatchet | None = None
+    # Backend type (hatchet or taskiq)
+    backend_type: str | None = None
+
+    # Hatchet-specific
+    hatchet_client: Any | None = None  # Hatchet client for workflow creation
+
+    # TaskIQ-specific
+    task_trigger: Any | None = None  # TaskIQTaskTrigger instance
+
+    # Common
     redis_client: Redis | None = None
 
 
@@ -47,15 +58,30 @@ async def update_register_signature_models():
 
 
 async def register_workflows():
+    """Register decorated tasks in Redis for runtime lookup."""
     for reg_task in REGISTERED_TASKS:
-        workflow, mageflow_task_name = reg_task
-        hatchet_task = HatchetTaskModel(
+        task_obj, mageflow_task_name = reg_task
+
+        # Get task metadata (works for both Hatchet and TaskIQ)
+        task_name = getattr(task_obj, "name", mageflow_task_name)
+        input_validator = getattr(task_obj, "input_validator", None)
+
+        # Get retries - location varies by backend
+        retries = None
+        if hasattr(task_obj, "tasks") and task_obj.tasks:
+            # Hatchet pattern: workflow.tasks[0].retries
+            retries = getattr(task_obj.tasks[0], "retries", None)
+        elif hasattr(task_obj, "retries"):
+            # Direct attribute
+            retries = task_obj.retries
+
+        task_model = HatchetTaskModel(
             mageflow_task_name=mageflow_task_name,
-            task_name=workflow.name,
-            input_validator=workflow.input_validator,
-            retries=workflow.tasks[0].retries,
+            task_name=task_name,
+            input_validator=input_validator,
+            retries=retries,
         )
-        await hatchet_task.asave()
+        await task_model.asave()
 
 
 async def lifespan_initialize():

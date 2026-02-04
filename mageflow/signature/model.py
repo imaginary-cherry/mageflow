@@ -4,8 +4,6 @@ from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
-from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Workflow
 from pydantic import (
     BaseModel,
     field_validator,
@@ -28,6 +26,11 @@ from mageflow.startup import mageflow_config
 from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.models import return_value_field
 from mageflow.workflows import MageflowWorkflow
+
+
+class EmptyMessage(BaseModel):
+    """Empty message model for use when no input is needed."""
+    pass
 
 
 class TaskSignature(AtomicRedisModel):
@@ -118,21 +121,41 @@ class TaskSignature(AtomicRedisModel):
             await signature.error_callbacks.aextend(errors)
 
     async def workflow(self, use_return_field: bool = True, **task_additional_params):
+        """
+        Get a task trigger wrapper for this signature.
+
+        Returns an object with aio_run_no_wait() method that works
+        regardless of which backend (Hatchet, TaskIQ) is configured.
+        """
+        from mageflow.backends.trigger import TaskTriggerWrapper
+        from mageflow.backends.protocol import BackendType
+
         total_kwargs = self.kwargs | task_additional_params
         task_def = await HatchetTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
         return_field = self.return_field_name if use_return_field else None
 
-        workflow = mageflow_config.hatchet_client.workflow(
-            name=task, input_validator=self.model_validators
-        )
-        mageflow_wf = MageflowWorkflow(
-            workflow,
-            workflow_params=total_kwargs,
-            return_value_field=return_field,
+        # For Hatchet, use the existing MageflowWorkflow for full compatibility
+        if mageflow_config.backend_type == BackendType.HATCHET:
+            workflow = mageflow_config.hatchet_client.workflow(
+                name=task, input_validator=self.model_validators
+            )
+            mageflow_wf = MageflowWorkflow(
+                workflow,
+                workflow_params=total_kwargs,
+                return_value_field=return_field,
+                task_ctx=self.task_ctx(),
+            )
+            return mageflow_wf
+
+        # For other backends, use the unified trigger wrapper
+        return TaskTriggerWrapper(
+            task_name=task,
             task_ctx=self.task_ctx(),
+            input_validator=self.model_validators,
+            workflow_params=total_kwargs,
+            return_field_name=return_field,
         )
-        return mageflow_wf
 
     def task_ctx(self) -> dict:
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
@@ -143,7 +166,7 @@ class TaskSignature(AtomicRedisModel):
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
-    ) -> list[Workflow]:
+    ) -> list[Any]:
         callback_ids = []
         if with_success:
             callback_ids.extend(self.success_callbacks)
@@ -254,7 +277,7 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.aio_run_no_wait(EmptyModel())
+            await self.aio_run_no_wait(EmptyMessage())
         else:
             await self.change_status(last_status)
 
