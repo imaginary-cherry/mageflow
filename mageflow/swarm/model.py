@@ -149,21 +149,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
         self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
     ):
         await self.kwargs.aupdate(**msg.model_dump(mode="json", exclude_unset=True))
-        workflow = await self.workflow(use_return_field=False, **kwargs)
-        return await workflow.aio_run_no_wait(msg, options)
-
-    async def workflow(self, use_return_field: bool = True, **task_additional_params):
-        # Use on swarm start task name for wf
-        task_name = self.task_name
-        self.task_name = ON_SWARM_START
-        additional_swarm_params = {SWARM_TASK_ID_PARAM_NAME: self.key}
-        workflow = await super().workflow(
-            **task_additional_params,
-            **additional_swarm_params,
-            use_return_field=use_return_field,
-        )
-        self.task_name = task_name
-        return workflow
+        start_swarm_msg = SwarmMessage(swarm_task_id=self.key)
+        await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, options=options)
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
