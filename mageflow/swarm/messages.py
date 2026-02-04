@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -13,3 +13,7 @@ class SwarmCallbackMessage(SwarmMessage):
 
 class SwarmResultsMessage(SwarmCallbackMessage):
     mageflow_results: Any
+
+
+class SwarmErrorMessage(SwarmCallbackMessage):
+    error: Optional[str] = None
