@@ -33,6 +33,7 @@ async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
         tasks = cast(list[BatchItemTaskSignature], tasks)
         original_tasks = await rapyer.afind(*[task.original_task_id for task in tasks])
         original_tasks = cast(list[TaskSignature], original_tasks)
+        # TODO - should be removed once the trigger on the next task will be fixed (the callback should not be stored in the specific signature but in swarm, and it should trigger with kwargs)
         async with swarm_task.apipeline():
             for task in original_tasks:
                 await task.aupdate_real_task_kwargs(**swarm_task.kwargs)
