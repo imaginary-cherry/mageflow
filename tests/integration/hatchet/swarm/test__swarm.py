@@ -66,7 +66,7 @@ async def test_swarm_with_three_tasks_integration_sanity(
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
 
     # Wait for all tasks to complete
-    await asyncio.sleep(1500)
+    await asyncio.sleep(15)
 
     # Assert
     # Check that all subtasks were called by checking Hatchet runs
