@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
+from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
 from pydantic import (
@@ -127,9 +128,15 @@ class TaskSignature(AtomicRedisModel):
     def task_ctx(self) -> dict:
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
 
-    async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
-        workflow = await self.workflow(use_return_field=False)
-        return await workflow.aio_run_no_wait(msg, **kwargs)
+    async def asend_callback(self, results: Any, **kwargs):
+        wf = await self.workflow(**kwargs)
+        return await wf.aio_run_no_wait(results)
+
+    async def aio_run_no_wait(
+        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+    ):
+        workflow = await self.workflow(use_return_field=False, **kwargs)
+        return await workflow.aio_run_no_wait(msg, options)
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
