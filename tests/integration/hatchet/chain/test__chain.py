@@ -35,6 +35,7 @@ async def test_chain_integration(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
+    additional_text_ctx = {"more_data": True}
     message = ContextMessage(base_data=test_ctx)
 
     signature2 = await mageflow.sign(task2, success_callbacks=[sign_callback1])
@@ -47,6 +48,7 @@ async def test_chain_integration(
     chain_signature = await mageflow.chain(
         [sign_task1, signature2.key, task3],
         success=success_chain_signature,
+        test_ctx=additional_text_ctx,
     )
     chain_tasks = await TaskSignature.afind()
 
@@ -56,7 +58,12 @@ async def test_chain_integration(
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
 
-    assert_chain_done(runs, chain_signature, chain_tasks + [success_chain_signature])
+    assert_chain_done(
+        runs,
+        chain_signature,
+        chain_tasks + [success_chain_signature],
+        test_ctx=additional_text_ctx,
+    )
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
