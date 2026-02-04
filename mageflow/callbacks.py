@@ -58,7 +58,6 @@ def handle_task_callback(
                     raise
                 if not task_model.should_retry(ctx.attempt_number, e):
                     await invoker.task_failed(e)
-                    await signature.failed()
                 raise
             else:
                 if is_normal_run:
@@ -66,7 +65,6 @@ def handle_task_callback(
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await invoker.task_success(dumped_results["hatchet_results"])
-                await signature.done()
                 if wrap_res:
                     return task_results
                 else:

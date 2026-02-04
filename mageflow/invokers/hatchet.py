@@ -65,6 +65,7 @@ class HatchetInvoker(BaseInvoker):
             if success_publish_tasks:
                 await asyncio.gather(*success_publish_tasks)
 
+            await current_task.done()
             await current_task.remove(with_success=False)
 
     async def task_failed(self, error: Exception):
@@ -89,6 +90,7 @@ class HatchetInvoker(BaseInvoker):
             if error_publish_tasks:
                 await asyncio.gather(*error_publish_tasks)
 
+            await current_task.failed()
             await current_task.remove(with_error=False)
 
     async def should_run_task(self) -> bool:
