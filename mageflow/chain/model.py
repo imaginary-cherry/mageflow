@@ -2,6 +2,7 @@ import asyncio
 from typing import cast, Any
 
 import rapyer
+from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from pydantic import field_validator, Field, BaseModel
 
 from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
@@ -55,6 +56,12 @@ class ChainTaskSignature(ContainerTaskSignature):
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
         return await first_task.workflow(**task_additional_params)
+
+    async def aio_run_no_wait(
+        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+    ):
+        full_kwargs = self.kwargs | kwargs
+        return await super().aio_run_no_wait(msg, options, **full_kwargs)
 
     async def aupdate_real_task_kwargs(self, **kwargs):
         first_task = await rapyer.aget(self.tasks[0])
