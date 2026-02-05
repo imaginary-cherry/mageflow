@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1]
+
+### 🐛 Fixed
+- **Native workflow execution**: Fixed some bugs that prevented running tasks natively (no mageflow support)
+
+
 ## [0.1.0]
 
 ### ✨ Added
