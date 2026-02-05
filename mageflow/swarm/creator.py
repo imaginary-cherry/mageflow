@@ -3,10 +3,7 @@ import uuid
 
 import rapyer
 
-from mageflow.signature.creator import (
-    TaskSignatureConvertible,
-    TaskSignatureOptions,
-)
+from mageflow.signature.creator import TaskSignatureConvertible, TaskSignatureOptions
 from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.state import PublishState
 from mageflow.typing_support import Unpack
