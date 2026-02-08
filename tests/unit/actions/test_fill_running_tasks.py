@@ -35,17 +35,12 @@ async def test_fill_running_tasks_sanity(
     async with swarm_signature.alock() as locked_swarm:
         await locked_swarm.aupdate(current_running_tasks=current_running)
 
-    # Add tasks to swarm to create BatchItemTaskSignatures using list comprehension
-    batch_tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
+    # Add tasks to swarm using list comprehension
+    tasks = await swarm_signature.add_tasks(original_tasks)
 
-    # Populate tasks_left_to_run with batch task IDs using aextend
-    tasks_to_queue = batch_tasks[:num_tasks_left]
-    task_keys_to_queue = [task.key for task in tasks_to_queue]
-    await swarm_signature.tasks_left_to_run.aextend(task_keys_to_queue)
-    original_tasks_in_queue = [task.original_task_id for task in tasks_to_queue]
+    # Clear auto-populated tasks_left_to_run and re-populate with desired subset
+    tasks_to_queue = tasks[:num_tasks_left]
+    tasks_in_queue = [task.key for task in tasks_to_queue]
 
     # Act
     # Track which instances the method was called on
@@ -67,7 +62,7 @@ async def test_fill_running_tasks_sanity(
     # Check all IDs are from our expected tasks (tasks that were queued)
     for task_id in called_task_ids:
         assert (
-            task_id in original_tasks_in_queue
+            task_id in tasks_in_queue
         ), f"Unexpected task ID: {task_id} not in queued tasks"
 
     # Check for duplicates
