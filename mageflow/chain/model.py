@@ -22,6 +22,10 @@ class ChainTaskSignature(ContainerTaskSignature):
     def validate_tasks(cls, v: list[TaskSignature]):
         return [cls.validate_task_key(item) for item in v]
 
+    @property
+    def task_ids(self):
+        return self.tasks
+
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
         sub_task_idx = self.tasks.index(sub_task.key)
         # If this is the last task, activate chain success callbacks

@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.visualizer.models import (
     BatchTasksRequest,
     RootTasksResponse,
@@ -32,9 +32,8 @@ async def fetch_all_tasks() -> dict:
     base_tasks = await TaskSignature.afind()
     chains = await ChainTaskSignature.afind()
     swarms = await SwarmTaskSignature.afind()
-    batch_items = await BatchItemTaskSignature.afind()
 
-    all_tasks = list(base_tasks) + list(chains) + list(swarms) + list(batch_items)
+    all_tasks = list(base_tasks) + list(chains) + list(swarms)
     return {task.key: task for task in all_tasks}
 
 
@@ -42,27 +41,18 @@ async def fetch_root_tasks() -> dict:
     base_tasks = list(await TaskSignature.afind())
     chains = list(await ChainTaskSignature.afind())
     swarms = list(await SwarmTaskSignature.afind())
-    batch_items = list(await BatchItemTaskSignature.afind())
 
     chain_children = {child_id for chain in chains for child_id in chain.tasks}
-    batch_item_ids = {batch_item.key for batch_item in batch_items}
-    original_linked_tasks = {bi.original_task_id for bi in batch_items}
-    original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
+    swarm_linked_tasks = {sub_task for swarm in swarms for sub_task in swarm}
 
-    all_tasks = base_tasks + chains + swarms + batch_items
+    all_tasks = base_tasks + chains + swarms
     all_callbacks = {
         cb_id
         for task in all_tasks
         for cb_id in list(task.success_callbacks) + list(task.error_callbacks)
     }
 
-    non_root_ids = (
-        chain_children
-        | batch_item_ids
-        | all_callbacks
-        | set(original_to_swarm.keys())
-        | original_linked_tasks
-    )
+    non_root_ids = chain_children | all_callbacks | swarm_linked_tasks
 
     return {task.key: task for task in all_tasks if task.key not in non_root_ids}
 
@@ -77,12 +67,7 @@ async def fetch_task_children(
     if not isinstance(task, ContainerTaskSignature):
         return None
 
-    if isinstance(task, ChainTaskSignature):
-        all_ids = list(task.tasks)
-    elif isinstance(task, SwarmTaskSignature):
-        all_ids = list(task.tasks)
-    else:
-        all_ids = []
+    all_ids = task.task_ids
 
     total_count = len(all_ids)
     start = (page - 1) * page_size

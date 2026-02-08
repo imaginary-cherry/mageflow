@@ -59,6 +59,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def validate_tasks(cls, v):
         return [cls.validate_task_key(item) for item in v]
 
+    @property
+    def task_ids(self):
+        return self.tasks
+
     async def sub_tasks(self) -> list[TaskSignature]:
         tasks = await rapyer.afind(*self.tasks)
         return cast(list[TaskSignature], tasks)

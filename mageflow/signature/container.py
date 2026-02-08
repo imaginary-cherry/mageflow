@@ -9,8 +9,13 @@ from mageflow.signature.model import TaskSignature
 
 
 class ContainerTaskSignature(TaskSignature, ABC):
+    @property
     @abc.abstractmethod
-    async def sub_tasks(self) -> list[Self]:
+    def task_ids(self):
+        pass
+
+    @abc.abstractmethod
+    async def sub_tasks(self) -> list[TaskSignature]:
         pass
 
     async def remove_references(self):
