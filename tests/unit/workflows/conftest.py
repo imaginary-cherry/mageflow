@@ -115,7 +115,6 @@ async def create_swarm_item_test_setup(
 class ChainTestSetup:
     chain_signature: ChainTaskSignature
     chain_tasks: list[TaskSignature]
-    current_task: TaskSignature
     success_callback: TaskSignature
     error_callback: TaskSignature
     ctx: MagicMock
@@ -149,10 +148,7 @@ async def create_chain_test_setup(
     )
 
     # Arrange
-    current_task = await mageflow.sign("current_task", model_validators=ContextMessage)
-
-    # Arrange
-    ctx = create_mock_context_with_metadata(task_id=current_task.key)
+    ctx = create_mock_context_with_metadata(task_id=chain_tasks[-1].key)
 
     # Arrange
     msg = ChainCallbackMessage(
@@ -171,7 +167,6 @@ async def create_chain_test_setup(
     return ChainTestSetup(
         chain_signature=chain_signature,
         chain_tasks=chain_tasks,
-        current_task=current_task,
         success_callback=success_callback,
         error_callback=error_callback,
         ctx=ctx,
