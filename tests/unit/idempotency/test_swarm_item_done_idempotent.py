@@ -18,7 +18,7 @@ async def assert_swarm_item_done_state(
     finished_tasks = await setup.swarm_task.finished_tasks.aload()
     assert len(finished_tasks) == expected_finished_count
     if check_batch_in_finished:
-        assert setup.batch_task.key in finished_tasks
+        assert setup.task.key in finished_tasks
     assert len(set(finished_tasks)) == len(finished_tasks)
 
     if expected_results_count is not None:

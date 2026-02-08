@@ -17,7 +17,7 @@ async def assert_swarm_item_failed_state(
     failed_tasks = await setup.swarm_task.failed_tasks.aload()
     assert len(failed_tasks) == expected_failed_count
     if check_batch_in_failed:
-        assert setup.batch_task.key in failed_tasks
+        assert setup.task.key in failed_tasks
     # Check no duplicates
     assert len(set(failed_tasks)) == len(failed_tasks)
 
