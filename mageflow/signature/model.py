@@ -97,6 +97,7 @@ class TaskSignature(AtomicRedisModel):
         if not model_validators:
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
+            task_name = task_def.mageflow_task_name if task_def else task_name
         return_field_name = return_value_field(model_validators)
 
         signature = cls(
@@ -108,10 +109,9 @@ class TaskSignature(AtomicRedisModel):
         await signature.asave()
         return signature
 
-    async def workflow(self, use_return_field: bool = True, **task_additional_params):
+    def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params
-        task_def = await HatchetTaskModel.safe_get(self.task_name)
-        task = task_def.task_name if task_def else self.task_name
+        task = self.task_name
         return_field = self.return_field_name if use_return_field else None
 
         workflow = mageflow_config.hatchet_client.workflow(
@@ -129,14 +129,14 @@ class TaskSignature(AtomicRedisModel):
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
 
     async def asend_callback(self, results: Any, **kwargs):
-        wf = await self.workflow(**kwargs)
+        wf = self.workflow(**kwargs)
         return await wf.aio_run_no_wait(results)
 
     async def aio_run_no_wait(
         self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
     ):
         params = dict(options=options) if options else {}
-        workflow = await self.workflow(use_return_field=False, **kwargs)
+        workflow = self.workflow(use_return_field=False, **kwargs)
         return await workflow.aio_run_no_wait(msg, **params)
 
     async def callback_workflows(
@@ -154,9 +154,8 @@ class TaskSignature(AtomicRedisModel):
             raise MissingSignatureError(
                 f"Some callbacks not found {callback_ids}, signature can be called only once"
             )
-        workflows = await asyncio.gather(
-            *[callback.workflow(**kwargs) for callback in callbacks_signatures]
-        )
+        workflows = [callback.workflow(**kwargs) for callback in callbacks_signatures]
+
         return workflows
 
     async def activate_callbacks(

@@ -55,17 +55,15 @@ class ChainTaskSignature(ContainerTaskSignature):
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
 
-    async def workflow(self, **task_additional_params):
-        first_task = await TaskSignature.get_safe(self.tasks[0])
-        if first_task is None:
-            raise MissingSignatureError(f"First task from chain {self.key} not found")
-        return await first_task.workflow(**task_additional_params)
-
     async def aio_run_no_wait(
         self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
     ):
+        first_task = await TaskSignature.get_safe(self.tasks[0])
+        if first_task is None:
+            raise MissingSignatureError(f"First task from chain {self.key} not found")
+
         full_kwargs = self.kwargs | kwargs
-        return await super().aio_run_no_wait(msg, options, **full_kwargs)
+        return await first_task.aio_run_no_wait(msg, options, **full_kwargs)
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
