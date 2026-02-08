@@ -8,12 +8,7 @@ from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
 from rapyer.types import RedisList, RedisInt
 
-from mageflow.errors import (
-    MissingSignatureError,
-    MissingSwarmItemError,
-    TooManyTasksError,
-    SwarmIsCanceledError,
-)
+from mageflow.errors import TooManyTasksError, SwarmIsCanceledError
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.signature.consts import REMOVED_TASK_TTL
 from mageflow.signature.container import ContainerTaskSignature
@@ -24,67 +19,9 @@ from mageflow.signature.creator import (
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.signature.types import TaskIdentifierType
-from mageflow.swarm.consts import (
-    BATCH_TASK_NAME_INITIALS,
-    ON_SWARM_END,
-    ON_SWARM_ERROR,
-    ON_SWARM_START,
-)
+from mageflow.swarm.consts import ON_SWARM_END, ON_SWARM_ERROR, ON_SWARM_START
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmErrorMessage, SwarmMessage
 from mageflow.swarm.state import PublishState
-from mageflow.utils.pythonic import deep_merge
-
-
-class BatchItemTaskSignature(TaskSignature):
-    swarm_id: TaskIdentifierType
-    original_task_id: TaskIdentifierType
-
-    async def aio_run_no_wait(
-        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **orig_task_kwargs
-    ):
-        async with self.alock() as swarm_item:
-            swarm_task = await SwarmTaskSignature.get_safe(self.swarm_id)
-            original_task = await TaskSignature.get_safe(self.original_task_id)
-            if swarm_task is None:
-                raise MissingSignatureError(
-                    f"Swarm {self.swarm_id} was deleted before finish"
-                )
-            if original_task is None:
-                raise MissingSwarmItemError(
-                    f"Task {self.original_task_id} was deleted before it was run in swarm"
-                )
-            kwargs = deep_merge(self.kwargs.clone(), original_task.kwargs.clone())
-            kwargs = deep_merge(kwargs, swarm_task.kwargs.clone())
-            kwargs = deep_merge(kwargs, msg.model_dump(mode="json"))
-            # For tasks are just represent larger tasks (like chain)
-            await original_task.kwargs.aupdate(**kwargs)
-            if self.key not in swarm_task.tasks_left_to_run:
-                await swarm_task.tasks_left_to_run.aappend(self.key)
-
-            return await swarm_task.fill_running_tasks(
-                max_tasks=1, options=options, **orig_task_kwargs
-            )
-
-    async def remove_references(self):
-        orignal_task = await TaskSignature.get_safe(self.original_task_id)
-        if orignal_task:
-            await orignal_task.remove()
-
-    async def change_status(self, status: SignatureStatus):
-        return await TaskSignature.safe_change_status(self.original_task_id, status)
-
-    async def resume(self):
-        async with TaskSignature.alock_from_key(self.original_task_id) as task:
-            await task.resume()
-            return await super().change_status(task.task_status.last_status)
-
-    async def suspend(self):
-        await TaskSignature.suspend_from_key(self.original_task_id)
-        return await super().change_status(SignatureStatus.SUSPENDED)
-
-    async def interrupt(self):
-        await TaskSignature.interrupt_from_key(self.original_task_id)
-        return await super().change_status(SignatureStatus.INTERRUPTED)
 
 
 class SwarmConfig(AtomicRedisModel):
@@ -93,12 +30,16 @@ class SwarmConfig(AtomicRedisModel):
     max_task_allowed: Optional[int] = None
 
     def can_add_task(self, swarm: "SwarmTaskSignature") -> bool:
+        return self.can_add_n_tasks(swarm, 1)
+
+    def can_add_n_tasks(self, swarm: "SwarmTaskSignature", n: int) -> bool:
         if self.max_task_allowed is None:
             return True
-        return len(swarm.tasks) < self.max_task_allowed
+        return len(swarm.tasks) + n < self.max_task_allowed
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
+    # TODO - TASKS list should be set once we enable this in rapyer
     tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     tasks_left_to_run: RedisList[TaskIdentifierType] = Field(default_factory=list)
     finished_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
@@ -119,9 +60,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return [cls.validate_task_key(item) for item in v]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        batch_items = await BatchItemTaskSignature.afind(*self.tasks)
-        original_keys = [item.original_task_id for item in batch_items]
-        return cast(list[TaskSignature], await rapyer.afind(*original_keys))
+        tasks = await rapyer.afind(*self.tasks)
+        return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
         swarm_done_msg = SwarmResultsMessage(
@@ -152,6 +92,17 @@ class SwarmTaskSignature(ContainerTaskSignature):
         start_swarm_msg = SwarmMessage(swarm_task_id=self.key)
         params = dict(options=options) if options else {}
         await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, **params)
+
+    async def aio_run_in_swarm(
+        self,
+        task: TaskSignatureConvertible,
+        msg: BaseModel,
+        options: TriggerWorkflowOptions = None,
+        close_on_max_task: bool = True,
+    ):
+        sub_task = await self.add_task(task, close_on_max_task)
+        await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
+        return await self.fill_running_tasks(max_tasks=1, options=options)
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
@@ -184,6 +135,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
             for task in tasks:
                 task.signature_container_id = self.key
             self.tasks.extend(task_keys)
+            self.tasks_left_to_run.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
             await self.close_swarm()
@@ -224,22 +176,18 @@ class SwarmTaskSignature(ContainerTaskSignature):
                     swarm_task.tasks_left_to_run.remove_range(0, num_of_task_to_run)
 
             if task_ids_to_run:
-                tasks = await BatchItemTaskSignature.afind(*task_ids_to_run)
-                original_task_ids = [
-                    batch_item.original_task_id for batch_item in tasks
-                ]
-                original_tasks = await rapyer.afind(*original_task_ids)
-                original_tasks = cast(list[TaskSignature], original_tasks)
+                tasks = await rapyer.afind(*task_ids_to_run)
+                tasks = cast(list[TaskSignature], tasks)
                 full_kwargs = swarm_task.kwargs | pub_kwargs
                 publish_coroutine = [
                     next_task.aio_run_no_wait(EmptyModel(), **full_kwargs)
-                    for next_task in original_tasks
+                    for next_task in tasks
                 ]
                 await asyncio.gather(*publish_coroutine)
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
                     swarm_task.current_running_tasks += num_of_task_to_run
-                return original_tasks
+                return tasks
             return []
 
     async def is_swarm_done(self):
@@ -295,28 +243,25 @@ class SwarmTaskSignature(ContainerTaskSignature):
         too_many_errors = len(self.failed_tasks) >= stop_after_n_failures
         return should_stop_after_failures and too_many_errors
 
-    async def finish_task(self, batch_item_key: str, results: Any):
+    async def finish_task(self, task_key: str, results: Any):
         async with self.apipeline() as swarm_task:
             # In case this was already updated
-            if batch_item_key in swarm_task.finished_tasks:
+            if task_key in swarm_task.finished_tasks:
                 return
-            swarm_task.finished_tasks.append(batch_item_key)
+            swarm_task.finished_tasks.append(task_key)
             swarm_task.tasks_results.append(results)
             swarm_task.current_running_tasks -= 1
 
-    async def task_failed(self, batch_item_key: str):
+    async def task_failed(self, task_key: str):
         async with self.apipeline() as swarm_task:
-            if batch_item_key in swarm_task.failed_tasks:
+            if task_key in swarm_task.failed_tasks:
                 return
-            swarm_task.failed_tasks.append(batch_item_key)
+            swarm_task.failed_tasks.append(task_key)
             swarm_task.current_running_tasks -= 1
 
     async def remove_task(self):
-        batch_tasks = await BatchItemTaskSignature.afind(*self.tasks)
         publish_state = await PublishState.aget(self.publishing_state_id)
         async with self.apipeline():
             # TODO - this should be removed once we use foreign key
             await publish_state.aset_ttl(REMOVED_TASK_TTL)
-            for batch_task in batch_tasks:
-                await batch_task.remove_task()
             return await super().remove_task()

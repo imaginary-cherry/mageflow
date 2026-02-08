@@ -1,7 +1,6 @@
 # Params
 from mageflow.signature.consts import MAGEFLOW_TASK_INITIALS
 
-BATCH_TASK_NAME_INITIALS = "batch-task-"
 SWARM_TASK_ID_PARAM_NAME = "swarm_task_id"
 
 # Actions
