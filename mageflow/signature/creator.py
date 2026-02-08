@@ -7,6 +7,7 @@ from mageflow.signature.model import (
     HatchetTaskType,
 )
 from mageflow.signature.status import TaskStatus
+from mageflow.typing_support import Unpack
 
 TaskSignatureConvertible: TypeAlias = (
     TaskIdentifierType | TaskSignature | HatchetTaskType
@@ -20,14 +21,6 @@ async def resolve_signature_key(task: TaskSignatureConvertible) -> TaskSignature
         return await TaskSignature.get_safe(task)
     else:
         return await TaskSignature.from_task(task)
-
-
-try:
-    # Python 3.12+
-    from typing import Unpack
-except ImportError:
-    # Older Python versions
-    from typing_extensions import Unpack
 
 
 class TaskSignatureOptions(TypedDict, total=False):
