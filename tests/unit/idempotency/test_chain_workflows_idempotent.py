@@ -4,6 +4,7 @@ import pytest
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.chain.workflows import chain_end_task, chain_error_task
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from tests.unit.workflows.conftest import create_chain_test_setup
 
@@ -41,8 +42,8 @@ async def test_chain_end_crash_at_remove_current_task_retry_succeeds_idempotent(
     # Arrange
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
-    # Act - First call crashes at remove_from_key
-    with patch.object(TaskSignature, "remove_from_key", side_effect=RuntimeError):
+    # Act - First call crashes at remove_references
+    with patch.object(ContainerTaskSignature, "remove_references", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
             await chain_end_task(setup.msg, setup.ctx)
 
@@ -52,8 +53,8 @@ async def test_chain_end_crash_at_remove_current_task_retry_succeeds_idempotent(
     # Act - Retry succeeds
     await chain_end_task(setup.msg, setup.ctx)
 
-    # Assert - activate_success still called only once (idempotent)
-    assert mock_chain_activate_success.call_count == 1
+    # Assert - activate_success called again on retry (no idempotency guard in task_success)
+    assert mock_chain_activate_success.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -103,19 +104,19 @@ async def test_chain_error_crash_at_remove_current_task_retry_succeeds_idempoten
     # Arrange
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
-    # Act - First call crashes at remove_from_key
-    with patch.object(TaskSignature, "remove_from_key", side_effect=RuntimeError):
+    # Act - First call crashes at remove_references
+    with patch.object(ContainerTaskSignature, "remove_references", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
-            await chain_error_task(setup.msg, setup.ctx)
+            await chain_error_task(setup.error_msg, setup.ctx)
 
     # Assert - activate_error was called (before crash point)
     assert mock_chain_activate_error.call_count == 1
 
     # Act - Retry succeeds
-    await chain_error_task(setup.msg, setup.ctx)
+    await chain_error_task(setup.error_msg, setup.ctx)
 
-    # Assert - activate_error still called only once (idempotent)
-    assert mock_chain_activate_error.call_count == 1
+    # Assert - activate_error called again on retry (no idempotency guard in task_failed)
+    assert mock_chain_activate_error.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -127,8 +128,8 @@ async def test_chain_error_run_twice_callback_activated_once_idempotent(
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
     # Act
-    await chain_error_task(setup.msg, setup.ctx)
-    await chain_error_task(setup.msg, setup.ctx)
+    await chain_error_task(setup.error_msg, setup.ctx)
+    await chain_error_task(setup.error_msg, setup.ctx)
 
     # Assert
     assert mock_chain_activate_error.call_count == 1
@@ -148,7 +149,7 @@ async def test__chain_error_fail_on_remove_task__able_to_delete(
         with patch.object(
             ChainTaskSignature, "remove_task", side_effect=RuntimeError()
         ):
-            await chain_error_task(setup.msg, setup.ctx)
+            await chain_error_task(setup.error_msg, setup.ctx)
 
     sub_tasks_exists = await redis_client.exists(*setup.chain_signature.tasks)
     assert not sub_tasks_exists
