@@ -15,7 +15,6 @@ from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.utils.models import return_value_field
-from mageflow.workflows import TASK_DATA_PARAM_NAME
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -91,7 +90,7 @@ def is_task_paused(wf: V1TaskSummary) -> bool:
 
 
 def get_task_param(wf: V1TaskSummary, param_name: str):
-    return wf.additional_metadata.get(TASK_DATA_PARAM_NAME, {}).get(param_name)
+    return wf.additional_metadata.get(param_name)
 
 
 def assert_signature_done(

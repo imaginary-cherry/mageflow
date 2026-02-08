@@ -8,30 +8,28 @@ from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.workflows import TASK_DATA_PARAM_NAME
 
 
 class HatchetInvoker(BaseInvoker):
     # TODO - This should be in init, and the entire class created via factory in mageflow_config
     client: Hatchet = None
 
-    def __init__(self, message: BaseModel, task_data: dict, workflow_id: Optional[str]):
+    def __init__(self, message: BaseModel, task_key: str, workflow_id: Optional[str]):
         self.message = message
-        self.task_data = task_data
+        self.task_key = task_key
         self.workflow_id = workflow_id
 
     @classmethod
     def from_task_data(cls, message: BaseModel, ctx: Context) -> "HatchetInvoker":
-        task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
+        task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME, None)
         hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
-        hatchet_ctx_metadata.pop(TASK_DATA_PARAM_NAME, None)
+        hatchet_ctx_metadata.pop(TASK_ID_PARAM_NAME, None)
         ctx_additional_metadata.set(hatchet_ctx_metadata)
-        return cls(message, task_data, ctx.workflow_id)
+        return cls(message, task_key, ctx.workflow_id)
 
     @classmethod
     def from_no_task(cls, message: BaseModel, task_id: str) -> "HatchetInvoker":
-        task_data = {TASK_ID_PARAM_NAME: task_id}
-        return cls(message, task_data, None)
+        return cls(message, task_id, None)
 
     async def task_signature(self) -> Optional[TaskSignature]:
         if self.task_id:
@@ -40,7 +38,7 @@ class HatchetInvoker(BaseInvoker):
 
     @property
     def task_id(self) -> str | None:
-        return self.task_data.get(TASK_ID_PARAM_NAME, None)
+        return self.task_key
 
     def is_vanilla_run(self):
         return self.task_id is None

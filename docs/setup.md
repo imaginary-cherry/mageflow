@@ -136,7 +136,7 @@ from mageflow import TaskSignature
 async def self_aware_task(msg: YourModel, signature: TaskSignature):
     # Access task signature information
     task_name = signature.task_name
-    task_id = signature.task_identifiers
+    task_id = signature.key
     
     # Can inspect callbacks, kwargs, and other signature properties
     print(f"Running task: {task_name} with ID: {task_id}")

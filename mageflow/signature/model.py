@@ -40,7 +40,6 @@ class TaskSignature(AtomicRedisModel):
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
-    task_identifiers: RedisDict[Any] = Field(default_factory=dict)
     signature_container_id: Optional[str] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
@@ -126,7 +125,7 @@ class TaskSignature(AtomicRedisModel):
         return mageflow_wf
 
     def task_ctx(self) -> dict:
-        return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
+        return {TASK_ID_PARAM_NAME: self.key}
 
     async def asend_callback(self, results: Any, **kwargs):
         wf = self.workflow(**kwargs)
