@@ -160,14 +160,14 @@ class SwarmTaskSignature(ContainerTaskSignature):
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
-    async def add_task(
-        self, task: TaskSignatureConvertible, close_on_max_task: bool = True
-    ) -> BatchItemTaskSignature:
+    async def add_tasks(
+        self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
+    ) -> list[TaskSignature]:
         """
-        task - task signature to add to swarm
+        tasks - tasks signature to add to swarm
         close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capcity
         """
-        if not self.config.can_add_task(self):
+        if not self.config.can_add_n_tasks(self, len(tasks)):
             raise TooManyTasksError(
                 f"Swarm {self.task_name} has reached max tasks limit"
             )
@@ -175,25 +175,30 @@ class SwarmTaskSignature(ContainerTaskSignature):
             raise SwarmIsCanceledError(
                 f"Swarm {self.task_name} is {self.task_status} - can't add task"
             )
-        task = await resolve_signature_key(task)
-        dump = task.model_dump(exclude={"task_name"})
-        batch_task_name = f"{BATCH_TASK_NAME_INITIALS}{task.task_name}"
-        batch_task = BatchItemTaskSignature(
-            **dump,
-            task_name=batch_task_name,
-            swarm_id=self.key,
-            original_task_id=task.key,
-        )
+
+        # TODO - find a way to do this in a single transaction when we find a way to save tasks at a transactions
+        tasks = await asyncio.gather(*[resolve_signature_key(task) for task in tasks])
+        task_keys = [task.key for task in tasks]
 
         async with self.apipeline():
-            task.signature_container_id = self.key
-            await batch_task.asave()
-            self.tasks.append(batch_task.key)
+            for task in tasks:
+                task.signature_container_id = self.key
+            self.tasks.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
             await self.close_swarm()
 
-        return batch_task
+        return tasks
+
+    async def add_task(
+        self, task: TaskSignatureConvertible, close_on_max_task: bool = True
+    ) -> TaskSignature:
+        """
+        task - task signature to add to swarm
+        close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capcity
+        """
+        added_tasks = await self.add_tasks([task], close_on_max_task)
+        return added_tasks[0]
 
     async def fill_running_tasks(
         self, max_tasks: Optional[int] = None, **pub_kwargs
