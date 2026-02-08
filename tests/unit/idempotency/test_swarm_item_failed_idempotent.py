@@ -67,7 +67,7 @@ async def test_crash_before_get_safe_retry_executes_normally_idempotent(
     setup = swarm_item_failed_setup
 
     # Act - First call crashes before get_safe
-    with patch.object(SwarmTaskSignature, "get_safe", side_effect=RuntimeError):
+    with patch.object(SwarmTaskSignature, "aget", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
             await swarm_item_failed(setup.msg, setup.ctx)
 
