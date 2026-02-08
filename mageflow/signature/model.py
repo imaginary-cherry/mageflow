@@ -135,8 +135,9 @@ class TaskSignature(AtomicRedisModel):
     async def aio_run_no_wait(
         self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
     ):
+        params = dict(options=options) if options else {}
         workflow = await self.workflow(use_return_field=False, **kwargs)
-        return await workflow.aio_run_no_wait(msg, options)
+        return await workflow.aio_run_no_wait(msg, **params)
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
