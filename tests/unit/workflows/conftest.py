@@ -4,11 +4,11 @@ from unittest.mock import MagicMock
 import pytest_asyncio
 
 import mageflow
-from mageflow.chain.messages import ChainCallbackMessage
+from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 
@@ -23,8 +23,7 @@ class CompletedSwarmWithSuccessCallback:
 @dataclass
 class SwarmTestSetup:
     swarm_task: SwarmTaskSignature
-    original_tasks: list[TaskSignature]
-    batch_tasks: list[BatchItemTaskSignature]
+    tasks: list[TaskSignature]
     item_task: TaskSignature | None = None
     ctx: MagicMock | None = None
 
@@ -50,10 +49,11 @@ async def completed_swarm_with_success_callback():
         error_callbacks=[error_callback, error_callback2],
     )
     original_task = await mageflow.sign("item_task")
-    batch_task = await swarm_task.add_task(original_task)
+    task = await swarm_task.add_task(original_task)
 
     async with swarm_task.apipeline():
-        swarm_task.finished_tasks.append(batch_task.key)
+        swarm_task.tasks_left_to_run.remove_range(0, len(swarm_task.tasks_left_to_run))
+        swarm_task.finished_tasks.append(task.key)
 
     async with swarm_task.alock() as locked_swarm:
         await locked_swarm.aupdate(is_swarm_closed=True)
@@ -85,21 +85,19 @@ async def create_swarm_item_test_setup(
         await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(num_tasks)
     ]
-    batch_tasks = [await swarm_task.add_task(task) for task in original_tasks]
+    tasks = await swarm_task.add_tasks(original_tasks)
 
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = current_running
-        swarm_task.tasks.extend([t.key for t in batch_tasks])
+        swarm_task.tasks_left_to_run.remove_range(0, len(swarm_task.tasks_left_to_run))
         if failed_indices:
-            swarm_task.failed_tasks.extend([batch_tasks[i].key for i in failed_indices])
+            swarm_task.failed_tasks.extend([tasks[i].key for i in failed_indices])
         if finished_indices:
-            swarm_task.finished_tasks.extend(
-                [batch_tasks[i].key for i in finished_indices]
-            )
+            swarm_task.finished_tasks.extend([tasks[i].key for i in finished_indices])
 
     if tasks_left_indices:
         await swarm_task.tasks_left_to_run.aextend(
-            [batch_tasks[i].key for i in tasks_left_indices]
+            [tasks[i].key for i in tasks_left_indices]
         )
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
@@ -107,8 +105,7 @@ async def create_swarm_item_test_setup(
 
     return SwarmTestSetup(
         swarm_task=swarm_task,
-        original_tasks=original_tasks,
-        batch_tasks=batch_tasks,
+        tasks=tasks,
         item_task=item_task,
         ctx=ctx,
     )
@@ -123,6 +120,7 @@ class ChainTestSetup:
     error_callback: TaskSignature
     ctx: MagicMock
     msg: ChainCallbackMessage
+    error_msg: ChainErrorMessage
 
 
 async def create_chain_test_setup(
@@ -162,6 +160,14 @@ async def create_chain_test_setup(
         chain_task_id=chain_signature.key,
     )
 
+    # Arrange
+    error_msg = ChainErrorMessage(
+        chain_task_id=chain_signature.key,
+        error="test error",
+        original_msg={"status": "error"},
+        error_task_key=chain_tasks[0].key,
+    )
+
     return ChainTestSetup(
         chain_signature=chain_signature,
         chain_tasks=chain_tasks,
@@ -170,4 +176,5 @@ async def create_chain_test_setup(
         error_callback=error_callback,
         ctx=ctx,
         msg=msg,
+        error_msg=error_msg,
     )
