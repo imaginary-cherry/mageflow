@@ -30,7 +30,6 @@ class TaskSignatureOptions(TypedDict, total=False):
     success_callbacks: list[TaskIdentifierType]
     error_callbacks: list[TaskIdentifierType]
     task_status: TaskStatus
-    task_identifiers: dict
 
 
 @overload
