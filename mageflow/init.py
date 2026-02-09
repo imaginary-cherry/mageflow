@@ -49,7 +49,6 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
         name=ON_SWARM_START,
         input_validator=SwarmMessage,
         retries=3,
-        input_validator=SwarmMessage,
         execution_timeout=timedelta(minutes=5),
         concurrency=ConcurrencyExpression(
             expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
