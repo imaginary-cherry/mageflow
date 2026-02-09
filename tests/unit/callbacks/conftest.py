@@ -80,27 +80,27 @@ async def task_signature_factory(
     return signature, task_model
 
 
-def decorated_func_factory(
+def handler_factory(
     expected_params: AcceptParams = AcceptParams.NO_CTX,
     wrap_res: bool = True,
     send_signature: bool = False,
     return_value: Any = "success_result",
     raises: Exception | None = None,
 ):
-    call_tracker: list[CallTracker] = []
+    tracked_calls: list[CallTracker] = []
 
     @handle_task_callback(
         expected_params=expected_params,
         wrap_res=wrap_res,
         send_signature=send_signature,
     )
-    async def decorated_func(*args, **kwargs):
-        call_tracker.append(CallTracker(args=args, kwargs=kwargs))
+    async def handler(*args, **kwargs):
+        tracked_calls.append(CallTracker(args=args, kwargs=kwargs))
         if raises:
             raise raises
         return return_value
 
-    return decorated_func, call_tracker
+    return handler, tracked_calls
 
 
 @pytest_asyncio.fixture

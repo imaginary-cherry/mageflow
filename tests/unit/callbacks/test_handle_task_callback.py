@@ -11,7 +11,7 @@ from tests.unit.assertions import assert_tasks_changed_status, assert_task_has_s
 from tests.unit.callbacks.conftest import (
     MockContextConfig,
     create_mock_hatchet_context,
-    decorated_func_factory,
+    handler_factory,
     task_signature_factory,
 )
 
@@ -25,17 +25,17 @@ async def test__pending_signature__success__returns_wrapped_result(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    handle_decorator, call_tracker = decorated_func_factory(return_value="my_result")
+    returning_handler, tracked_calls = handler_factory(return_value="my_result")
     message = ContextMessage()
 
     # Act
-    result = await handle_decorator(message, ctx)
+    result = await returning_handler(message, ctx)
 
     # Assert
     assert isinstance(result, HatchetResult)
     assert result.hatchet_results == "my_result"
     await assert_tasks_changed_status([signature.key], SignatureStatus.DONE)
-    assert len(call_tracker) == 1
+    assert len(tracked_calls) == 1
 
 
 @pytest.mark.asyncio
@@ -47,13 +47,13 @@ async def test__pending_signature__success_wrap_false__returns_raw(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    handle_decorator, call_tracker = decorated_func_factory(
+    unwrapped_handler, tracked_calls = handler_factory(
         wrap_res=False, return_value="raw_result"
     )
     message = ContextMessage()
 
     # Act
-    result = await handle_decorator(message, ctx)
+    result = await unwrapped_handler(message, ctx)
 
     # Assert
     assert result == "raw_result"
@@ -72,12 +72,12 @@ async def test__pending_signature__error_with_retry__raises_without_failing(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    handle_decorator, _ = decorated_func_factory(raises=ValueError("test error"))
+    raising_handler, _ = handler_factory(raises=ValueError("test error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(ValueError, match="test error"):
-        await handle_decorator(message, ctx)
+        await raising_handler(message, ctx)
 
     reloaded = await TaskSignature.get_safe(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
@@ -98,12 +98,12 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=3)
     )
-    decorated_func, _ = decorated_func_factory(raises=ValueError("test error"))
+    raising_handler, _ = handler_factory(raises=ValueError("test error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(ValueError, match="test error"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     assert len(mock_workflow_run) == 1
@@ -121,11 +121,11 @@ async def test__active_signature__success__marks_done(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, _ = decorated_func_factory(return_value="done")
+    returning_handler, _ = handler_factory(return_value="done")
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await returning_handler(message, ctx)
 
     # Assert
     await assert_tasks_changed_status([signature.key], SignatureStatus.DONE)
@@ -146,12 +146,12 @@ async def test__active_signature__error__marks_failed(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("fail"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("fail"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="fail"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     assert len(mock_workflow_run) == 1
@@ -166,34 +166,37 @@ async def test__suspended_signature__cancel_called():
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, call_tracker = decorated_func_factory()
+    default_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
     ctx.aio_cancel.assert_awaited_once()
-    assert len(call_tracker) == 0
+    assert len(tracked_calls) == 0
 
 
 @pytest.mark.asyncio
-async def test__suspended_signature__cancel_raises__propagates_error():
+@pytest.mark.parametrize(
+    "status", [SignatureStatus.SUSPENDED, SignatureStatus.CANCELED]
+)
+async def test__suspended_signature__cancel_raises__propagates_error(status):
     # Arrange
-    signature, _ = await task_signature_factory(status=SignatureStatus.SUSPENDED)
+    signature, _ = await task_signature_factory(status=status)
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, call_tracker = decorated_func_factory()
+    default_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
-    assert len(call_tracker) == 0
+    assert len(tracked_calls) == 0
 
 
 @pytest.mark.asyncio
@@ -205,37 +208,17 @@ async def test__suspended_signature__kwargs_updated():
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, _ = decorated_func_factory()
+    default_handler, _ = handler_factory()
     message = ContextMessage(base_data={"key": "value"})
 
     # Act
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
     # Assert
     reloaded = await TaskSignature.get_safe(signature.key)
     assert "base_data" in reloaded.kwargs
     assert reloaded.kwargs["base_data"] == {"key": "value"}
-
-
-@pytest.mark.asyncio
-async def test__canceled_signature__cancel_called():
-    # Arrange
-    signature, _ = await task_signature_factory(status=SignatureStatus.CANCELED)
-    ctx = create_mock_hatchet_context(
-        MockContextConfig(
-            task_id=signature.key, job_name="test_task", cancel_raises=True
-        )
-    )
-    decorated_func, call_tracker = decorated_func_factory()
-    message = ContextMessage()
-
-    # Act & Assert
-    with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
-
-    ctx.aio_cancel.assert_awaited_once()
-    assert len(call_tracker) == 0
 
 
 @pytest.mark.asyncio
@@ -247,12 +230,12 @@ async def test__canceled_signature__removed():
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, _ = decorated_func_factory()
+    default_handler, _ = handler_factory()
     message = ContextMessage()
 
     # Act
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
     # Assert
     await assert_task_has_short_ttl(signature.key)
@@ -267,15 +250,15 @@ async def test__done_signature__should_not_run():
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, call_tracker = decorated_func_factory()
+    default_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
     ctx.aio_cancel.assert_awaited_once()
-    assert len(call_tracker) == 0
+    assert len(tracked_calls) == 0
 
 
 @pytest.mark.asyncio
@@ -287,15 +270,15 @@ async def test__failed_signature__should_not_run():
             task_id=signature.key, job_name="test_task", cancel_raises=True
         )
     )
-    decorated_func, call_tracker = decorated_func_factory()
+    default_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(asyncio.CancelledError):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
     ctx.aio_cancel.assert_awaited_once()
-    assert len(call_tracker) == 0
+    assert len(tracked_calls) == 0
 
 
 @pytest.mark.asyncio
@@ -307,16 +290,16 @@ async def test__no_task_id__success__returns_directly(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=None, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(return_value="direct")
+    returning_handler, tracked_calls = handler_factory(return_value="direct")
     message = ContextMessage()
 
     # Act
-    result = await decorated_func(message, ctx)
+    result = await returning_handler(message, ctx)
 
     # Assert
     assert result == "direct"
     assert not isinstance(result, HatchetResult)
-    assert len(call_tracker) == 1
+    assert len(tracked_calls) == 1
 
 
 @pytest.mark.asyncio
@@ -328,12 +311,12 @@ async def test__no_task_id__error__raises_directly(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=None, job_name="test_task")
     )
-    decorated_func, _ = decorated_func_factory(raises=ValueError("vanilla error"))
+    raising_handler, _ = handler_factory(raises=ValueError("vanilla error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(ValueError, match="vanilla error"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     assert len(mock_workflow_run) == 0
 
@@ -347,11 +330,11 @@ async def test__no_task_id__no_workflow_calls(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=None, job_name="test_task")
     )
-    decorated_func, _ = decorated_func_factory(return_value="result")
+    returning_handler, _ = handler_factory(return_value="result")
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await returning_handler(message, ctx)
 
     # Assert
     assert len(mock_workflow_run) == 0
@@ -368,14 +351,14 @@ async def test__invalid_task_id__should_not_run():
             cancel_raises=True,
         )
     )
-    decorated_func, call_tracker = decorated_func_factory()
+    default_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(Exception):
-        await decorated_func(message, ctx)
+        await default_handler(message, ctx)
 
-    assert len(call_tracker) == 0
+    assert len(tracked_calls) == 0
 
 
 @pytest.mark.asyncio
@@ -390,12 +373,12 @@ async def test__no_retries__error__marks_failed(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("error"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="error"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     assert len(mock_workflow_run) == 1
@@ -410,12 +393,12 @@ async def test__retries_3_attempt_1__error__not_failed(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("retry"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("retry"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="retry"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     reloaded = await TaskSignature.get_safe(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
@@ -434,12 +417,12 @@ async def test__retries_3_attempt_3__error__marks_failed(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=3)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("final"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("final"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="final"):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     assert len(mock_workflow_run) == 1
@@ -457,14 +440,14 @@ async def test__non_retryable_exception__always_fails(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(
+    non_retryable_handler, _ = handler_factory(
         raises=NonRetryableException("non-retryable")
     )
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(NonRetryableException, match="non-retryable"):
-        await decorated_func(message, ctx)
+        await non_retryable_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     assert len(mock_workflow_run) == 1
@@ -480,11 +463,11 @@ async def test__with_success_callbacks__on_success__triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, _ = decorated_func_factory(return_value="success")
+    returning_handler, _ = handler_factory(return_value="success")
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await returning_handler(message, ctx)
 
     # Assert
     assert len(mock_workflow_run) == 1
@@ -503,12 +486,12 @@ async def test__with_success_callbacks__on_error__not_triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("err"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("err"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     assert len(mock_workflow_run) == 0
 
@@ -525,12 +508,12 @@ async def test__with_error_callbacks__on_error_no_retry__triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("error"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     assert len(mock_workflow_run) == 1
     assert mock_workflow_run[0].config.name == "error_callback_task"
@@ -548,12 +531,12 @@ async def test__with_error_callbacks__on_error_with_retry__not_triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("error"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("error"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     assert len(mock_workflow_run) == 0
 
@@ -572,11 +555,11 @@ async def test__with_both_callbacks__on_success__only_success_triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, _ = decorated_func_factory(return_value="ok")
+    returning_handler, _ = handler_factory(return_value="ok")
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await returning_handler(message, ctx)
 
     # Assert
     assert len(mock_workflow_run) == 1
@@ -598,12 +581,12 @@ async def test__with_both_callbacks__on_error__only_error_triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
-    decorated_func, _ = decorated_func_factory(raises=RuntimeError("err"))
+    raising_handler, _ = handler_factory(raises=RuntimeError("err"))
     message = ContextMessage()
 
     # Act & Assert
     with pytest.raises(RuntimeError):
-        await decorated_func(message, ctx)
+        await raising_handler(message, ctx)
 
     assert len(mock_workflow_run) == 1
     assert mock_workflow_run[0].config.name == "error_callback_task"
@@ -618,18 +601,18 @@ async def test__just_message__func_receives_only_message(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(
+    just_message_handler, tracked_calls = handler_factory(
         expected_params=AcceptParams.JUST_MESSAGE
     )
     message = ContextMessage(base_data={"test": "data"})
 
     # Act
-    await decorated_func(message, ctx)
+    await just_message_handler(message, ctx)
 
     # Assert
-    assert len(call_tracker) == 1
-    assert call_tracker[0].args == (message,)
-    assert call_tracker[0].kwargs == {}
+    assert len(tracked_calls) == 1
+    assert tracked_calls[0].args == (message,)
+    assert tracked_calls[0].kwargs == {}
 
 
 @pytest.mark.asyncio
@@ -641,17 +624,15 @@ async def test__no_ctx__func_receives_message_and_kwargs(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(
-        expected_params=AcceptParams.NO_CTX
-    )
+    no_ctx_handler, tracked_calls = handler_factory(expected_params=AcceptParams.NO_CTX)
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await no_ctx_handler(message, ctx)
 
     # Assert
-    assert len(call_tracker) == 1
-    assert call_tracker[0].args[0] == message
+    assert len(tracked_calls) == 1
+    assert tracked_calls[0].args[0] == message
 
 
 @pytest.mark.asyncio
@@ -663,17 +644,17 @@ async def test__all__func_receives_message_and_ctx(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(
+    all_params_handler, tracked_calls = handler_factory(
         expected_params=AcceptParams.ALL
     )
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await all_params_handler(message, ctx)
 
     # Assert
-    assert len(call_tracker) == 1
-    assert call_tracker[0].args == (message, ctx)
+    assert len(tracked_calls) == 1
+    assert tracked_calls[0].args == (message, ctx)
 
 
 @pytest.mark.asyncio
@@ -685,16 +666,16 @@ async def test__send_signature_true__in_kwargs(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(send_signature=True)
+    signature_sending_handler, tracked_calls = handler_factory(send_signature=True)
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await signature_sending_handler(message, ctx)
 
     # Assert
-    assert len(call_tracker) == 1
-    assert "signature" in call_tracker[0].kwargs
-    assert call_tracker[0].kwargs["signature"].key == signature.key
+    assert len(tracked_calls) == 1
+    assert "signature" in tracked_calls[0].kwargs
+    assert tracked_calls[0].kwargs["signature"].key == signature.key
 
 
 @pytest.mark.asyncio
@@ -706,12 +687,12 @@ async def test__send_signature_false__not_in_kwargs(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    decorated_func, call_tracker = decorated_func_factory(send_signature=False)
+    no_signature_handler, tracked_calls = handler_factory(send_signature=False)
     message = ContextMessage()
 
     # Act
-    await decorated_func(message, ctx)
+    await no_signature_handler(message, ctx)
 
     # Assert
-    assert len(call_tracker) == 1
-    assert "signature" not in call_tracker[0].kwargs
+    assert len(tracked_calls) == 1
+    assert "signature" not in tracked_calls[0].kwargs
