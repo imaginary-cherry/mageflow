@@ -75,10 +75,9 @@ Flexible task definition system with validation, state management, and lifecycle
 ```python
 import mageflow
 
-# Create a task signature with validation
+# Create a task signature with callbacks
 task_signature = await mageflow.sign(
-    task_name="process-order",
-    task_identifiers={"order_id": "12345"},
+    "process-order",
     success_callbacks=[send_confirmation_task],
     error_callbacks=[handle_error_task]
 )
