@@ -43,7 +43,7 @@ async def fetch_root_tasks() -> dict:
     swarms = list(await SwarmTaskSignature.afind())
 
     chain_children = {child_id for chain in chains for child_id in chain.tasks}
-    swarm_linked_tasks = {sub_task for swarm in swarms for sub_task in swarm}
+    swarm_linked_tasks = {sub_task for swarm in swarms for sub_task in swarm.task_ids}
 
     all_tasks = base_tasks + chains + swarms
     all_callbacks = {
