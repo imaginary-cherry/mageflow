@@ -21,7 +21,7 @@ async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
             return
 
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg, validator=SwarmMessage)
+        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start tasks")
