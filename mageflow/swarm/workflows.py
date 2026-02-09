@@ -79,7 +79,9 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
                 )
                 return
             await swarm_task.interrupt()
-            await invoker.task_failed(EmptyModel(), "Swarm failed too much")
+            await invoker.task_failed(
+                EmptyModel(), RuntimeError("Swarm failed too much")
+            )
             return
 
         num_task_started = await swarm_task.fill_running_tasks()
