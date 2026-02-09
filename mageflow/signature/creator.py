@@ -17,12 +17,8 @@ TaskSignatureConvertible: TypeAlias = (
 
 
 async def resolve_signature_key(task: TaskSignatureConvertible) -> TaskSignature:
-    if isinstance(task, TaskSignature):
-        return task
-    elif isinstance(task, TaskIdentifierType):
-        return await TaskSignature.get_safe(task)
-    else:
-        return await TaskSignature.from_task(task)
+    signatures = await resolve_signature_keys([task])
+    return signatures[0]
 
 
 async def resolve_signature_keys(
