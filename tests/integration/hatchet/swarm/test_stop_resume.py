@@ -5,7 +5,7 @@ import pytest
 
 import mageflow
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_paused,
@@ -35,7 +35,6 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
         config=SwarmConfig(max_concurrency=3),
     )
     await swarm_signature.close_swarm()
-    batch_tasks = await BatchItemTaskSignature.afind()
     message = ContextMessage(base_data=test_ctx)
 
     # Act
@@ -58,13 +57,12 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     await asyncio.sleep(70)
 
     # Assert
-    # TODO - check that at least one task was stopped....
     runs = await get_runs(hatchet, ctx_metadata)
 
     tasks_map = {task.key: task for task in tasks}
-    signature_tasks = [tasks_map[batch.original_task_id] for batch in batch_tasks]
+    signature_tasks = [tasks_map[sub_task_id] for sub_task_id in swarm_signature.tasks]
     assert_paused(runs, signature_tasks, pause_time, resume_time)
     assert_task_did_not_repeat(runs)
 
-    assert_swarm_task_done(runs, swarm_signature, batch_tasks, tasks)
+    assert_swarm_task_done(runs, swarm_signature, tasks)
     await assert_redis_is_clean(redis_client)

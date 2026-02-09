@@ -2161,14 +2161,14 @@ files = [
 
 [[package]]
 name = "rapyer"
-version = "1.2.0"
+version = "1.2.1"
 description = "Pydantic models with Redis as the backend"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "rapyer-1.2.0-py3-none-any.whl", hash = "sha256:73654e260667f4293839f08e13e656bcecfdf939b13d1676d338c66a149895b2"},
-    {file = "rapyer-1.2.0.tar.gz", hash = "sha256:f0b6a75d1d6dedd78b9b78adcf6fd2d06cea90e92416bacc5324534753698059"},
+    {file = "rapyer-1.2.1-py3-none-any.whl", hash = "sha256:13cae17ab2983844a03fe61f76c2232bf70483985801370fab6291c05494789f"},
+    {file = "rapyer-1.2.1.tar.gz", hash = "sha256:4f4873ff1b4841bff177b22692b5653381a0dd6424f94ff5e58589877cf85f1e"},
 ]
 
 [package.dependencies]
@@ -2896,4 +2896,4 @@ hatchet = ["hatchet-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "3ce4915951f05eca8c09e17d61577369858b59aa9fddc4ffcc11a49f05b5d297"
+content-hash = "799cde78f05ebaffe23f550ae2c6a02b3b2595a01059381e3bf2bcb939566f21"

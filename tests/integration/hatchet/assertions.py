@@ -3,6 +3,7 @@ from datetime import datetime
 
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
+from pydantic import BaseModel
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.consts import (
@@ -12,10 +13,8 @@ from mageflow.signature.consts import (
 )
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
-from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.utils.models import return_value_field
-from mageflow.workflows import TASK_DATA_PARAM_NAME
-from pydantic import BaseModel
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -91,7 +90,7 @@ def is_task_paused(wf: V1TaskSummary) -> bool:
 
 
 def get_task_param(wf: V1TaskSummary, param_name: str):
-    return wf.additional_metadata.get(TASK_DATA_PARAM_NAME, {}).get(param_name)
+    return wf.additional_metadata.get(param_name)
 
 
 def assert_signature_done(
@@ -234,7 +233,6 @@ def assert_signature_not_called(runs: HatchetRuns, task_sign: TaskSignature | st
 def assert_swarm_task_done(
     runs: HatchetRuns,
     swarm_task: SwarmTaskSignature,
-    batch_items: list[BatchItemTaskSignature],
     tasks: list[TaskSignature],
     allow_fails: bool = True,
     check_callbacks: bool = True,
@@ -242,17 +240,15 @@ def assert_swarm_task_done(
     **swarm_kwargs,
 ):
     task_map = {task.key: task for task in tasks}
-    batch_map = {batch_item.key: batch_item for batch_item in batch_items}
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
     msg_data = swarm_msg.model_dump() if swarm_msg else {}
-    for batch_id in swarm_task.tasks:
-        batch_task = batch_map[batch_id]
-        task = task_map[batch_task.original_task_id]
+    for sub_task_id in swarm_task.tasks:
+        task = task_map[sub_task_id]
         wf = assert_signature_done(
             runs,
-            batch_map[batch_id].original_task_id,
+            sub_task_id,
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
@@ -268,7 +264,6 @@ def assert_swarm_task_done(
         if "hatchet_results" in task_output
     ]
 
-    # TODO - remove this once we move to invoke chain task via invoker_register
     if check_callbacks:
         for callback_sign in swarm_task.success_callbacks:
             task = task_map[callback_sign]
@@ -289,21 +284,21 @@ def assert_chain_done(
     chain_signature: ChainTaskSignature,
     full_tasks: list[TaskSignature],
     check_callbacks: bool = True,
+    **chain_kwargs,
 ):
     wf_by_signature = map_wf_by_id(runs)
     task_map = {task.key: task for task in full_tasks}
     chain_tasks = [task_map[task_id] for task_id in chain_signature.tasks]
     assert_tasks_in_order(wf_by_signature, chain_tasks)
     output_value = None
-    input_params = {}
     for chain_task_id in chain_signature.tasks:
+        input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
         if output_value:
-            input_params = {return_value_field(task.model_validators): output_value}
+            input_params |= {return_value_field(task.model_validators): output_value}
         task_wf = _assert_task_done(chain_task_id, wf_by_signature, input_params)
         output_value = task_wf.output["hatchet_results"]
 
-    # TODO - remove this once we move to invoke chain task via invoker_register
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
             task = task_map[chain_success]

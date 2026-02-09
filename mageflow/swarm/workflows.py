@@ -5,48 +5,30 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.consts import (
-    SWARM_TASK_ID_PARAM_NAME,
-    SWARM_ITEM_TASK_ID_PARAM_NAME,
-    SWARM_FILL_TASK,
-    SWARM_ACTION_FILL,
-)
-from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, BatchItemTaskSignature
+from mageflow.swarm.consts import SWARM_FILL_TASK, SWARM_ACTION_FILL
+from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
+from mageflow.swarm.model import SwarmTaskSignature
 
 
-async def swarm_start_tasks(msg: EmptyModel, ctx: Context):
+async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
     try:
         ctx.log(f"Swarm task started {msg}")
-        swarm_task_id = msg.model_dump()[SWARM_TASK_ID_PARAM_NAME]
+        swarm_task_id = msg.swarm_task_id
         swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
         if swarm_task.has_swarm_started:
             ctx.log(f"Swarm task started but already running {msg}")
             return
 
-        invoker = HatchetInvoker(msg, ctx)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await swarm_task.tasks_left_to_run.aextend(swarm_task.tasks)
-        tasks = await rapyer.afind(*swarm_task.tasks)
-        tasks = cast(list[BatchItemTaskSignature], tasks)
-        original_tasks = await rapyer.afind(*[task.original_task_id for task in tasks])
-        original_tasks = cast(list[TaskSignature], original_tasks)
-        async with swarm_task.apipeline():
-            for task in original_tasks:
-                await task.aupdate_real_task_kwargs(**swarm_task.kwargs)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
-    except Exception:
+    except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start tasks")
         raise
 
 
 async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
-    invoker = HatchetInvoker(msg, ctx)
-    task_data = invoker.task_ctx
-    task_key = task_data[TASK_ID_PARAM_NAME]
     try:
         swarm_task_id = msg.swarm_task_id
         swarm_item_id = msg.swarm_item_id
@@ -60,39 +42,32 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
 
         # Publish next tasks
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
-    finally:
-        await TaskSignature.remove_from_key(task_key)
 
 
-async def swarm_item_failed(msg: EmptyModel, ctx: Context):
-    invoker = HatchetInvoker(msg, ctx)
-    task_data = invoker.task_ctx
-    task_key = task_data[TASK_ID_PARAM_NAME]
+async def swarm_item_failed(msg: SwarmErrorMessage, ctx: Context):
     try:
-        msg_data = msg.model_dump()
-        swarm_task_key = msg_data[SWARM_TASK_ID_PARAM_NAME]
-        swarm_item_key = msg_data[SWARM_ITEM_TASK_ID_PARAM_NAME]
-        ctx.log(f"Swarm item failed {swarm_item_key}")
+        swarm_task_key = msg.swarm_task_id
+        swarm_item_key = msg.swarm_item_id
+        ctx.log(f"Swarm item failed {swarm_item_key} - {msg.error}")
         # Check if the swarm should end
-        swarm_task = await SwarmTaskSignature.get_safe(swarm_task_key)
+        swarm_task = await SwarmTaskSignature.aget(swarm_task_key)
         await swarm_task.task_failed(swarm_item_key)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
-        await invoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
-    finally:
-        await TaskSignature.remove_from_key(task_key)
 
 
 async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
     async with SwarmTaskSignature.alock_from_key(
         msg.swarm_task_id, action=SWARM_ACTION_FILL
     ) as swarm_task:
+        invoker = HatchetInvoker.from_no_task(msg, msg.swarm_task_id)
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
             swarm_task = await SwarmTaskSignature.get_safe(msg.swarm_task_id)
@@ -102,9 +77,9 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
                 )
                 return
             await swarm_task.interrupt()
-            await swarm_task.activate_error(EmptyModel())
-            await swarm_task.remove(with_error=False)
-            await swarm_task.failed()
+            await invoker.task_failed(
+                EmptyModel(), RuntimeError("Swarm failed too much")
+            )
             return
 
         num_task_started = await swarm_task.fill_running_tasks()
@@ -118,6 +93,5 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         is_swarm_finished_running = await swarm_task.is_swarm_done()
         if is_swarm_finished_running and not_yet_published:
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
-            await swarm_task.activate_success(msg)
-            await swarm_task.done()
+            await invoker.task_success(EmptyModel())
             ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")

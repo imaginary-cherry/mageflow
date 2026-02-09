@@ -134,18 +134,6 @@ async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_ta
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_missing_swarm_task_id_edge_case(mock_context):
-    # Arrange
-    ctx = mock_context
-    ctx.additional_metadata = {"task_data": {}}
-    msg = EmptyModel()
-
-    # Act & Assert
-    with pytest.raises(KeyError):
-        await swarm_start_tasks(msg, ctx)
-
-
-@pytest.mark.asyncio
 async def test_swarm_start_tasks_swarm_not_found_edge_case():
     # Arrange
     ctx = create_mock_context_with_metadata()

@@ -57,7 +57,6 @@ from mageflow import TaskSignature
 async def my_task(msg: MyModel, signature: TaskSignature):
     # Access the task's signature
     task_name = signature.task_name
-    task_id = signature.task_identifiers
     return {"task_name": task_name}
 ```
 

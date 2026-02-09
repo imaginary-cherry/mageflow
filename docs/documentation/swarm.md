@@ -54,7 +54,7 @@ swarm_signature = await mageflow.swarm(
 ## Managing Swarm Lifecycle
 
 ### Starting a Swarm
-You can start a swarm like any other task with the `aio_run_no_wait` method:
+Start a swarm like any other task with the `aio_run_no_wait` method:
 ```python
 # Create swarm (not closed yet)
 swarm = await mageflow.swarm(tasks=[initial_task])
@@ -67,34 +67,32 @@ await swarm.aio_run_no_wait(message)
 # 4. Trigger callbacks when all tasks finish or failure conditions are met
 
 ```
-In this case, all the tasks in the swarm will recieve the message once they got a task slot to run (the number of slots can be configured with the max_concurrency parameter in SwarmConfig).
+All tasks in the swarm will receive the message once they get a task slot to run (the number of slots can be configured with the `max_concurrency` parameter in `SwarmConfig`).
 
 
 ### Adding Tasks
 
-You can also add tasks after you created the swarm, to run it, in that case you should also run them so they will be added to the swarm ready queue: 
+Use `aio_run_in_swarm()` to add and schedule a task in one step:
 
 ```python
 # Create swarm (not closed yet)
 swarm = await mageflow.swarm(tasks=[initial_task])
+await swarm.aio_run_no_wait(SwarmMessage(swarm_data="shared"))
 
 # Add more tasks while swarm is running
-new_task = await swarm.add_task(additional_task)
-# Add the task to the queue to be run once the swarm can allocate a task slot 
-await new_task.aio_run_no_wait(message)
+await swarm.aio_run_in_swarm(additional_task, TaskMessage(data="task-specific"))
 ```
-In this way, the task will recieve the message sent to new_task
 
-If we run the swarm as well as running individual added tasks, the message to the task will include both the parameters from the message sent to the swarm and the parameters from the message sent to the new task.
-You can configure the message model to ignore extra fields so this merge wont effect the message the task recieve.
+The task receives its own message data merged with the swarm's shared parameters.
+Configure the message model to ignore extra fields so the merge doesn't affect the task:
 
 ```python
 class NewTaskMessage(BaseModel):
     data: str
-    
+
     # Ignore extra fields
     model_config = ConfigDict(extra="ignore")
-    
+
 class SwarmMessage(BaseModel):
     swarm_data: str
 
@@ -105,14 +103,12 @@ async def new_task(message: NewTaskMessage):
 swarm = await mageflow.swarm(tasks=[initial_task])
 await swarm.aio_run_no_wait(SwarmMessage(swarm_data="swarm_data"))
 
-# Add more tasks while swarm is running
-new_task = await swarm.add_task(additional_task)
-# Add the task to the queue to be run once the swarm can allocate a task slot 
-await new_task.aio_run_no_wait(message)
+# Add and run task in one call
+await swarm.aio_run_in_swarm(new_task, NewTaskMessage(data="hello"))
 ```
 
 ### Closing a Swarm
-When you want finish adding tasks to the swarm, you can close it.
+When you're done adding tasks to the swarm, close it.
 
 ```python
 # Close the swarm to prevent new tasks and trigger completion
@@ -126,10 +122,9 @@ swarm = await mageflow.swarm(
 ```
 Once the swarm is closed, it will not accept new tasks and will trigger completion callbacks when all tasks complete.
 
-You can also create swarm that is already closed
+You can also create a swarm that is already closed:
 
 ```python
-# Create swarm (not closed yet)
 swarm = await mageflow.swarm(tasks=[initial_task], is_swarm_closed=True)
 ```
 
@@ -140,7 +135,7 @@ Swarms automatically manage task concurrency:
 ```python
 # Example: Process 20 files with max 5 concurrent
 file_tasks = [
-    await mageflow.sign("process-file", file_path=f"file_{i}.txt") 
+    await mageflow.sign("process-file", file_path=f"file_{i}.txt")
     for i in range(20)
 ]
 
@@ -155,7 +150,7 @@ swarm = await mageflow.swarm(
 await swarm.aio_run_no_wait(ProcessMessage())
 ```
 
-This is espilcally usefull where you want to manage a suddent peak in tasks, without deploying new workers to support the load.
+This is especially useful when you want to manage a sudden peak in tasks without deploying new workers to support the load.
 
 ## Failure Handling
 
@@ -178,7 +173,7 @@ swarm = await mageflow.swarm(
 ```
 
 ## Swarm Callback
-The swarm will trigger callbacks when all tasks completed. The callback will receive a list of all the tasks results (see [ReturnValue Annotation](callbacks.md#setting-success-callbacks) docs).
+The swarm triggers callbacks when all tasks complete. The callback receives a list of all the task results (see [ReturnValue Annotation](callbacks.md#setting-success-callbacks) docs).
 
 ## Example Use Cases
 
@@ -224,9 +219,7 @@ await swarm.aio_run_no_wait(InitialMessage())
 
 # Add tasks as needed
 for data_item in dynamic_data_stream:
-    new_task = await mageflow.sign("process-item", data=data_item)
-    await swarm.add_task(new_task)
-    await new_task.aio_run_no_wait(ProcessMessage())
+    await swarm.aio_run_in_swarm("process-item", ProcessMessage(data=data_item))
 
 # Close when done adding tasks
 await swarm.close_swarm()
@@ -257,12 +250,3 @@ batch_swarm = await mageflow.swarm(
 
 await batch_swarm.aio_run_no_wait(BatchMessage())
 ```
-
-## Why Use Swarms?
-
-Swarms are ideal when you have multiple independent tasks that can run in parallel:
-- **Parallel Processing**: Execute multiple tasks simultaneously for better performance
-- **Concurrency Control**: Limit resource usage while maximizing throughput
-- **Dynamic Scaling**: Add tasks to the queue as needed
-- **Failure Management**: Control how task failures affect the overall operation
-- **Resource Management**: Prevent overwhelming downstream systems with configurable concurrency limits

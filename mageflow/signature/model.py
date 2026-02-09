@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
+from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Workflow
 from pydantic import (
@@ -39,7 +40,7 @@ class TaskSignature(AtomicRedisModel):
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
-    task_identifiers: RedisDict[Any] = Field(default_factory=dict)
+    signature_container_id: Optional[str] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 
@@ -95,6 +96,7 @@ class TaskSignature(AtomicRedisModel):
         if not model_validators:
             task_def = await HatchetTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
+            task_name = task_def.mageflow_task_name if task_def else task_name
         return_field_name = return_value_field(model_validators)
 
         signature = cls(
@@ -106,21 +108,9 @@ class TaskSignature(AtomicRedisModel):
         await signature.asave()
         return signature
 
-    async def add_callbacks(
-        self, success: list[Self] = None, errors: list[Self] = None
-    ):
-        if success:
-            success = [self.validate_task_key(s) for s in success]
-        if errors:
-            errors = [self.validate_task_key(e) for e in errors]
-        async with self.apipeline() as signature:
-            await signature.success_callbacks.aextend(success)
-            await signature.error_callbacks.aextend(errors)
-
-    async def workflow(self, use_return_field: bool = True, **task_additional_params):
+    def workflow(self, use_return_field: bool = True, **task_additional_params):
         total_kwargs = self.kwargs | task_additional_params
-        task_def = await HatchetTaskModel.safe_get(self.task_name)
-        task = task_def.task_name if task_def else self.task_name
+        task = self.task_name
         return_field = self.return_field_name if use_return_field else None
 
         workflow = mageflow_config.hatchet_client.workflow(
@@ -135,11 +125,18 @@ class TaskSignature(AtomicRedisModel):
         return mageflow_wf
 
     def task_ctx(self) -> dict:
-        return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
+        return {TASK_ID_PARAM_NAME: self.key}
 
-    async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
-        workflow = await self.workflow(use_return_field=False)
-        return await workflow.aio_run_no_wait(msg, **kwargs)
+    async def asend_callback(self, results: Any, **kwargs):
+        wf = self.workflow(**kwargs)
+        return await wf.aio_run_no_wait(results)
+
+    async def aio_run_no_wait(
+        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+    ):
+        params = dict(options=options) if options else {}
+        workflow = self.workflow(use_return_field=False, **kwargs)
+        return await workflow.aio_run_no_wait(msg, **params)
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
@@ -156,9 +153,8 @@ class TaskSignature(AtomicRedisModel):
             raise MissingSignatureError(
                 f"Some callbacks not found {callback_ids}, signature can be called only once"
             )
-        workflows = await asyncio.gather(
-            *[callback.workflow(**kwargs) for callback in callbacks_signatures]
-        )
+        workflows = [callback.workflow(**kwargs) for callback in callbacks_signatures]
+
         return workflows
 
     async def activate_callbacks(
@@ -224,9 +220,6 @@ class TaskSignature(AtomicRedisModel):
         await self.task_status.aupdate(
             last_status=self.task_status.status, status=status
         )
-
-    async def aupdate_real_task_kwargs(self, **kwargs):
-        return await self.kwargs.aupdate(**kwargs)
 
     # When pausing signature from outside the task
     @classmethod

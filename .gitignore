@@ -226,3 +226,4 @@ frontend/node_modules/
 /app/.idea/
 /scripts
 /frontend/.idea/
+.planning/
