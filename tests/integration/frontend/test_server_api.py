@@ -241,3 +241,78 @@ async def test_get_callbacks_for_nonexistent_task_returns_none(test_client):
     # Assert
     assert response.status_code == 200
     assert response.json() is None
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+async def test_cancel_task_returns_202_accepted(test_client):
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{seeded_data.basic_task_id}/cancel")
+
+    # Assert
+    assert response.status_code == 202
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+async def test_pause_task_returns_202_accepted(test_client):
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{seeded_data.chain.chain_id}/pause")
+
+    # Assert
+    assert response.status_code == 202
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+async def test_retry_task_returns_202_accepted(test_client):
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{seeded_data.callbacks.task_id}/retry")
+
+    # Assert
+    assert response.status_code == 202
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_cancel_nonexistent_task_returns_404(test_client):
+    # Arrange
+    client, _ = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{TEST_PREFIX}nonexistent/cancel")
+
+    # Assert
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_pause_nonexistent_task_returns_404(test_client):
+    # Arrange
+    client, _ = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{TEST_PREFIX}nonexistent/pause")
+
+    # Assert
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_retry_nonexistent_task_returns_404(test_client):
+    # Arrange
+    client, _ = test_client
+
+    # Act
+    response = await client.post(f"/api/tasks/{TEST_PREFIX}nonexistent/retry")
+
+    # Assert
+    assert response.status_code == 404

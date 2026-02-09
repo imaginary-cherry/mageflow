@@ -85,18 +85,6 @@ async def seed_swarm_task() -> SwarmTestData:
     publish_state.key = f"{TEST_PREFIX}publish_state_001"
     await publish_state.asave()
 
-    swarm = SwarmTaskSignature(
-        task_name="test_swarm",
-        tasks=[],
-        kwargs={"swarm_param": "swarm_value"},
-        creation_time=datetime.now(),
-        task_status=TaskStatus(status=SignatureStatus.ACTIVE),
-        publishing_state_id=publish_state.key,
-        config=SwarmConfig(max_concurrency=10),
-    )
-    swarm.key = f"{TEST_PREFIX}swarm_001"
-    await swarm.asave()
-
     original_task_ids = []
     swarm_item_callback_ids = []
     for i in range(3):
@@ -112,6 +100,18 @@ async def seed_swarm_task() -> SwarmTestData:
 
         swarm_item_callback_ids.extend(original_task.success_callbacks)
         swarm_item_callback_ids.extend(original_task.error_callbacks)
+
+    swarm = SwarmTaskSignature(
+        task_name="test_swarm",
+        tasks=original_task_ids,
+        kwargs={"swarm_param": "swarm_value"},
+        creation_time=datetime.now(),
+        task_status=TaskStatus(status=SignatureStatus.ACTIVE),
+        publishing_state_id=publish_state.key,
+        config=SwarmConfig(max_concurrency=10),
+    )
+    swarm.key = f"{TEST_PREFIX}swarm_001"
+    await swarm.asave()
 
     return SwarmTestData(
         swarm_id=swarm.key,
