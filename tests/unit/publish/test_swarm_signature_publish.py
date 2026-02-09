@@ -188,7 +188,7 @@ async def test_aio_run_in_swarm_at_max_concurrency_returns_empty(
     result = await swarm.aio_run_in_swarm(sub_task, msg)
 
     # Assert
-    assert result == []
+    assert result is None
     mock_task_aio_run_no_wait.assert_not_called()
 
 
