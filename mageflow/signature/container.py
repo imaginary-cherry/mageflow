@@ -1,7 +1,7 @@
 import abc
 import asyncio
 from abc import ABC
-from typing import Self, Any
+from typing import Any
 
 from pydantic import BaseModel
 
