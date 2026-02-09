@@ -63,6 +63,21 @@ async def test_batch_fetch_tasks_returns_requested_tasks(test_client):
     assert returned_ids == set(task_ids)
     assert len(returned_ids) == len(task_ids)
 
+    # Verify field names match frontend expectations
+    for task in tasks:
+        assert "children_ids" in task
+        assert "metadata" in task
+        assert "status" in task
+        valid_statuses = ["pending", "running", "completed", "failed", "cancelled", "paused"]
+        assert task["status"] in valid_statuses
+
+    # Verify specific status values for seeded tasks
+    basic_task = next(t for t in tasks if t["id"] == seeded_data.basic_task_id)
+    assert basic_task["status"] == "pending"
+
+    chain_task = next(t for t in tasks if t["id"] == seeded_data.chain.chain_id)
+    assert chain_task["status"] == "running"
+
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_batch_fetch_with_empty_list_returns_empty(test_client):
@@ -123,7 +138,7 @@ async def test_get_swarm_children_returns_batch_item_ids(test_client):
     assert response.status_code == 200
     data = response.json()
     assert data["totalCount"] == 3
-    assert set(data["taskIds"]) == set(seeded_data.swarm.batch_item_ids)
+    assert set(data["taskIds"]) == set(seeded_data.swarm.original_task_ids)
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -32,7 +32,6 @@ class SeededTestData:
             self.chain.task1_id,
             self.chain.task2_id,
             self.swarm.swarm_id,
-            *self.swarm.batch_item_ids,
             *self.swarm.original_task_ids,
             *self.swarm.swarm_item_callback_ids,
             self.callbacks.task_id,
