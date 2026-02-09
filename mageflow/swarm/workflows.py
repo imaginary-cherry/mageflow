@@ -21,8 +21,6 @@ async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
             return
 
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        tasks = await rapyer.afind(*swarm_task.tasks)
-        tasks = cast(list[TaskSignature], tasks)
         await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception as e:
