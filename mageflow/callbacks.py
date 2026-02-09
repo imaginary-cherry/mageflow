@@ -4,13 +4,9 @@ import inspect
 from enum import Enum
 from typing import Any
 
-from hatchet_sdk import Context
-from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 
-from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.task.model import HatchetTaskModel
+from mageflow.task.model import MageflowTaskModel
 from mageflow.utils.pythonic import flexible_call
 
 
@@ -20,8 +16,13 @@ class AcceptParams(Enum):
     ALL = 3
 
 
-class HatchetResult(BaseModel):
+class MageflowResult(BaseModel):
+    # Field name kept as hatchet_results for wire-format backward compatibility
     hatchet_results: Any
+
+
+# Backward-compatible alias
+HatchetResult = MageflowResult
 
 
 def handle_task_callback(
@@ -31,11 +32,15 @@ def handle_task_callback(
 ):
     def task_decorator(func):
         @functools.wraps(func)
-        async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
-            invoker = HatchetInvoker(message, ctx)
-            task_model = await HatchetTaskModel.aget(ctx.action.job_name)
+        async def wrapper(message, ctx, *args, **kwargs):
+            from mageflow.startup import mageflow_config
+
+            adapter = mageflow_config.adapter
+            invoker = adapter.create_invoker(message, ctx)
+            task_name = _extract_task_name(ctx)
+            task_model = await MageflowTaskModel.aget(task_name)
             if not await invoker.should_run_task():
-                await ctx.aio_cancel()
+                await invoker.cancel_current_task()
                 await asyncio.sleep(10)
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
@@ -53,14 +58,14 @@ def handle_task_callback(
             except (Exception, asyncio.CancelledError) as e:
                 if is_normal_run:
                     raise
-                if not task_model.should_retry(ctx.attempt_number, e):
+                if not task_model.should_retry(invoker.get_attempt_number(), e):
                     await invoker.task_failed()
                     await signature.failed()
                 raise
             else:
                 if is_normal_run:
                     return result
-                task_results = HatchetResult(hatchet_results=result)
+                task_results = MageflowResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await invoker.task_success(dumped_results["hatchet_results"])
                 await signature.done()
@@ -75,10 +80,26 @@ def handle_task_callback(
     return task_decorator
 
 
+def _extract_task_name(ctx) -> str:
+    """Extract the task name from the execution context, regardless of client type."""
+    # Hatchet context
+    if hasattr(ctx, "action") and hasattr(ctx.action, "job_name"):
+        return ctx.action.job_name
+    # Temporal activity info
+    if hasattr(ctx, "workflow_type"):
+        return ctx.workflow_type
+    # Generic fallback
+    if hasattr(ctx, "task_name"):
+        return ctx.task_name
+    if isinstance(ctx, dict):
+        return ctx.get("task_name", "")
+    return ""
+
+
 def register_task(register_name: str):
     from mageflow.startup import REGISTERED_TASKS
 
-    def decorator(func: Standalone):
+    def decorator(func):
         REGISTERED_TASKS.append((func, register_name))
         return func
 

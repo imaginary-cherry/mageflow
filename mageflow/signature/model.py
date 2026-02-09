@@ -4,8 +4,6 @@ from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
 
 import rapyer
-from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Workflow
 from pydantic import (
     BaseModel,
     field_validator,
@@ -23,11 +21,13 @@ from mageflow.errors import MissingSignatureError
 from mageflow.models.message import DEFAULT_RESULT_NAME
 from mageflow.signature.consts import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
 from mageflow.signature.status import TaskStatus, SignatureStatus, PauseActionTypes
-from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
+from mageflow.signature.types import TaskIdentifierType, TaskType
 from mageflow.startup import mageflow_config
-from mageflow.task.model import HatchetTaskModel
+from mageflow.task.model import MageflowTaskModel
 from mageflow.utils.models import return_value_field
-from mageflow.workflows import MageflowWorkflow
+
+# Keep backward-compatible alias
+HatchetTaskType = TaskType
 
 
 class TaskSignature(AtomicRedisModel):
@@ -64,15 +64,24 @@ class TaskSignature(AtomicRedisModel):
     @classmethod
     async def from_task(
         cls,
-        task: HatchetTaskType,
+        task: TaskType,
         success_callbacks: list[TaskIdentifierType | Self] = None,
         error_callbacks: list[TaskIdentifierType | Self] = None,
         **kwargs,
     ) -> Self:
-        return_field_name = return_value_field(task.input_validator)
+        # Extract task metadata via adapter if available
+        adapter = mageflow_config.adapter
+        if adapter:
+            task_name = adapter.get_task_name(task)
+            input_validator = adapter.get_input_validator(task)
+        else:
+            task_name = getattr(task, "name", str(task))
+            input_validator = getattr(task, "input_validator", None)
+
+        return_field_name = return_value_field(input_validator)
         signature = cls(
-            task_name=task.name,
-            model_validators=task.input_validator,
+            task_name=task_name,
+            model_validators=input_validator,
             return_field_name=return_field_name,
             success_callbacks=success_callbacks or [],
             error_callbacks=error_callbacks or [],
@@ -93,7 +102,7 @@ class TaskSignature(AtomicRedisModel):
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
         if not model_validators:
-            task_def = await HatchetTaskModel.safe_get(task_name)
+            task_def = await MageflowTaskModel.safe_get(task_name)
             model_validators = task_def.input_validator if task_def else None
         return_field_name = return_value_field(model_validators)
 
@@ -117,33 +126,71 @@ class TaskSignature(AtomicRedisModel):
             await signature.success_callbacks.aextend(success)
             await signature.error_callbacks.aextend(errors)
 
-    async def workflow(self, use_return_field: bool = True, **task_additional_params):
-        total_kwargs = self.kwargs | task_additional_params
-        task_def = await HatchetTaskModel.safe_get(self.task_name)
+    async def run_no_wait(self, msg: BaseModel, use_return_field: bool = True, **task_additional_params):
+        """Run this task via the adapter without waiting for completion."""
+        total_kwargs = dict(self.kwargs) | task_additional_params
+        task_def = await MageflowTaskModel.safe_get(self.task_name)
         task = task_def.task_name if task_def else self.task_name
         return_field = self.return_field_name if use_return_field else None
 
-        workflow = mageflow_config.hatchet_client.workflow(
-            name=task, input_validator=self.model_validators
+        adapter = mageflow_config.adapter
+        return await adapter.run_task_no_wait(
+            task_name=task,
+            msg=msg,
+            task_ctx=self.task_ctx(),
+            input_validator=self.model_validators,
+            extra_params=total_kwargs,
+            return_value_field=return_field,
         )
-        mageflow_wf = MageflowWorkflow(
-            workflow,
-            workflow_params=total_kwargs,
+
+    # Keep backward-compatible workflow() method for code that wraps it further
+    async def workflow(self, use_return_field: bool = True, **task_additional_params):
+        """
+        Create a workflow wrapper for this task signature.
+
+        For Hatchet adapter, returns a MageflowWorkflow.
+        For other adapters, returns a lightweight wrapper with aio_run_no_wait.
+        """
+        total_kwargs = dict(self.kwargs) | task_additional_params
+        task_def = await MageflowTaskModel.safe_get(self.task_name)
+        task = task_def.task_name if task_def else self.task_name
+        return_field = self.return_field_name if use_return_field else None
+
+        adapter = mageflow_config.adapter
+
+        # Try Hatchet path for backward compat (returns MageflowWorkflow)
+        if hasattr(adapter, "caller"):
+            from mageflow.workflows import MageflowWorkflow
+
+            workflow = adapter.caller.workflow(
+                name=task, input_validator=self.model_validators
+            )
+            return MageflowWorkflow(
+                workflow,
+                workflow_params=total_kwargs,
+                return_value_field=return_field,
+                task_ctx=self.task_ctx(),
+            )
+
+        # Generic adapter path: return an object with aio_run_no_wait
+        return _AdapterWorkflowProxy(
+            adapter=adapter,
+            task_name=task,
+            input_validator=self.model_validators,
+            extra_params=total_kwargs,
             return_value_field=return_field,
             task_ctx=self.task_ctx(),
         )
-        return mageflow_wf
 
     def task_ctx(self) -> dict:
         return self.task_identifiers | {TASK_ID_PARAM_NAME: self.key}
 
     async def aio_run_no_wait(self, msg: BaseModel, **kwargs):
-        workflow = await self.workflow(use_return_field=False)
-        return await workflow.aio_run_no_wait(msg, **kwargs)
+        return await self.run_no_wait(msg, use_return_field=False, **kwargs)
 
     async def callback_workflows(
         self, with_success: bool = True, with_error: bool = True, **kwargs
-    ) -> list[Workflow]:
+    ) -> list:
         callback_ids = []
         if with_success:
             callback_ids.extend(self.success_callbacks)
@@ -254,7 +301,8 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.aio_run_no_wait(EmptyModel())
+            empty_msg = _create_empty_model()
+            await self.aio_run_no_wait(empty_msg)
         else:
             await self.change_status(last_status)
 
@@ -306,6 +354,43 @@ class TaskSignature(AtomicRedisModel):
         elif pause_type == PauseActionTypes.INTERRUPT:
             return await self.interrupt()
         raise NotImplementedError(f"Pause type {pause_type} not supported")
+
+
+class _AdapterWorkflowProxy:
+    """Lightweight proxy that mimics MageflowWorkflow.aio_run_no_wait for non-Hatchet adapters."""
+
+    def __init__(self, adapter, task_name, input_validator, extra_params, return_value_field, task_ctx):
+        self._adapter = adapter
+        self._task_name = task_name
+        self._input_validator = input_validator
+        self._extra_params = extra_params
+        self._return_value_field = return_value_field
+        self._task_ctx = task_ctx
+
+    async def aio_run_no_wait(self, msg, **kwargs):
+        return await self._adapter.run_task_no_wait(
+            task_name=self._task_name,
+            msg=msg,
+            task_ctx=self._task_ctx,
+            input_validator=self._input_validator,
+            extra_params=self._extra_params,
+            return_value_field=self._return_value_field,
+        )
+
+
+def _create_empty_model() -> BaseModel:
+    """Create an empty BaseModel, using Hatchet's EmptyModel if available, else generic."""
+    try:
+        from hatchet_sdk.runnables.types import EmptyModel
+
+        return EmptyModel()
+    except ImportError:
+        pass
+
+    class EmptyModel(BaseModel):
+        pass
+
+    return EmptyModel()
 
 
 @contextlib.asynccontextmanager

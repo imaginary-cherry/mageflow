@@ -2,7 +2,6 @@ import asyncio
 from typing import Self, Any, Optional, cast
 
 import rapyer
-from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
 from rapyer.types import RedisList, RedisInt
@@ -30,6 +29,7 @@ from mageflow.swarm.consts import (
     ON_SWARM_ERROR,
     ON_SWARM_START,
 )
+from mageflow.signature.model import _create_empty_model
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.state import PublishState
 from mageflow.utils.pythonic import deep_merge
@@ -228,7 +228,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 original_tasks = await rapyer.afind(*original_task_ids)
                 original_tasks = cast(list[TaskSignature], original_tasks)
                 publish_coroutine = [
-                    next_task.aio_run_no_wait(EmptyModel(), **pub_kwargs)
+                    next_task.aio_run_no_wait(_create_empty_model(), **pub_kwargs)
                     for next_task in original_tasks
                 ]
                 await asyncio.gather(*publish_coroutine)
@@ -281,7 +281,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
             should_finish_swarm = await swarm_task.is_swarm_done()
             not_yet_published = not swarm_task.has_published_callback()
             if should_finish_swarm and not_yet_published:
-                await swarm_task.activate_success(EmptyModel())
+                await swarm_task.activate_success(_create_empty_model())
                 await swarm_task.done()
         return self
 
