@@ -18,6 +18,10 @@ class BaseInvoker(ABC):
         pass
 
     @abc.abstractmethod
+    def is_vanilla_run(self) -> bool:
+        pass
+
+    @abc.abstractmethod
     async def task_signature(self) -> Optional[TaskSignature]:
         pass
 
@@ -71,15 +75,15 @@ class BaseInvoker(ABC):
     async def should_run_task(self, message: BaseModel) -> bool:
         signature = await self.task_signature()
         if signature:
-            if signature is None:
-                return False
             should_task_run = await signature.should_run()
             if should_task_run:
                 return True
             await signature.task_status.aupdate(last_status=SignatureStatus.ACTIVE)
             await signature.handle_inactive_task(message)
             return False
-        return True
+        if self.is_vanilla_run():
+            return True
+        return False
 
     @classmethod
     @abc.abstractmethod
