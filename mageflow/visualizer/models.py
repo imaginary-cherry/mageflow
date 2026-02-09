@@ -5,9 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
 
-TaskType = Literal["task", "chain", "swarm", "batch_item"]
 TaskStatus = Literal[
     "pending", "active", "suspended", "interrupted", "canceled", "completed", "failed"
 ]
@@ -37,10 +35,9 @@ class CamelCaseModel(BaseModel):
 
 class TaskFromServer(BaseModel):
     id: str
-    type: TaskType
+    type: str
     name: str
     status: TaskStatus
-    parent_id: str | None
     subtask_ids: list[str]
     success_callback_ids: list[str]
     error_callback_ids: list[str]
@@ -68,40 +65,15 @@ class BatchTasksRequest(CamelCaseModel):
     task_ids: list[str]
 
 
-def get_task_type(task: TaskSignature) -> TaskType:
-    if isinstance(task, ChainTaskSignature):
-        return "chain"
-    elif isinstance(task, SwarmTaskSignature):
-        return "swarm"
-    elif isinstance(task, BatchItemTaskSignature):
-        return "batch_item"
-    return "task"
-
-
-def get_subtask_ids(task: TaskSignature) -> list[str]:
-    if isinstance(task, ChainTaskSignature):
-        return list(task.tasks)
-    elif isinstance(task, SwarmTaskSignature):
-        return list(task.tasks)
-    return []
-
-
-def get_parent_id(task: TaskSignature) -> str | None:
-    if isinstance(task, BatchItemTaskSignature):
-        return task.swarm_id
-    return None
-
-
 def serialize_task(task: TaskSignature) -> TaskFromServer:
     return TaskFromServer(
         id=task.key,
-        type=get_task_type(task),
+        type=task.__class__.__name__,
         name=task.task_name,
         status=STATUS_MAPPING.get(task.task_status.status, "pending"),
-        parent_id=get_parent_id(task),
-        subtask_ids=get_subtask_ids(task),
+        subtask_ids=task.task_ids if isinstance(task, ChainTaskSignature) else [],
         success_callback_ids=list(task.success_callbacks),
         error_callback_ids=list(task.error_callbacks),
         kwargs=dict(task.kwargs),
-        created_at=task.creation_time.isoformat() if task.creation_time else "",
+        created_at=task.creation_time.isoformat(),
     )
