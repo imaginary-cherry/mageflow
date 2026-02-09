@@ -181,7 +181,7 @@ async def test__suspended_signature__cancel_called():
 @pytest.mark.parametrize(
     "status", [SignatureStatus.SUSPENDED, SignatureStatus.CANCELED]
 )
-async def test__suspended_signature__cancel_raises__propagates_error(status):
+async def test__task_should_not_run__cancel_raises__propagates_error(status):
     # Arrange
     signature, _ = await task_signature_factory(status=status)
     ctx = create_mock_hatchet_context(
