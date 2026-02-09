@@ -1,7 +1,9 @@
 import asyncio
+import functools
 import json
 import logging
 import uuid
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel
@@ -13,31 +15,35 @@ from mageflow.signature.status import SignatureStatus
 
 logger = logging.getLogger(__name__)
 
-TASK_DATA_HEADER_KEY = "mageflow_task_data"
+# Reserved key embedded in the workflow input dict to carry mageflow context.
+# Stripped by the task decorator before the user function ever sees the message.
+MAGEFLOW_CTX_KEY = "__mageflow_ctx__"
+
+
+@dataclass
+class TemporalTaskContext:
+    """
+    Lightweight context object passed as the second argument to
+    handle_task_callback when running under Temporal.
+
+    Mirrors the role of hatchet_sdk.Context - carries invisible
+    mageflow metadata (task_id, identifiers) separate from the user message.
+    """
+
+    task_data: dict = field(default_factory=dict)
+    task_name: str = ""
+    workflow_run_id: str = ""
+    attempt: int = 1
 
 
 class TemporalInvoker(BaseInvoker):
     """Per-execution invoker for Temporal activities/workflows."""
 
-    def __init__(self, message: BaseModel, activity_info: Any):
+    def __init__(self, message: BaseModel, ctx: TemporalTaskContext):
         self.message = message
-        self._activity_info = activity_info
-        self.task_data = self._extract_task_data(activity_info)
-        self.workflow_run_id = getattr(activity_info, "workflow_run_id", "")
-
-    @staticmethod
-    def _extract_task_data(activity_info: Any) -> dict:
-        """Extract mageflow task_data from Temporal headers or search attributes."""
-        # Temporal passes metadata via workflow headers
-        headers = getattr(activity_info, "header", {}) or {}
-        task_data_raw = headers.get(TASK_DATA_HEADER_KEY, None)
-        if task_data_raw:
-            if isinstance(task_data_raw, bytes):
-                task_data_raw = task_data_raw.decode()
-            if isinstance(task_data_raw, str):
-                return json.loads(task_data_raw)
-            return task_data_raw
-        return {}
+        self._ctx = ctx
+        self.task_data = ctx.task_data
+        self.workflow_run_id = ctx.workflow_run_id
 
     @property
     def task_ctx(self) -> dict:
@@ -51,7 +57,7 @@ class TemporalInvoker(BaseInvoker):
         return self.task_id is None
 
     def get_attempt_number(self) -> int:
-        return getattr(self._activity_info, "attempt", 1)
+        return self._ctx.attempt
 
     async def cancel_current_task(self):
         try:
@@ -126,8 +132,6 @@ class TemporalInvoker(BaseInvoker):
     async def wait_task(
         self, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
     ):
-        from temporalio.client import Client as TemporalClient
-
         client = TemporalClientAdapter._temporal_client
         if client is None:
             raise RuntimeError("Temporal client not configured")
@@ -137,6 +141,36 @@ class TemporalInvoker(BaseInvoker):
             id=f"{task_name}-{uuid.uuid4().hex[:12]}",
             task_queue=TemporalClientAdapter._task_queue,
         )
+
+
+def _build_temporal_context(raw_input: dict, task_name: str) -> TemporalTaskContext:
+    """
+    Extract the mageflow context from the raw Temporal input and build
+    a TemporalTaskContext.  The MAGEFLOW_CTX_KEY is popped from the
+    input dict in-place so the user function never sees it.
+    """
+    task_data = raw_input.pop(MAGEFLOW_CTX_KEY, {})
+    if isinstance(task_data, str):
+        task_data = json.loads(task_data)
+
+    # Try to get activity info for workflow_run_id and attempt
+    workflow_run_id = ""
+    attempt = 1
+    try:
+        from temporalio import activity
+
+        info = activity.info()
+        workflow_run_id = info.workflow_run_id
+        attempt = info.attempt
+    except Exception:
+        pass
+
+    return TemporalTaskContext(
+        task_data=task_data,
+        task_name=task_name,
+        workflow_run_id=workflow_run_id,
+        attempt=attempt,
+    )
 
 
 class TemporalClientAdapter(TaskClientAdapter):
@@ -149,6 +183,14 @@ class TemporalClientAdapter(TaskClientAdapter):
     - worker() -> Temporal Worker
     - run_task_no_wait -> client.start_workflow()
     - run_task_and_wait -> client.execute_workflow()
+
+    Task context passing strategy:
+    The mageflow task_ctx (containing task_id and identifiers) is embedded
+    inside the workflow input under a reserved key (MAGEFLOW_CTX_KEY).
+    The task decorator strips it from the input and builds a
+    TemporalTaskContext before calling the callback-wrapped user function.
+    This way the user function never sees the mageflow internals -- just
+    like Hatchet's additional_metadata.
     """
 
     _temporal_client = None
@@ -159,50 +201,105 @@ class TemporalClientAdapter(TaskClientAdapter):
         TemporalClientAdapter._temporal_client = temporal_client
         TemporalClientAdapter._task_queue = task_queue
         self.task_queue = task_queue
-        self._registered_workflows = {}
         self._registered_activities = {}
 
     def task(self, name: str, **kwargs):
         """
-        Returns a decorator that registers a function as a Temporal workflow
-        wrapping a single activity.
+        Returns a decorator that wraps a function for Temporal execution.
+
+        The wrapper:
+        1. Receives the raw input dict from Temporal
+        2. Pops MAGEFLOW_CTX_KEY to build a TemporalTaskContext
+        3. Reconstructs the user message (via input_validator or raw dict)
+        4. Calls the inner function with (message, temporal_ctx)
+           -- matching the (message, ctx) signature handle_task_callback expects
         """
+        input_validator = kwargs.get("input_validator")
 
         def decorator(func):
+            @functools.wraps(func)
+            async def temporal_wrapper(raw_input: dict):
+                # raw_input is the dict Temporal deserialised from the workflow input.
+                # Pop the mageflow context before the user function can see it.
+                if not isinstance(raw_input, dict):
+                    if isinstance(raw_input, BaseModel):
+                        raw_input = raw_input.model_dump(mode="json")
+                    else:
+                        raw_input = dict(raw_input) if raw_input else {}
+
+                ctx = _build_temporal_context(raw_input, name)
+
+                # Reconstruct the user message
+                validator = input_validator
+                if validator is not None:
+                    try:
+                        message = validator(**raw_input)
+                    except Exception:
+                        message = validator.model_validate(raw_input)
+                else:
+                    # No validator -- pass a generic BaseModel-like wrapper
+                    message = _dict_to_model(raw_input)
+
+                return await func(message, ctx)
+
+            # Store metadata on the wrapper for get_task_name / get_retries etc.
+            temporal_wrapper._temporal_task_name = name
+            temporal_wrapper._temporal_kwargs = kwargs
+            temporal_wrapper._temporal_durable = False
+            temporal_wrapper._temporal_input_validator = input_validator
+            temporal_wrapper._temporal_retries = kwargs.get("retries", 0)
+
             self._registered_activities[name] = {
-                "func": func,
+                "func": temporal_wrapper,
                 "name": name,
                 "kwargs": kwargs,
                 "durable": False,
             }
-            func._temporal_task_name = name
-            func._temporal_kwargs = kwargs
-            func._temporal_durable = False
-            func._temporal_input_validator = kwargs.get("input_validator")
-            func._temporal_retries = kwargs.get("retries", 0)
-            return func
+            return temporal_wrapper
 
         return decorator
 
     def durable_task(self, name: str, **kwargs):
         """
-        Returns a decorator that registers a function as a Temporal workflow
-        with heartbeating enabled (for long-running activities).
+        Same as task() but marks the activity as durable (heartbeating).
         """
+        input_validator = kwargs.get("input_validator")
 
         def decorator(func):
+            @functools.wraps(func)
+            async def temporal_wrapper(raw_input: dict):
+                if not isinstance(raw_input, dict):
+                    if isinstance(raw_input, BaseModel):
+                        raw_input = raw_input.model_dump(mode="json")
+                    else:
+                        raw_input = dict(raw_input) if raw_input else {}
+
+                ctx = _build_temporal_context(raw_input, name)
+
+                validator = input_validator
+                if validator is not None:
+                    try:
+                        message = validator(**raw_input)
+                    except Exception:
+                        message = validator.model_validate(raw_input)
+                else:
+                    message = _dict_to_model(raw_input)
+
+                return await func(message, ctx)
+
+            temporal_wrapper._temporal_task_name = name
+            temporal_wrapper._temporal_kwargs = kwargs
+            temporal_wrapper._temporal_durable = True
+            temporal_wrapper._temporal_input_validator = input_validator
+            temporal_wrapper._temporal_retries = kwargs.get("retries", 0)
+
             self._registered_activities[name] = {
-                "func": func,
+                "func": temporal_wrapper,
                 "name": name,
                 "kwargs": kwargs,
                 "durable": True,
             }
-            func._temporal_task_name = name
-            func._temporal_kwargs = kwargs
-            func._temporal_durable = True
-            func._temporal_input_validator = kwargs.get("input_validator")
-            func._temporal_retries = kwargs.get("retries", 0)
-            return func
+            return temporal_wrapper
 
         return decorator
 
@@ -247,17 +344,22 @@ class TemporalClientAdapter(TaskClientAdapter):
         extra_params: dict = None,
         return_value_field: str = None,
     ):
-        """Start a Temporal workflow without waiting for completion."""
+        """
+        Start a Temporal workflow without waiting for completion.
+
+        The mageflow task_ctx is embedded in the input dict under
+        MAGEFLOW_CTX_KEY.  The receiving task decorator strips it
+        before the user function sees it.
+        """
         input_data = msg.model_dump(mode="json")
         if extra_params:
             input_data.update(extra_params)
         if return_value_field:
             input_data = {return_value_field: input_data}
 
-        # Pass mageflow task context via headers
-        headers = {}
+        # Embed mageflow context inside the input payload
         if task_ctx:
-            headers[TASK_DATA_HEADER_KEY] = json.dumps(task_ctx)
+            input_data[MAGEFLOW_CTX_KEY] = task_ctx
 
         workflow_id = f"{task_name}-{uuid.uuid4().hex[:12]}"
 
@@ -266,7 +368,6 @@ class TemporalClientAdapter(TaskClientAdapter):
             input_data,
             id=workflow_id,
             task_queue=self.task_queue,
-            headers=headers,
         )
         return handle
 
@@ -345,3 +446,12 @@ class TemporalClientAdapter(TaskClientAdapter):
 
     def get_retries(self, workflow_or_func) -> int | None:
         return getattr(workflow_or_func, "_temporal_retries", None)
+
+
+def _dict_to_model(data: dict) -> BaseModel:
+    """Wrap a plain dict in a BaseModel so it has .model_dump()."""
+
+    class DynamicModel(BaseModel):
+        model_config = {"extra": "allow"}
+
+    return DynamicModel(**data)
