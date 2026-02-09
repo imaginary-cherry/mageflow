@@ -351,12 +351,12 @@ async def test__invalid_task_id__should_not_run():
             cancel_raises=True,
         )
     )
-    default_handler, tracked_calls = handler_factory()
+    handler_bad_signature_key, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act & Assert
-    with pytest.raises(Exception):
-        await default_handler(message, ctx)
+    with pytest.raises(asyncio.CancelledError):
+        await handler_bad_signature_key(message, ctx)
 
     assert len(tracked_calls) == 0
 
