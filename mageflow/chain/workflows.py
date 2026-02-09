@@ -31,7 +31,7 @@ async def chain_error_task(msg: ChainErrorMessage, ctx: Context):
         chain_signature = await invoker.task_signature()
 
         if chain_signature is None:
-            ctx.log(f"Chain task {chain_task_id} already removed, skipping")
+            ctx.log(f"Chain task {msg.chain_task_id} already removed, skipping")
             return
 
         ctx.log(f"Chain task failed {chain_signature.task_name}")
