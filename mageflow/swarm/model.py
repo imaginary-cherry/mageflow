@@ -35,7 +35,7 @@ class SwarmConfig(AtomicRedisModel):
     def can_add_n_tasks(self, swarm: "SwarmTaskSignature", n: int) -> bool:
         if self.max_task_allowed is None:
             return True
-        return len(swarm.tasks) + n < self.max_task_allowed
+        return len(swarm.tasks) + n <= self.max_task_allowed
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
