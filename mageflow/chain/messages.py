@@ -11,7 +11,6 @@ class ChainMessage(BaseModel):
 
 class ChainCallbackMessage(ChainMessage):
     chain_results: ReturnValue[Any]
-    chain_task_id: str
 
 
 class ChainErrorMessage(ChainMessage):
