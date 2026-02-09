@@ -1,5 +1,4 @@
-import asyncio
-from typing import Any
+from typing import Optional
 
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
@@ -9,28 +8,37 @@ from mageflow.invokers.base import BaseInvoker
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.workflows import TASK_DATA_PARAM_NAME
 
 
 class HatchetInvoker(BaseInvoker):
     # TODO - This should be in init, and the entire class created via factory in mageflow_config
     client: Hatchet = None
 
-    def __init__(self, message: BaseModel, ctx: Context):
+    def __init__(self, message: BaseModel, task_key: str, workflow_id: Optional[str]):
         self.message = message
-        self.task_data = ctx.additional_metadata.get(TASK_DATA_PARAM_NAME, {})
-        self.workflow_id = ctx.workflow_id
-        hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
-        hatchet_ctx_metadata.pop(TASK_DATA_PARAM_NAME, None)
-        ctx_additional_metadata.set(hatchet_ctx_metadata)
+        self.task_key = task_key
+        self.workflow_id = workflow_id
 
-    @property
-    def task_ctx(self) -> dict:
-        return self.task_data
+    @classmethod
+    def from_task_data(cls, message: BaseModel, ctx: Context) -> "HatchetInvoker":
+        task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME, None)
+        hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
+        hatchet_ctx_metadata.pop(TASK_ID_PARAM_NAME, None)
+        ctx_additional_metadata.set(hatchet_ctx_metadata)
+        return cls(message, task_key, ctx.workflow_id)
+
+    @classmethod
+    def from_no_task(cls, message: BaseModel, task_id: str) -> "HatchetInvoker":
+        return cls(message, task_id, None)
+
+    async def task_signature(self) -> Optional[TaskSignature]:
+        if self.task_id:
+            return await TaskSignature.get_safe(self.task_id)
+        return None
 
     @property
     def task_id(self) -> str | None:
-        return self.task_data.get(TASK_ID_PARAM_NAME, None)
+        return self.task_key
 
     def is_vanilla_run(self):
         return self.task_id is None
@@ -44,48 +52,29 @@ class HatchetInvoker(BaseInvoker):
                 return signature
         return None
 
-    async def task_success(self, result: Any):
-        success_publish_tasks = []
-        task_id = self.task_id
-        if task_id:
-            current_task = await TaskSignature.get_safe(task_id)
-            task_success_workflows = current_task.activate_success(result)
-            success_publish_tasks.append(asyncio.create_task(task_success_workflows))
-
-            if success_publish_tasks:
-                await asyncio.gather(*success_publish_tasks)
-
-            await current_task.remove(with_success=False)
-
-    async def task_failed(self):
-        error_publish_tasks = []
-        task_id = self.task_id
-        if task_id:
-            current_task = await TaskSignature.get_safe(task_id)
-            task_error_workflows = current_task.activate_error(self.message)
-            error_publish_tasks.append(asyncio.create_task(task_error_workflows))
-
-            if error_publish_tasks:
-                await asyncio.gather(*error_publish_tasks)
-
-            await current_task.remove(with_error=False)
-
-    async def should_run_task(self) -> bool:
-        task_id = self.task_id
-        if task_id:
-            signature = await TaskSignature.get_safe(task_id)
-            if signature is None:
-                return False
-            should_task_run = await signature.should_run()
-            if should_task_run:
-                return True
-            await signature.task_status.aupdate(last_status=SignatureStatus.ACTIVE)
-            await signature.handle_inactive_task(self.message)
-            return False
-        return True
-
+    @classmethod
     async def wait_task(
-        self, task_name: str, msg: BaseModel, validator: type[BaseModel] = None
+        cls,
+        task_name: str,
+        msg: BaseModel,
+        validator: type[BaseModel] = None,
+        **request_kwargs,
     ):
-        wf = self.client.workflow(name=task_name, input_validator=validator)
-        return await wf.aio_run(msg)
+        validator = validator or type(msg)
+        wf = cls.client.workflow(name=task_name, input_validator=validator)
+        return await wf.aio_run(msg, **request_kwargs)
+
+    @classmethod
+    async def run_task(
+        cls,
+        task_name: str,
+        msg: BaseModel,
+        validator: type[BaseModel] = None,
+        **request_kwargs,
+    ):
+        validator = validator or type(msg)
+        wf = cls.client.workflow(name=task_name, input_validator=validator)
+        return await wf.aio_run_no_wait(
+            msg,
+            **request_kwargs,
+        )

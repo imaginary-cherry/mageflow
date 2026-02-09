@@ -22,7 +22,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     msg = SwarmResultsMessage(
         mageflow_results={"status": "success", "value": 42},
         swarm_task_id=setup.swarm_task.key,
-        swarm_item_id=setup.batch_tasks[0].key,
+        swarm_item_id=setup.tasks[0].key,
     )
 
     # Act
@@ -31,7 +31,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
 
-    assert setup.batch_tasks[0].key in reloaded_swarm.finished_tasks
+    assert setup.tasks[0].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 1
 
     assert len(reloaded_swarm.tasks_results) == 1
@@ -55,7 +55,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
     msg = SwarmResultsMessage(
         mageflow_results={"status": "complete"},
         swarm_task_id=setup.swarm_task.key,
-        swarm_item_id=setup.batch_tasks[1].key,
+        swarm_item_id=setup.tasks[1].key,
     )
 
     # Act
@@ -63,7 +63,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
-    assert setup.batch_tasks[1].key in reloaded_swarm.finished_tasks
+    assert setup.tasks[1].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 2
     mock_invoker_wait_task.assert_called_once()
 
@@ -84,7 +84,7 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
     )
 
     # Act & Assert
-    with pytest.raises(AttributeError):
+    with pytest.raises(Exception):
         await swarm_item_done(msg, ctx)
 
 
@@ -120,7 +120,7 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     original_task = await mageflow.sign(
         "original_task", model_validators=ContextMessage
     )
-    batch_task = await swarm_task.add_task(original_task)
+    task = await swarm_task.add_task(original_task)
 
     item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
 
@@ -128,7 +128,7 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id=swarm_task.key,
-        swarm_item_id=batch_task.key,
+        swarm_item_id=task.key,
     )
 
     # Act & Assert

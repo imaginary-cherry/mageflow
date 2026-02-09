@@ -4,7 +4,7 @@ import pytest
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmConfig
+from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_chain_done,
     assert_redis_is_clean,
@@ -67,8 +67,6 @@ async def test__swarm_with_swarms_and_chains__sanity(
     )
     tasks = await TaskSignature.afind()
     tasks_map = {task.key: task for task in tasks}
-    batch_items = await BatchItemTaskSignature.afind()
-    batch_items_map = {batch_item.key: batch_item for batch_item in batch_items}
 
     task_res_param = {"2": "chain"}
     msg = CommandMessageWithResult(base_data=test_ctx, task_result=task_res_param)
@@ -103,14 +101,11 @@ async def test__swarm_with_swarms_and_chains__sanity(
     assert_signature_not_called(runs, not_triggered_success)
 
     # Check the inner swarm is done
-    base_swarm_batch_items = [batch_items_map[key] for key in base_swarm.tasks]
-    assert_swarm_task_done(
-        runs, base_swarm, base_swarm_batch_items, tasks, check_callbacks=False
-    )
+    assert_swarm_task_done(runs, base_swarm, tasks, check_callbacks=False)
     # Assert swarms were called with params
-    first_task = tasks_map[batch_items_map[base_swarm.tasks[0]].original_task_id]
+    first_task = tasks_map[base_swarm.tasks[0]]
     assert_signature_done(runs, first_task, base_data=test_ctx)
-    second_task = tasks_map[batch_items_map[base_swarm.tasks[1]].original_task_id]
+    second_task = tasks_map[base_swarm.tasks[1]]
     assert_signature_done(runs, second_task, **msg_dump)
 
     # Check final success was called

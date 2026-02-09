@@ -1,5 +1,7 @@
 from datetime import datetime
-from typing import TypeAlias, TypedDict, Any, overload
+from typing import TypeAlias, TypedDict, Any, Optional, overload
+
+import rapyer
 
 from mageflow.signature.model import (
     TaskSignature,
@@ -7,6 +9,7 @@ from mageflow.signature.model import (
     HatchetTaskType,
 )
 from mageflow.signature.status import TaskStatus
+from mageflow.typing_support import Unpack
 
 TaskSignatureConvertible: TypeAlias = (
     TaskIdentifierType | TaskSignature | HatchetTaskType
@@ -14,20 +17,38 @@ TaskSignatureConvertible: TypeAlias = (
 
 
 async def resolve_signature_key(task: TaskSignatureConvertible) -> TaskSignature:
-    if isinstance(task, TaskSignature):
-        return task
-    elif isinstance(task, TaskIdentifierType):
-        return await TaskSignature.get_safe(task)
-    else:
-        return await TaskSignature.from_task(task)
+    signatures = await resolve_signature_keys([task])
+    return signatures[0]
 
 
-try:
-    # Python 3.12+
-    from typing import Unpack
-except ImportError:
-    # Older Python versions
-    from typing_extensions import Unpack
+async def resolve_signature_keys(
+    tasks: list[TaskSignatureConvertible],
+) -> list[Optional[TaskSignature]]:
+    result: list[Optional[TaskSignature]] = [None] * len(tasks)
+    identifier_entries: list[tuple[int, str]] = []
+    hatchet_entries: list[tuple[int, HatchetTaskType]] = []
+
+    for i, task in enumerate(tasks):
+        if isinstance(task, TaskSignature):
+            result[i] = task
+        elif isinstance(task, TaskIdentifierType):
+            identifier_entries.append((i, task))
+        else:
+            hatchet_entries.append((i, task))
+
+    if identifier_entries:
+        keys = [key for _, key in identifier_entries]
+        found = await rapyer.afind(*keys, skip_missing=True)
+        found_by_key = {sig.key: sig for sig in found}
+        for i, key in identifier_entries:
+            result[i] = found_by_key.get(key)
+
+    if hatchet_entries:
+        async with rapyer.apipeline():
+            for i, task in hatchet_entries:
+                result[i] = await TaskSignature.from_task(task)
+
+    return result
 
 
 class TaskSignatureOptions(TypedDict, total=False):
@@ -37,7 +58,6 @@ class TaskSignatureOptions(TypedDict, total=False):
     success_callbacks: list[TaskIdentifierType]
     error_callbacks: list[TaskIdentifierType]
     task_status: TaskStatus
-    task_identifiers: dict
 
 
 @overload

@@ -19,7 +19,6 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature
   - `success_callbacks`: List of task IDs to execute on success
   - `error_callbacks`: List of task IDs to execute on error
   - `task_status`: Initial status for the task
-  - `task_identifiers`: Additional identifier mappings
 
 **Returns:** `TaskSignature` - The created task signature
 
@@ -35,7 +34,6 @@ The main signature class that manages task execution and lifecycle.
 - `success_callbacks`: Tasks executed when task completes successfully
 - `error_callbacks`: Tasks executed when task fails
 - `task_status`: Current status information
-- `task_identifiers`: Additional identifier mappings
 - `id`: Unique identifier for the signature
 
 ### Class Methods
@@ -62,18 +60,6 @@ async def aio_run_no_wait(self, msg: BaseModel, **kwargs)
 **Parameters:**
 - `msg`: Message object to pass to the task
 - `**kwargs`: Additional execution parameters
-
-#### add_callbacks()
-
-Add success and error callbacks to the signature.
-
-```python
-async def add_callbacks(
-    self,
-    success: list[TaskSignature] = None,
-    errors: list[TaskSignature] = None
-)
-```
 
 #### remove()
 

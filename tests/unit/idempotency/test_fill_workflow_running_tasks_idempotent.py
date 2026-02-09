@@ -30,14 +30,14 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - linked tasks status changed (via interrupt -> suspend)
-    original_task = await TaskSignature.get_safe(setup.original_task.key)
+    original_task = await TaskSignature.get_safe(setup.task.key)
     assert original_task.task_status.status == SignatureStatus.SUSPENDED
 
     # Assert - activate_error and remove were called
     mock_activate_error.assert_called()
     await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.batch_task.key)
-    await assert_task_has_short_ttl(setup.batch_task.original_task_id)
+    await assert_task_has_short_ttl(setup.task.key)
+    await assert_task_has_short_ttl(setup.task.key)
 
 
 @pytest.mark.asyncio
@@ -62,8 +62,8 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
 
     # Assert - both activate_error and remove were called on retry
     await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.batch_task.key)
-    await assert_task_has_short_ttl(setup.batch_task.original_task_id)
+    await assert_task_has_short_ttl(setup.task.key)
+    await assert_task_has_short_ttl(setup.task.key)
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
 
 @pytest.mark.asyncio
 async def test_on_remove_task__finish_removing_all(
-    completed_swarm_setup, mock_batch_task_run
+    completed_swarm_setup, mock_task_run
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
@@ -102,4 +102,4 @@ async def test_on_remove_task__finish_removing_all(
 
     # Assert
     await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.batch_task.key)
+    await assert_task_has_short_ttl(setup.task.key)
