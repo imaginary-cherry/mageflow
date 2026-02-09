@@ -1,7 +1,7 @@
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
-    resolve_signature_key,
+    resolve_signature_keys,
 )
 from mageflow.signature.model import TaskInputType
 
@@ -18,7 +18,7 @@ async def chain(
             "Chained tasks must contain at least two tasks. "
             "If you want to run a single task, use `create_workflow` instead."
         )
-    tasks = [await resolve_signature_key(task) for task in tasks]
+    tasks = await resolve_signature_keys(tasks)
 
     # Create a chain task that will be deleted only at the end of the chain
     first_task = tasks[0]

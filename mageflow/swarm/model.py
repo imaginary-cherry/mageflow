@@ -14,7 +14,7 @@ from mageflow.signature.consts import REMOVED_TASK_TTL
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.creator import (
     TaskSignatureConvertible,
-    resolve_signature_key,
+    resolve_signature_keys,
 )
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
@@ -132,8 +132,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 f"Swarm {self.task_name} is {self.task_status} - can't add task"
             )
 
-        # TODO - find a way to do this in a single transaction when we find a way to save tasks at a transactions
-        tasks = await asyncio.gather(*[resolve_signature_key(task) for task in tasks])
+        tasks = await resolve_signature_keys(tasks)
         task_keys = [task.key for task in tasks]
 
         async with self.apipeline():
