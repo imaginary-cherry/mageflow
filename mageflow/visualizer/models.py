@@ -1,23 +1,23 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 
 TaskStatus = Literal[
-    "pending", "active", "suspended", "interrupted", "canceled", "completed", "failed"
+    "pending", "running", "paused", "cancelled", "completed", "failed"
 ]
 
 STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
     SignatureStatus.PENDING: "pending",
-    SignatureStatus.ACTIVE: "active",
+    SignatureStatus.ACTIVE: "running",
     SignatureStatus.FAILED: "failed",
     SignatureStatus.DONE: "completed",
-    SignatureStatus.SUSPENDED: "suspended",
-    SignatureStatus.INTERRUPTED: "interrupted",
-    SignatureStatus.CANCELED: "canceled",
+    SignatureStatus.SUSPENDED: "paused",
+    SignatureStatus.INTERRUPTED: "paused",
+    SignatureStatus.CANCELED: "cancelled",
 }
 
 
@@ -34,14 +34,16 @@ class CamelCaseModel(BaseModel):
 
 
 class TaskFromServer(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     type: str
     name: str
     status: TaskStatus
-    subtask_ids: list[str]
+    subtask_ids: list[str] = Field(serialization_alias="children_ids")
     success_callback_ids: list[str]
     error_callback_ids: list[str]
-    kwargs: dict[str, Any]
+    kwargs: dict[str, Any] = Field(serialization_alias="metadata")
     created_at: str
 
 
