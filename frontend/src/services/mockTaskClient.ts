@@ -13,8 +13,8 @@ export class MockTaskClient implements TaskClient {
     return Promise.resolve(mockTasks[id]);
   }
 
-  async getTasksMap(): Promise<Record<string, Task>> {
-    return Promise.resolve({ ...mockTasks });
+  async getTasksBatch(ids: string[]): Promise<Task[]> {
+    return Promise.resolve(ids.map(id => mockTasks[id]).filter((t): t is Task => !!t));
   }
 
   async getChildren(taskId: string, page = 1, limit = DEFAULT_PAGE_LIMIT): Promise<PaginatedChildren> {
