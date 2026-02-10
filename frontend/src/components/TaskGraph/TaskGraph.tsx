@@ -27,7 +27,7 @@ interface TaskGraphProps {}
 
 const TaskGraph = ({}: TaskGraphProps) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const { rootIds, loading: rootIdsLoading } = useRootTaskIds();
+  const { rootIds, loading: rootIdsLoading, error: rootIdsError } = useRootTaskIds();
   const { tasksMap, nodeStates, loading: treeLoading, loadChildrenPage } = useTaskTree(rootIds);
 
   const handleTaskClick = useCallback((task: Task) => {
