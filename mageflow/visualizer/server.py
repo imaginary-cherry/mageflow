@@ -4,6 +4,7 @@ from pathlib import Path
 
 import rapyer
 from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
@@ -201,5 +202,11 @@ def create_app() -> FastAPI:
 
 def create_dev_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     register_api_routes(app)
     return app
