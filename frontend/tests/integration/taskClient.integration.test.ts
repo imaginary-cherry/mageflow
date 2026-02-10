@@ -173,6 +173,67 @@ describe('TaskClient integration', () => {
     expect(child2!.metadata?.item_index).toBe(2)
   })
 
+  it('getTask returns swarm task with correct values', async () => {
+    // Arrange
+    const taskId = 'SwarmTaskSignature:test_frontend_swarm_001'
+
+    // Act
+    const task = await client.getTask(taskId)
+
+    // Assert
+    expect(task).toBeDefined()
+    expect(task!.id).toBe(taskId)
+    expect(task!.name).toBe('test_swarm')
+    expect(task!.type).toBe('swarm')
+    expect(task!.status).toBe('running')
+    expect(task!.metadata).toEqual({ swarm_param: 'swarm_value' })
+    expect(task!.children_ids.length).toBe(3)
+    expect(task!.children_ids).toContain('TaskSignature:test_frontend_swarm_original_000')
+    expect(task!.children_ids).toContain('TaskSignature:test_frontend_swarm_original_001')
+    expect(task!.children_ids).toContain('TaskSignature:test_frontend_swarm_original_002')
+  })
+
+  it('getTask returns task_with_callbacks with callback IDs', async () => {
+    // Arrange
+    const taskId = 'TaskSignature:test_frontend_task_with_callbacks_001'
+
+    // Act
+    const task = await client.getTask(taskId)
+
+    // Assert
+    expect(task).toBeDefined()
+    expect(task!.id).toBe(taskId)
+    expect(task!.name).toBe('task_with_callbacks')
+    expect(task!.type).toBe('simple')
+    expect(task!.status).toBe('running')
+    expect(task!.metadata).toEqual({ has_callbacks: true })
+    expect(task!.success_callback_ids).toContain('TaskSignature:test_frontend_success_callback_001')
+    expect(task!.success_callback_ids.length).toBe(1)
+    expect(task!.error_callback_ids).toContain('TaskSignature:test_frontend_error_callback_001')
+    expect(task!.error_callback_ids.length).toBe(1)
+  })
+
+  it('getTask returns callback tasks individually', async () => {
+    // Arrange
+    const successId = 'TaskSignature:test_frontend_success_callback_001'
+    const errorId = 'TaskSignature:test_frontend_error_callback_001'
+
+    // Act
+    const successTask = await client.getTask(successId)
+    const errorTask = await client.getTask(errorId)
+
+    // Assert
+    expect(successTask).toBeDefined()
+    expect(successTask!.name).toBe('on_success_callback')
+    expect(successTask!.status).toBe('pending')
+    expect(successTask!.metadata?.callback_type).toBe('success')
+
+    expect(errorTask).toBeDefined()
+    expect(errorTask!.name).toBe('on_error_callback')
+    expect(errorTask!.status).toBe('pending')
+    expect(errorTask!.metadata?.callback_type).toBe('error')
+  })
+
   it('cancelTask throws for nonexistent task', async () => {
     // Arrange
     const nonexistentId = 'nonexistent_task'
