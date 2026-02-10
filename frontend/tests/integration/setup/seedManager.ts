@@ -1,10 +1,16 @@
 import { spawn } from "child_process";
+import { existsSync } from "fs";
 import path from "path";
 
-/**
- * Project root directory (repo root, one level above frontend/)
- */
 export const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+
+function findPython(): string {
+  const venvPython = path.join(projectRoot, ".venv", "bin", "python");
+  if (existsSync(venvPython)) {
+    return venvPython;
+  }
+  return "python";
+}
 
 /**
  * Seed test data into Redis using Python seed script
@@ -17,7 +23,7 @@ export async function seedTestData(projectRoot: string): Promise<void> {
     let stderr = "";
 
     const seedProcess = spawn(
-      "python",
+      findPython(),
       [
         "-m",
         "tests.integration.frontend.seed_test_data",
@@ -63,7 +69,7 @@ export async function cleanupTestData(projectRoot: string): Promise<void> {
     let stderr = "";
 
     const cleanupProcess = spawn(
-      "python",
+      findPython(),
       [
         "-m",
         "tests.integration.frontend.seed_test_data",

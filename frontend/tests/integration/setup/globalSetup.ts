@@ -16,10 +16,10 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const healthUrl = `${serverUrl}/api/health`;
 
   console.log(`Starting FastAPI server on port ${port}...`);
-  serverProcess = startServer(port, projectRoot);
+  serverProcess = await startServer(port, projectRoot);
 
   try {
-    await waitForServer(healthUrl, 15000);
+    await waitForServer(healthUrl, serverProcess, 5000);
     console.log(`FastAPI server ready at ${serverUrl}`);
   } catch (error) {
     serverProcess.kill();
@@ -28,7 +28,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
     );
   }
 
-  // @ts-ignore - Vitest provide API not fully typed
+  // @ts-expect-error - Vitest provide API not fully typed
   project.provide("serverUrl", serverUrl);
 
   return async () => {
