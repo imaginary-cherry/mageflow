@@ -61,8 +61,12 @@ describe('TaskClient integration', () => {
     expect(task!.id).toBe(taskId)
     expect(task!.name).toBe('basic_test_task')
     expect(task!.status).toBe('pending')
-    expect(task!.metadata).toHaveProperty('param1')
-    expect(task!.metadata).toHaveProperty('param2')
+    expect(task!.type).toBe('simple')
+    expect(task!.metadata?.param1).toBe('value1')
+    expect(task!.metadata?.param2).toBe(42)
+    expect(task!.children_ids).toEqual([])
+    expect(task!.success_callback_ids).toEqual([])
+    expect(task!.error_callback_ids).toEqual([])
   })
 
   it('getTask returns undefined for nonexistent task', async () => {
@@ -91,6 +95,9 @@ describe('TaskClient integration', () => {
     expect(task).toBeDefined()
     expect(task!.type).toBe('chain')
     expect(['simple', 'chain', 'swarm']).toContain(task!.type)
+    expect(task!.name).toBe('test_chain')
+    expect(task!.status).toBe('running')
+    expect(task!.metadata).toEqual({ chain_param: 'chain_value' })
     expect(task!.children_ids.length).toBe(2)
     expectedChildren.forEach(childId => {
       expect(task!.children_ids).toContain(childId)
@@ -118,12 +125,17 @@ describe('TaskClient integration', () => {
     expect(result.total).toBe(2)
     expect(result.page).toBe(page)
 
-    result.tasks.forEach(task => {
-      expect(typeof task.id).toBe('string')
-      expect(typeof task.name).toBe('string')
-      expect(typeof task.status).toBe('string')
-      expect(['pending', 'running', 'completed', 'failed', 'cancelled', 'paused']).toContain(task.status)
-    })
+    const child1 = result.tasks.find(t => t.id === 'TaskSignature:test_frontend_chain_task_001')
+    expect(child1).toBeDefined()
+    expect(child1!.name).toBe('chain_step_1')
+    expect(child1!.status).toBe('pending')
+    expect(child1!.metadata?.step).toBe(1)
+
+    const child2 = result.tasks.find(t => t.id === 'TaskSignature:test_frontend_chain_task_002')
+    expect(child2).toBeDefined()
+    expect(child2!.name).toBe('chain_step_2')
+    expect(child2!.status).toBe('pending')
+    expect(child2!.metadata?.step).toBe(2)
   })
 
   it('getChildren returns paginated children for swarm', async () => {
@@ -142,6 +154,23 @@ describe('TaskClient integration', () => {
 
     expect(result.tasks.length).toBe(3)
     expect(result.total).toBe(3)
+
+    result.tasks.forEach(task => {
+      expect(task.name).toBe('swarm_item_task')
+      expect(task.status).toBe('pending')
+    })
+
+    const child0 = result.tasks.find(t => t.id === 'TaskSignature:test_frontend_swarm_original_000')
+    expect(child0).toBeDefined()
+    expect(child0!.metadata?.item_index).toBe(0)
+
+    const child1 = result.tasks.find(t => t.id === 'TaskSignature:test_frontend_swarm_original_001')
+    expect(child1).toBeDefined()
+    expect(child1!.metadata?.item_index).toBe(1)
+
+    const child2 = result.tasks.find(t => t.id === 'TaskSignature:test_frontend_swarm_original_002')
+    expect(child2).toBeDefined()
+    expect(child2!.metadata?.item_index).toBe(2)
   })
 
   it('cancelTask throws for nonexistent task', async () => {
