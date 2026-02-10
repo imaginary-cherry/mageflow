@@ -2,11 +2,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.swarm.model import SwarmTaskSignature
 
 TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
 
