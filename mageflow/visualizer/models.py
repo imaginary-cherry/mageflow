@@ -3,13 +3,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from mageflow.chain.model import ChainTaskSignature
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.model import SwarmTaskSignature
 
-TaskStatus = Literal[
-    "pending", "running", "paused", "cancelled", "completed", "failed"
-]
+TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
 
 STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
     SignatureStatus.PENDING: "pending",
@@ -69,12 +68,7 @@ class BatchTasksRequest(CamelCaseModel):
 
 
 def serialize_task(task: TaskSignature) -> TaskFromServer:
-    if isinstance(task, ChainTaskSignature):
-        subtask_ids = task.task_ids
-    elif isinstance(task, SwarmTaskSignature):
-        subtask_ids = list(task.tasks)
-    else:
-        subtask_ids = []
+    subtask_ids = task.task_ids if isinstance(task, ContainerTaskSignature) else []
 
     return TaskFromServer(
         id=task.key,
