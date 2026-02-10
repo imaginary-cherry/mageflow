@@ -81,6 +81,9 @@ const InnerTaskRenderer = memo(({
     .map(id => tasksMap[id])
     .filter(Boolean);
 
+  const loadedChildren = task.children_ids.filter(id => tasksMap[id]);
+  const isLoadingChildren = loadedChildren.length < task.children_ids.length;
+
   const totalPages = Math.ceil(childTasks.length / TASKS_PER_PAGE);
   const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
   const paginatedChildren = childTasks.slice(startIndex, startIndex + TASKS_PER_PAGE);
@@ -143,13 +146,24 @@ const InnerTaskRenderer = memo(({
 
       {/* Pagination footer */}
       {needsPagination && (
-        <div 
+        <div
           className="flex items-center justify-center gap-2 text-xs text-muted-foreground"
           style={{ height: CONTAINER_FOOTER_HEIGHT }}
         >
           <span>
             {startIndex + 1}-{Math.min(startIndex + TASKS_PER_PAGE, childTasks.length)} of {childTasks.length}
           </span>
+        </div>
+      )}
+
+      {/* Loading indicator for missing children */}
+      {isLoadingChildren && (
+        <div
+          className="flex items-center justify-center gap-2 text-xs text-muted-foreground"
+          style={{ height: CONTAINER_FOOTER_HEIGHT, padding: `0 ${CONTAINER_PADDING}px` }}
+        >
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Loading children...</span>
         </div>
       )}
     </div>
