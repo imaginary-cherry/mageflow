@@ -51,6 +51,17 @@ const TaskGraph = ({}: TaskGraphProps) => {
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
+  if (rootIdsError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <h2 className="text-xl font-semibold text-destructive mb-2">Failed to load tasks</h2>
+          <p className="text-muted-foreground">{rootIdsError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full relative">
       <ReactFlow
