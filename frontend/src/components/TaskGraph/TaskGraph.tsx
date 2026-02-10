@@ -11,7 +11,8 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import {Task} from '@/types/task';
-import {useRootTaskIds, useTasksMap} from '@/hooks/useTaskData';
+import {useRootTaskIds} from '@/hooks/useTaskData';
+import {useTaskTree} from '@/hooks/useTaskTree';
 import {useTaskGraphLayout} from './useTaskGraphLayout';
 import SimpleTaskNode from './SimpleTaskNode';
 import ContainerTaskNode from './ContainerTaskNode';
@@ -22,20 +23,12 @@ const nodeTypes = {
   containerTask: ContainerTaskNode,
 };
 
-interface TaskGraphProps {
-  onRefetchReady?: (refetch: () => Promise<void>) => void;
-}
+interface TaskGraphProps {}
 
-const TaskGraph = ({ onRefetchReady }: TaskGraphProps) => {
+const TaskGraph = ({}: TaskGraphProps) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const { tasksMap, loading: tasksLoading, refetch } = useTasksMap();
   const { rootIds, loading: rootIdsLoading } = useRootTaskIds();
-
-  useEffect(() => {
-    if (onRefetchReady) {
-      onRefetchReady(refetch);
-    }
-  }, [onRefetchReady, refetch]);
+  const { tasksMap, nodeStates, loading: treeLoading, loadChildrenPage } = useTaskTree(rootIds);
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
@@ -47,7 +40,7 @@ const TaskGraph = ({ onRefetchReady }: TaskGraphProps) => {
     onTaskClick: handleTaskClick,
   });
 
-  const loading = tasksLoading || rootIdsLoading;
+  const loading = rootIdsLoading || treeLoading;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
