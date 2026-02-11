@@ -1,9 +1,12 @@
+import os
 from dataclasses import dataclass
 
 import httpx
 import pytest_asyncio
 import rapyer
 from fastapi import FastAPI
+from redis.asyncio import Redis
+from testcontainers.redis import RedisContainer
 
 from mageflow.visualizer.server import register_api_routes
 from tests.integration.frontend.seed_test_data import (
@@ -16,6 +19,25 @@ from tests.integration.frontend.seed_test_data import (
     seed_swarm_task,
     seed_task_with_callbacks,
 )
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def redis_client():
+    redis_url = os.getenv("REDIS_URL")
+    if redis_url:
+        client = Redis.from_url(redis_url, decode_responses=True)
+        yield client
+        await client.aclose()
+        return
+
+    with RedisContainer("redis/redis-stack-server:7.2.0-v10") as container:
+        host = container.get_container_host_ip()
+        port = container.get_exposed_port(6379)
+        redis_url = f"redis://{host}:{port}"
+        os.environ["REDIS_URL"] = redis_url
+        client = Redis.from_url(redis_url, decode_responses=True)
+        yield client
+        await client.aclose()
 
 
 @dataclass
