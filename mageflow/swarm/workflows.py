@@ -21,7 +21,7 @@ async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
             return
 
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
         ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start tasks")
@@ -42,7 +42,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
 
         # Publish next tasks
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
@@ -57,7 +57,7 @@ async def swarm_item_failed(msg: SwarmErrorMessage, ctx: Context):
         swarm_task = await SwarmTaskSignature.aget(swarm_task_key)
         await swarm_task.task_failed(swarm_item_key)
         fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
-        await HatchetInvoker.wait_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise
