@@ -154,7 +154,7 @@ def mock_fill_running_tasks():
 @pytest.fixture
 def mock_handle_finish_tasks_error():
     with patch.object(
-        HatchetInvoker, "wait_task", side_effect=RuntimeError("Finish tasks error")
+        HatchetInvoker, "run_task", side_effect=RuntimeError("Finish tasks error")
     ) as mock_finish:
         yield mock_finish
 
