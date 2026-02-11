@@ -32,26 +32,17 @@ export async function startServer(port: number, projectRoot: string): Promise<Ch
     );
   }
 
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
   const serverProcess = spawn(
     findPython(projectRoot),
     [
       "-m",
-      "uvicorn",
-      "mageflow.visualizer.server:create_dev_app",
-      "--factory",
-      "--host",
-      "127.0.0.1",
+      "tests.integration.frontend.start_server_with_redis",
       "--port",
       port.toString(),
     ],
     {
       cwd: projectRoot,
-      env: {
-        ...process.env,
-        REDIS_URL: redisUrl,
-      },
+      env: process.env,
       stdio: ["ignore", "inherit", "pipe"],
     }
   );
