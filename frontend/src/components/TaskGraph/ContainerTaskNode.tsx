@@ -4,7 +4,8 @@ import { Task, TaskStatus } from '@/types/task';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Circle, Loader2, XCircle, PauseCircle, Clock, Link, Zap, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
+import { useTaskStore } from '@/stores/TaskStoreContext';
+import { 
   CONTAINER_PADDING,
   CONTAINER_HEADER_HEIGHT,
   CONTAINER_FOOTER_HEIGHT,
@@ -24,7 +25,6 @@ const statusIcons: Record<TaskStatus, React.ReactNode> = {
 
 export interface ContainerNodeData extends Record<string, unknown> {
   task: Task;
-  tasksMap: Record<string, Task>;
   onTaskClick?: (task: Task) => void;
   width: number;
   height: number;
@@ -32,19 +32,24 @@ export interface ContainerNodeData extends Record<string, unknown> {
 
 const ContainerTaskNode = memo(({ data }: NodeProps) => {
   const nodeData = data as ContainerNodeData;
-  const { task, tasksMap, onTaskClick, width, height } = nodeData;
+  const { task, onTaskClick, width, height } = nodeData;
   const [currentPage, setCurrentPage] = useState(1);
-
+  const { state } = useTaskStore();
+  const tasksMap = state.tasks;
+  
   const isChain = task.type === 'chain';
-
+  
   const childTasks = task.children_ids
     .map(id => tasksMap[id])
     .filter(Boolean);
-
+  
   const totalPages = Math.ceil(childTasks.length / TASKS_PER_PAGE);
   const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
   const paginatedChildren = childTasks.slice(startIndex, startIndex + TASKS_PER_PAGE);
   const needsPagination = childTasks.length > TASKS_PER_PAGE;
+
+  // Check if any children are still loading
+  const loadingChildren = task.children_ids.filter(id => !tasksMap[id] && state.loadingTasks.has(id));
 
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(Math.max(1, Math.min(newPage, totalPages)));
@@ -66,7 +71,6 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
         height: currentDimensions.height,
       }}
       onClick={(e) => {
-        // Only trigger if clicking the container itself, not children
         if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.container-header')) {
           onTaskClick?.(task);
         }
@@ -132,6 +136,17 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
             depth={1}
           />
         ))}
+        {/* Loading skeleton for children not yet loaded */}
+        {loadingChildren.map(id => (
+          <div
+            key={id}
+            className="rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/30 animate-pulse flex items-center justify-center gap-2"
+            style={{ width: 180, height: 44 }}
+          >
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/50" />
+            <span className="text-xs text-muted-foreground/50">Loading...</span>
+          </div>
+        ))}
       </div>
 
       {/* Pagination footer */}
@@ -140,19 +155,13 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
           className="flex items-center justify-center gap-1 px-2"
           style={{ height: CONTAINER_FOOTER_HEIGHT }}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
             onClick={(e) => { e.stopPropagation(); handlePageChange(1); }}
             disabled={currentPage === 1}
           >
             <ChevronsLeft className="h-3 w-3" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
             onClick={(e) => { e.stopPropagation(); handlePageChange(currentPage - 1); }}
             disabled={currentPage === 1}
           >
@@ -161,19 +170,13 @@ const ContainerTaskNode = memo(({ data }: NodeProps) => {
           <span className="text-xs text-muted-foreground px-2">
             {startIndex + 1}-{Math.min(startIndex + TASKS_PER_PAGE, childTasks.length)} of {childTasks.length}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
             onClick={(e) => { e.stopPropagation(); handlePageChange(currentPage + 1); }}
             disabled={currentPage === totalPages}
           >
             <ChevronRight className="h-3 w-3" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
             onClick={(e) => { e.stopPropagation(); handlePageChange(totalPages); }}
             disabled={currentPage === totalPages}
           >

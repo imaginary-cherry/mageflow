@@ -1,24 +1,24 @@
-import { useCallback, useRef } from 'react';
 import { TaskGraph, TaskGraphHeader } from '@/components/TaskGraph';
+import { TaskStoreProvider, useTaskStore } from '@/stores/TaskStoreContext';
 
-const Index = () => {
-  const refetchRef = useRef<(() => Promise<void>) | null>(null);
-
-  const handleRefetchReady = useCallback((refetch: () => Promise<void>) => {
-    refetchRef.current = refetch;
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    refetchRef.current?.();
-  }, []);
+const IndexContent = () => {
+  const { refresh } = useTaskStore();
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <TaskGraphHeader onRefresh={handleRefresh} />
+      <TaskGraphHeader onRefresh={refresh} />
       <div className="flex-1">
-        <TaskGraph onRefetchReady={handleRefetchReady} />
+        <TaskGraph />
       </div>
     </div>
+  );
+};
+
+const Index = () => {
+  return (
+    <TaskStoreProvider>
+      <IndexContent />
+    </TaskStoreProvider>
   );
 };
 

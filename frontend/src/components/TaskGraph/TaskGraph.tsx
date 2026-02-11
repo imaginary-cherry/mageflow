@@ -1,63 +1,61 @@
-import {useCallback, useEffect, useState} from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
+  ReactFlow,
+  Controls,
   Background,
   BackgroundVariant,
-  Controls,
   MiniMap,
-  ReactFlow,
-  useEdgesState,
   useNodesState,
+  useEdgesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import {Task} from '@/types/task';
-import {useRootTaskIds} from '@/hooks/useTaskData';
-import {useTaskTree} from '@/hooks/useTaskTree';
-import {useTaskGraphLayout} from './useTaskGraphLayout';
+import { Task } from '@/types/task';
+import { useTaskStore } from '@/stores/TaskStoreContext';
+import { useTaskGraphLayout } from './useTaskGraphLayout';
 import SimpleTaskNode from './SimpleTaskNode';
 import ContainerTaskNode from './ContainerTaskNode';
+import LoadingTaskNode from './LoadingTaskNode';
 import TaskDetailPanel from './TaskDetailPanel';
+import { Loader2 } from 'lucide-react';
 
 const nodeTypes = {
   simpleTask: SimpleTaskNode,
   containerTask: ContainerTaskNode,
+  loadingTask: LoadingTaskNode,
 };
 
-interface TaskGraphProps {}
-
-const TaskGraph = ({}: TaskGraphProps) => {
+const TaskGraph = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const { rootIds, loading: rootIdsLoading, error: rootIdsError } = useRootTaskIds();
-  const { tasksMap, nodeStates, loading: treeLoading, loadChildrenPage } = useTaskTree(rootIds);
+  const { state, loadRootTaskIds } = useTaskStore();
+
+  useEffect(() => {
+    loadRootTaskIds();
+  }, [loadRootTaskIds]);
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
   }, []);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useTaskGraphLayout({
-    tasksMap,
-    rootTaskIds: rootIds,
     onTaskClick: handleTaskClick,
+    tasks: state.tasks,
+    rootTaskIds: state.rootTaskIds,
+    loadingTasks: state.loadingTasks,
   });
-
-  const loading = rootIdsLoading || treeLoading;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
 
-  // Sync with layout when it changes
   useEffect(() => {
     setNodes(layoutNodes);
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
-  if (rootIdsError) {
+  if (state.rootLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center p-6 max-w-md">
-          <h2 className="text-xl font-semibold text-destructive mb-2">Failed to load tasks</h2>
-          <p className="text-muted-foreground">{rootIdsError}</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -79,6 +77,7 @@ const TaskGraph = ({}: TaskGraphProps) => {
         <MiniMap 
           className="!bg-card !border-border !shadow-lg"
           nodeColor={(node) => {
+            if (node.type === 'loadingTask') return 'hsl(var(--muted))';
             if (node.type === 'simpleTask') return 'hsl(217, 91%, 60%)';
             if (node.type === 'containerTask') {
               const task = (node.data as { task: Task }).task;

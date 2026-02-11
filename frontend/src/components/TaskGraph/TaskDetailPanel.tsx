@@ -4,9 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Pause, XCircle, RotateCcw, Link, Zap, Box } from 'lucide-react';
-import { useTaskClient } from '@/services';
-import { NetworkError, NotFoundError, ServerError } from '@/services/errors';
-import { toast } from 'sonner';
 
 interface TaskDetailPanelProps {
   task: Task | null;
@@ -29,61 +26,18 @@ const statusColors: Record<string, string> = {
 };
 
 const TaskDetailPanel = ({ task, onClose }: TaskDetailPanelProps) => {
-  const client = useTaskClient();
   const TypeIcon = task ? typeIcons[task.type] : Box;
 
-  const handlePause = async () => {
-    if (!task) return;
-    try {
-      await client.pauseTask(task.id);
-      toast.success('Task paused');
-    } catch (error) {
-      if (error instanceof NetworkError) {
-        toast.error('Network error, please check connection');
-      } else if (error instanceof NotFoundError) {
-        toast.error('Task not found');
-      } else if (error instanceof ServerError) {
-        toast.error(`Server error (${error.status})`);
-      } else {
-        toast.error('An unexpected error occurred');
-      }
-    }
+  const handlePause = () => {
+    console.log('Pause task:', task?.id);
   };
 
-  const handleCancel = async () => {
-    if (!task) return;
-    try {
-      await client.cancelTask(task.id);
-      toast.success('Task cancelled');
-    } catch (error) {
-      if (error instanceof NetworkError) {
-        toast.error('Network error, please check connection');
-      } else if (error instanceof NotFoundError) {
-        toast.error('Task not found');
-      } else if (error instanceof ServerError) {
-        toast.error(`Server error (${error.status})`);
-      } else {
-        toast.error('An unexpected error occurred');
-      }
-    }
+  const handleCancel = () => {
+    console.log('Cancel task:', task?.id);
   };
 
-  const handleRetry = async () => {
-    if (!task) return;
-    try {
-      await client.retryTask(task.id);
-      toast.success('Task retried');
-    } catch (error) {
-      if (error instanceof NetworkError) {
-        toast.error('Network error, please check connection');
-      } else if (error instanceof NotFoundError) {
-        toast.error('Task not found');
-      } else if (error instanceof ServerError) {
-        toast.error(`Server error (${error.status})`);
-      } else {
-        toast.error('An unexpected error occurred');
-      }
-    }
+  const handleRetry = () => {
+    console.log('Retry task:', task?.id);
   };
 
   return (
@@ -166,11 +120,11 @@ const TaskDetailPanel = ({ task, onClose }: TaskDetailPanelProps) => {
                 <Pause className="h-4 w-4 mr-1" />
                 Pause
               </Button>
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="sm"
                 onClick={handleCancel}
-                disabled={task?.status !== 'running' && task?.status !== 'pending'}
+                disabled={task?.status !== 'running' && task?.status !== 'paused'}
                 className="text-destructive hover:text-destructive"
               >
                 <XCircle className="h-4 w-4 mr-1" />

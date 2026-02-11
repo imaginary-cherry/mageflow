@@ -2,20 +2,25 @@ import { useMemo } from 'react';
 import dagre from 'dagre';
 import { Node, Edge } from '@xyflow/react';
 import { Task, TaskNodeData } from '@/types/task';
-import {
-  SIMPLE_TASK_WIDTH,
-  SIMPLE_TASK_HEIGHT,
-  calculateTaskDimensions
+import { 
+  SIMPLE_TASK_WIDTH, 
+  SIMPLE_TASK_HEIGHT, 
+  calculateTaskDimensions 
 } from './taskSizeUtils';
 import { ContainerNodeData } from './ContainerTaskNode';
 
+// Placeholder size for tasks still loading
+const LOADING_NODE_WIDTH = 200;
+const LOADING_NODE_HEIGHT = 60;
+
 interface UseTaskGraphLayoutProps {
-  tasksMap: Record<string, Task>;
-  rootTaskIds: string[];
   onTaskClick?: (task: Task) => void;
+  tasks: Record<string, Task>;
+  rootTaskIds: string[];
+  loadingTasks: Set<string>;
 }
 
-export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTaskGraphLayoutProps) => {
+export const useTaskGraphLayout = ({ onTaskClick, tasks, rootTaskIds, loadingTasks }: UseTaskGraphLayoutProps) => {
   const { nodes, edges } = useMemo(() => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -31,7 +36,7 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
       if (task.type !== 'simple') {
         task.children_ids.forEach(id => {
           nestedIds.add(id);
-          const childTask = tasksMap[id];
+          const childTask = tasks[id];
           if (childTask) {
             const childNested = getNestedChildIds(childTask);
             childNested.forEach(nestedId => nestedIds.add(nestedId));
@@ -41,9 +46,9 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
       return nestedIds;
     };
 
-    // Collect all nested child IDs
+    // Collect all nested child IDs from loaded tasks
     const allNestedChildIds = new Set<string>();
-    Object.values(tasksMap).forEach(task => {
+    Object.values(tasks).forEach(task => {
       if (task.type !== 'simple') {
         const nested = getNestedChildIds(task);
         nested.forEach(id => allNestedChildIds.add(id));
@@ -52,25 +57,34 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
 
     const processTask = (taskId: string, isTopLevel: boolean = true) => {
       if (visited.has(taskId)) return;
+      visited.add(taskId);
 
-      const task = tasksMap[taskId];
-      if (!task) return;
+      const task = tasks[taskId];
+      
+      if (!task) {
+        // Task is still loading — render a placeholder node
+        if (loadingTasks.has(taskId)) {
+          dagreGraph.setNode(taskId, { width: LOADING_NODE_WIDTH, height: LOADING_NODE_HEIGHT });
+          nodes.push({
+            id: taskId,
+            type: 'loadingTask',
+            position: { x: 0, y: 0 },
+            data: { taskId } as any,
+          });
+        }
+        return;
+      }
 
       // Skip if this task is a nested child (rendered inside a container)
       if (!isTopLevel && allNestedChildIds.has(taskId)) return;
 
-      visited.add(taskId);
+      const dimensions = calculateTaskDimensions(task, tasks, 1);
 
-      // Calculate dimensions
-      const dimensions = calculateTaskDimensions(task, tasksMap, 1);
-
-      // Add node to dagre with calculated dimensions
       dagreGraph.setNode(taskId, { 
         width: dimensions.width, 
         height: dimensions.height 
       });
 
-      // Create React Flow node
       if (task.type === 'simple') {
         nodes.push({
           id: taskId,
@@ -83,9 +97,8 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
           id: taskId,
           type: 'containerTask',
           position: { x: 0, y: 0 },
-          data: {
-            task,
-            tasksMap,
+          data: { 
+            task, 
             onTaskClick,
             width: dimensions.width,
             height: dimensions.height,
@@ -93,7 +106,7 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
         });
       }
 
-      // Process success callbacks (these are separate nodes, not nested)
+      // Process success callbacks
       task.success_callback_ids.forEach(callbackId => {
         processTask(callbackId, true);
         if (!allNestedChildIds.has(callbackId)) {
@@ -111,7 +124,7 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
         }
       });
 
-      // Process error callbacks (these are separate nodes, not nested)
+      // Process error callbacks
       task.error_callback_ids.forEach(callbackId => {
         processTask(callbackId, true);
         if (!allNestedChildIds.has(callbackId)) {
@@ -136,7 +149,7 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
     // Run dagre layout
     dagre.layout(dagreGraph);
 
-    // Apply positions from dagre
+    // Apply positions
     nodes.forEach(node => {
       const nodeWithPosition = dagreGraph.node(node.id);
       if (nodeWithPosition) {
@@ -148,7 +161,7 @@ export const useTaskGraphLayout = ({ tasksMap, rootTaskIds, onTaskClick }: UseTa
     });
 
     return { nodes, edges };
-  }, [tasksMap, rootTaskIds, onTaskClick]);
+  }, [onTaskClick, tasks, rootTaskIds, loadingTasks]);
 
   return { nodes, edges };
 };
