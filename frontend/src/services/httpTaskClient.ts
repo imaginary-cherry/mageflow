@@ -15,7 +15,7 @@ interface TaskFromServer {
 }
 
 export class HttpTaskClient implements TaskClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl ?? import.meta.env.VITE_API_URL ?? '';
