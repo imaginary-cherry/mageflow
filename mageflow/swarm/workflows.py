@@ -70,7 +70,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         invoker = HatchetInvoker.from_no_task(msg, msg.swarm_task_id)
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
-            swarm_task = await SwarmTaskSignature.get_safe(msg.swarm_task_id)
+
             if swarm_task is None or swarm_task.has_published_errors():
                 ctx.log(
                     f"Swarm {msg.swarm_task_id} was deleted already deleted or failed"
