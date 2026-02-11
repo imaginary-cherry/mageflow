@@ -3,12 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { TaskClientProvider, HttpTaskClient } from "@/services";
+import {TaskClientProvider, HttpTaskClient, MockTaskClient} from "@/services";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-const taskClient = new HttpTaskClient();
+const taskClient = new MockTaskClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

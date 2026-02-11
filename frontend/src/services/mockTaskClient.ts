@@ -1,16 +1,27 @@
-import { Task, PaginatedChildren } from '@/types/task';
-import { TaskClient } from './types';
-import { mockTasks, rootTaskIds } from '@/data/mockTasks';
+import {PaginatedChildren, Task} from '@/types/task';
+import {TaskClient} from './types';
+import {mockTasks, rootTaskIds} from '@/data/mockTasks';
 
 const DEFAULT_PAGE_LIMIT = 5;
+const DELAY_MIN = 400;
+const DELAY_MAX = 1200;
+
+
+const randomDelay = () =>
+    new Promise<void>(resolve =>
+        setTimeout(resolve, DELAY_MIN + Math.random() * (DELAY_MAX - DELAY_MIN))
+    );
 
 export class MockTaskClient implements TaskClient {
   async getRootTaskIds(): Promise<string[]> {
-    return Promise.resolve([...rootTaskIds]);
+    await randomDelay();
+    return [...rootTaskIds];
   }
 
   async getTask(id: string): Promise<Task | undefined> {
-    return Promise.resolve(mockTasks[id]);
+    await randomDelay();
+    const task = mockTasks[id];
+    return task ? { ...task } : null;
   }
 
   async getTasksBatch(ids: string[]): Promise<Task[]> {

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
-import { Task } from '@/types/task';
-import { fetchRootTaskIds, fetchTask } from '@/api/taskApi';
+import React, {createContext, useCallback, useContext, useReducer, useRef} from 'react';
+import {Task} from '@/types/task';
+import {useTaskClient} from "@/services";
 
 interface TaskStoreState {
   tasks: Record<string, Task>;
@@ -64,13 +64,14 @@ const TaskStoreContext = createContext<TaskStoreContextValue | null>(null);
 export const TaskStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const fetchedRef = useRef<Set<string>>(new Set());
+  const client = useTaskClient();
 
   const loadTask = useCallback(async (id: string) => {
     if (fetchedRef.current.has(id)) return;
     fetchedRef.current.add(id);
 
     dispatch({ type: 'SET_LOADING', id });
-    const task = await fetchTask(id);
+    const task = await client.getTask(id);
     if (!task) {
       dispatch({ type: 'CLEAR_LOADING', id });
       return;
@@ -88,7 +89,7 @@ export const TaskStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const loadRootTaskIds = useCallback(async () => {
     dispatch({ type: 'SET_ROOT_LOADING', loading: true });
-    const ids = await fetchRootTaskIds();
+    const ids = await client.getRootTaskIds();
     dispatch({ type: 'SET_ROOT_IDS', ids });
     ids.forEach(id => loadTask(id));
   }, [loadTask]);
