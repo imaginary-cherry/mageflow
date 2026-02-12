@@ -1,25 +1,21 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from mageflow.chain.model import ChainTaskSignature
+from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
 
-TaskType = Literal["task", "chain", "swarm", "batch_item"]
-TaskStatus = Literal[
-    "pending", "active", "suspended", "interrupted", "canceled", "completed", "failed"
-]
+TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
 
 STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
     SignatureStatus.PENDING: "pending",
-    SignatureStatus.ACTIVE: "active",
+    SignatureStatus.ACTIVE: "running",
     SignatureStatus.FAILED: "failed",
     SignatureStatus.DONE: "completed",
-    SignatureStatus.SUSPENDED: "suspended",
-    SignatureStatus.INTERRUPTED: "interrupted",
-    SignatureStatus.CANCELED: "canceled",
+    SignatureStatus.SUSPENDED: "paused",
+    SignatureStatus.INTERRUPTED: "paused",
+    SignatureStatus.CANCELED: "cancelled",
 }
 
 
@@ -36,15 +32,16 @@ class CamelCaseModel(BaseModel):
 
 
 class TaskFromServer(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
-    type: TaskType
+    type: str
     name: str
     status: TaskStatus
-    parent_id: str | None
-    subtask_ids: list[str]
+    subtask_ids: list[str] = Field(serialization_alias="children_ids")
     success_callback_ids: list[str]
     error_callback_ids: list[str]
-    kwargs: dict[str, Any]
+    kwargs: dict[str, Any] = Field(serialization_alias="metadata")
     created_at: str
 
 
@@ -68,40 +65,17 @@ class BatchTasksRequest(CamelCaseModel):
     task_ids: list[str]
 
 
-def get_task_type(task: TaskSignature) -> TaskType:
-    if isinstance(task, ChainTaskSignature):
-        return "chain"
-    elif isinstance(task, SwarmTaskSignature):
-        return "swarm"
-    elif isinstance(task, BatchItemTaskSignature):
-        return "batch_item"
-    return "task"
-
-
-def get_subtask_ids(task: TaskSignature) -> list[str]:
-    if isinstance(task, ChainTaskSignature):
-        return list(task.tasks)
-    elif isinstance(task, SwarmTaskSignature):
-        return list(task.tasks)
-    return []
-
-
-def get_parent_id(task: TaskSignature) -> str | None:
-    if isinstance(task, BatchItemTaskSignature):
-        return task.swarm_id
-    return None
-
-
 def serialize_task(task: TaskSignature) -> TaskFromServer:
+    subtask_ids = task.task_ids if isinstance(task, ContainerTaskSignature) else []
+
     return TaskFromServer(
         id=task.key,
-        type=get_task_type(task),
+        type=task.__class__.__name__,
         name=task.task_name,
         status=STATUS_MAPPING.get(task.task_status.status, "pending"),
-        parent_id=get_parent_id(task),
-        subtask_ids=get_subtask_ids(task),
+        subtask_ids=subtask_ids,
         success_callback_ids=list(task.success_callbacks),
         error_callback_ids=list(task.error_callbacks),
         kwargs=dict(task.kwargs),
-        created_at=task.creation_time.isoformat() if task.creation_time else "",
+        created_at=task.creation_time.isoformat(),
     )
