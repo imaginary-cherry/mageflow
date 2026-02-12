@@ -12,7 +12,7 @@ def validate_static_files_exist() -> bool:
 
 @click.command(name="task-display")
 @click.option("--host", default="127.0.0.1", help="Host to bind the server to")
-@click.option("--port", default=8080, type=int, help="Port to bind the server to")
+@click.option("--port", default=8000, type=int, help="Port to bind the server to")
 @click.option(
     "--dev", is_flag=True, help="Run in development mode with proxy to React dev server"
 )

@@ -9,8 +9,6 @@ from pydantic import BaseModel
 
 from mageflow.utils.pythonic import deep_merge
 
-TASK_DATA_PARAM_NAME = "task_data"
-
 
 class ModelToDump(BaseModel):
     value: Any
@@ -36,7 +34,7 @@ class MageflowWorkflow(Workflow):
         # Force model dump
         kwargs = self._mageflow_workflow_params
         results_model = ModelToDump(value=kwargs)
-        extra_params = super(MageflowWorkflow, self)._serialize_input(results_model)
+        extra_params = results_model.model_dump(mode="json")
         dumped_kwargs = extra_params["value"]
 
         if self._return_value_field:
@@ -48,7 +46,7 @@ class MageflowWorkflow(Workflow):
 
     def _update_options(self, options: TriggerWorkflowOptions):
         if self._task_ctx:
-            options.additional_metadata[TASK_DATA_PARAM_NAME] = self._task_ctx
+            options.additional_metadata |= self._task_ctx
         return options
 
     def run(

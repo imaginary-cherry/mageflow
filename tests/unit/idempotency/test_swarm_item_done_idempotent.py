@@ -18,7 +18,7 @@ async def assert_swarm_item_done_state(
     finished_tasks = await setup.swarm_task.finished_tasks.aload()
     assert len(finished_tasks) == expected_finished_count
     if check_batch_in_finished:
-        assert setup.batch_task.key in finished_tasks
+        assert setup.task.key in finished_tasks
     assert len(set(finished_tasks)) == len(finished_tasks)
 
     if expected_results_count is not None:
@@ -52,7 +52,7 @@ async def test_retry_with_prepopulated_done_state_skips_update_idempotent(
     setup = swarm_item_done_setup
 
     # Act
-    with patch.object(HatchetInvoker, "wait_task", side_effect=Exception):
+    with patch.object(HatchetInvoker, "run_task", side_effect=Exception):
         with pytest.raises(Exception):
             await swarm_item_done(setup.msg, setup.ctx)
     await swarm_item_done(setup.msg, setup.ctx)
@@ -100,7 +100,7 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
     # Act
     with patch.object(
         HatchetInvoker,
-        "wait_task",
+        "run_task",
         side_effect=RuntimeError("Simulated wait_task failure"),
     ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):

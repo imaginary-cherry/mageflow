@@ -12,7 +12,7 @@ async def test_chain_error_task_sanity(mock_workflow_run):
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
     # Act
-    await chain_error_task(setup.msg, setup.ctx)
+    await chain_error_task(setup.error_msg, setup.ctx)
 
     # Assert
     assert len(mock_workflow_run) == 1
@@ -20,7 +20,6 @@ async def test_chain_error_task_sanity(mock_workflow_run):
     assert triggered_signature_id == setup.error_callback.key
 
     await assert_task_has_short_ttl(setup.chain_signature.key)
-    await assert_task_has_short_ttl(setup.current_task.key)
 
     for task in setup.chain_tasks:
         await assert_task_has_short_ttl(task.key)

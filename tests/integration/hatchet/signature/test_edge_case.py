@@ -5,12 +5,14 @@ import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
 
 import mageflow
+from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     get_runs,
     assert_signature_done,
     assert_signature_not_called,
     assert_signature_failed,
     map_wf_by_id,
+    assert_task_was_paused,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage, MageflowTestError
@@ -38,6 +40,7 @@ async def test__timeout_task__call_error_callback(
     error_sign = await mageflow.sign(error_callback)
     timeout_sign = await mageflow.sign(timeout_task, error_callbacks=[error_sign])
     message = ContextMessage(base_data=test_ctx)
+    expected_task_input = message.model_dump(mode="json", exclude_unset=True)
 
     # Act
     await timeout_sign.aio_run_no_wait(message, options=trigger_options)
@@ -45,7 +48,7 @@ async def test__timeout_task__call_error_callback(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    assert_signature_done(runs, error_sign, **message.model_dump(mode="json"))
+    assert_signature_done(runs, error_sign, **expected_task_input)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -232,3 +235,33 @@ async def test_timeout_task_output__sanity(
     assert timeout_task_summary.status == V1TaskStatus.FAILED
     # No error message
     assert not timeout_task_summary.error_message
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test__suspended_task_with_retries__does_not_retry(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    retry_task_sign = await mageflow.sign(retry_once)
+    message = ContextMessage(base_data=test_ctx)
+
+    # Act
+    await retry_task_sign.suspend()
+    await retry_task_sign.aio_run_no_wait(message, options=trigger_options)
+    await asyncio.sleep(5)
+
+    # Assert
+    runs = await get_runs(hatchet, ctx_metadata)
+
+    loaded_signature = await TaskSignature.get_safe(retry_task_sign.key)
+    assert_task_was_paused(runs, loaded_signature)
+
+    wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
+    task_summary = wf_by_task_id[retry_task_sign.key]
+    assert (
+        task_summary.retry_count == 0
+    ), f"Expected retry_count=0, got {task_summary.retry_count}"

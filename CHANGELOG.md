@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.2.0]
+
+### 🏗️ Design Changes
+- **Nested Tasks Redesign**: We change how nested task (like task in a chain) alert the parent task on status change. This will help save a lot of memory in redis and have faster execution. For that we added:
+  - **Container sub-task hooks**: `on_sub_task_done()` and `on_sub_task_error()` abstract methods on `ContainerTaskSignature` for handling child task lifecycle events.
+  - **BREAKING** - Removed `task_identifiers` from `TaskSignature`: Replaced by `signature_container_id` for parent reference.
+
+### ✨ Added
+- **`aio_run_in_swarm()` method**: Add and schedule a task in a running swarm in a single call, replacing the previous `add_task()` + `aio_run_no_wait()` two-step pattern.
+- **Chain kwargs forwarding**: Chains now accept `**kwargs` that are forwarded to all sub-tasks during execution.
+
+### 🔄 Changed
+- **BREAKING** - Removed `BatchItemTaskSignature`: Swarm tasks are no longer wrapped in batch item signatures. Tasks run directly within the swarm.
+- **BREAKING** - Removed `add_task()` from swarm: Use `aio_run_in_swarm()` instead.
+- **BREAKING** - Removed `add_callbacks()` from `TaskSignature`: Callbacks are now set at creation time only.
+- **All internal tasks are durable**: Chain and swarm infrastructure tasks now use `durable_task` for crash recovery.
+
+### 🛠️ Technical Improvements
+- **Task data parameter consolidation**: Only `task_id` is sent as task metadata instead of a full `task_data` dictionary. This will allow users to filter workflow base on task id and will save data that is sent in tasks.
+
+### 🧪 Tests
+- **Unit tests for handle decorator**: Added comprehensive tests for `handle_task_callback` decorator.
+- **Unit tests for signature creation**: Added tests for `TaskSignatureOptions` and `resolve_signature_key`.
+
+
+## [0.1.1]
+
+### 🐛 Fixed
+- **Native workflow execution**: Fixed some bugs that prevented running tasks natively (no mageflow support)
+
+
 ## [0.1.0]
 
 ### ✨ Added

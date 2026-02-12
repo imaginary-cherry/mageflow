@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import rapyer
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
@@ -13,7 +14,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
+from mageflow.signature.status import SignatureStatus
+from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.visualizer.models import (
     BatchTasksRequest,
     RootTasksResponse,
@@ -32,9 +34,8 @@ async def fetch_all_tasks() -> dict:
     base_tasks = await TaskSignature.afind()
     chains = await ChainTaskSignature.afind()
     swarms = await SwarmTaskSignature.afind()
-    batch_items = await BatchItemTaskSignature.afind()
 
-    all_tasks = list(base_tasks) + list(chains) + list(swarms) + list(batch_items)
+    all_tasks = list(base_tasks) + list(chains) + list(swarms)
     return {task.key: task for task in all_tasks}
 
 
@@ -42,27 +43,18 @@ async def fetch_root_tasks() -> dict:
     base_tasks = list(await TaskSignature.afind())
     chains = list(await ChainTaskSignature.afind())
     swarms = list(await SwarmTaskSignature.afind())
-    batch_items = list(await BatchItemTaskSignature.afind())
 
     chain_children = {child_id for chain in chains for child_id in chain.tasks}
-    batch_item_ids = {batch_item.key for batch_item in batch_items}
-    original_linked_tasks = {bi.original_task_id for bi in batch_items}
-    original_to_swarm = {bi.original_task_id: bi.swarm_id for bi in batch_items}
+    swarm_linked_tasks = {sub_task for swarm in swarms for sub_task in swarm.task_ids}
 
-    all_tasks = base_tasks + chains + swarms + batch_items
+    all_tasks = base_tasks + chains + swarms
     all_callbacks = {
         cb_id
         for task in all_tasks
         for cb_id in list(task.success_callbacks) + list(task.error_callbacks)
     }
 
-    non_root_ids = (
-        chain_children
-        | batch_item_ids
-        | all_callbacks
-        | set(original_to_swarm.keys())
-        | original_linked_tasks
-    )
+    non_root_ids = chain_children | all_callbacks | swarm_linked_tasks
 
     return {task.key: task for task in all_tasks if task.key not in non_root_ids}
 
@@ -77,12 +69,7 @@ async def fetch_task_children(
     if not isinstance(task, ContainerTaskSignature):
         return None
 
-    if isinstance(task, ChainTaskSignature):
-        all_ids = list(task.tasks)
-    elif isinstance(task, SwarmTaskSignature):
-        all_ids = list(task.tasks)
-    else:
-        all_ids = []
+    all_ids = task.task_ids
 
     total_count = len(all_ids)
     start = (page - 1) * page_size
@@ -159,6 +146,41 @@ def register_api_routes(app: FastAPI):
     async def get_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
         return await fetch_task_callbacks(task_id)
 
+    @app.post("/api/tasks/{task_id}/cancel", status_code=status.HTTP_202_ACCEPTED)
+    async def cancel_task(task_id: str):
+        success = await TaskSignature.safe_change_status(
+            task_id, SignatureStatus.CANCELED
+        )
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+        return Response(status_code=status.HTTP_202_ACCEPTED)
+
+    @app.post("/api/tasks/{task_id}/pause", status_code=status.HTTP_202_ACCEPTED)
+    async def pause_task(task_id: str):
+        success = await TaskSignature.safe_change_status(
+            task_id, SignatureStatus.SUSPENDED
+        )
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+        return Response(status_code=status.HTTP_202_ACCEPTED)
+
+    @app.post("/api/tasks/{task_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+    async def retry_task(task_id: str):
+        try:
+            await TaskSignature.resume_from_key(task_id)
+            return Response(status_code=status.HTTP_202_ACCEPTED)
+        except KeyNotFound:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer", lifespan=lifespan)
@@ -180,5 +202,11 @@ def create_app() -> FastAPI:
 
 def create_dev_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     register_api_routes(app)
     return app

@@ -1,21 +1,15 @@
 import pytest
 
 import mageflow
+from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import BatchItemTaskSignature, SwarmTaskSignature
+from mageflow.swarm.model import SwarmTaskSignature
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.assertions import (
-    assert_single_success_callback,
-    assert_single_error_callback_is_chain_error,
-    assert_task_reloaded_as_type,
-    assert_success_callback_is_chain_end,
-    assert_all_error_callbacks_are_chain_error,
-    assert_callback_contains,
-)
+from tests.unit.assertions import assert_task_reloaded_as_type, assert_callback_contains
 
 
 @pytest.mark.asyncio
-async def test_chain_with_swarm_task_creates_callbacks_correctly_edge_case(
+async def test_chain_with_swarm_task_creates_container_correctly_edge_case(
     hatchet_mock,
 ):
     # Arrange
@@ -39,12 +33,14 @@ async def test_chain_with_swarm_task_creates_callbacks_correctly_edge_case(
     reloaded_swarm = await assert_task_reloaded_as_type(
         swarm_task.key, SwarmTaskSignature
     )
-    await assert_single_success_callback(reloaded_swarm, simple_task.key)
-    await assert_single_error_callback_is_chain_error(reloaded_swarm)
+    assert reloaded_swarm.signature_container_id == chain_signature.key
+
+    reloaded_simple = await assert_task_reloaded_as_type(simple_task.key, TaskSignature)
+    assert reloaded_simple.signature_container_id == chain_signature.key
 
 
 @pytest.mark.asyncio
-async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
+async def test_chain_with_swarm_added_task_creates_container_correctly_edge_case(
     hatchet_mock,
 ):
     # Arrange
@@ -53,14 +49,12 @@ async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
         model_validators=ContextMessage,
     )
 
-    # Create an original task for a batch item
     original_task = await mageflow.sign(
         "original_task",
         model_validators=ContextMessage,
     )
 
-    # Create batch item task via swarm.add_task
-    batch_item_task = await parent_swarm.add_task(original_task)
+    task = await parent_swarm.add_task(original_task)
 
     simple_task = await mageflow.sign(
         "simple_task_after_batch",
@@ -68,14 +62,15 @@ async def test_chain_with_batch_item_task_creates_callbacks_correctly_edge_case(
     )
 
     # Act
-    await mageflow.chain([batch_item_task.key, simple_task.key])
+    chain_signature = await mageflow.chain([parent_swarm.key, simple_task.key])
 
     # Assert
-    reloaded_batch_item = await assert_task_reloaded_as_type(
-        batch_item_task.key, BatchItemTaskSignature
+    reloaded_task = await assert_task_reloaded_as_type(task.key, TaskSignature)
+    assert reloaded_task.signature_container_id == parent_swarm.key
+    reloaded_swarm = await assert_task_reloaded_as_type(
+        parent_swarm.key, SwarmTaskSignature
     )
-    await assert_single_success_callback(reloaded_batch_item, simple_task.key)
-    await assert_single_error_callback_is_chain_error(reloaded_batch_item)
+    assert reloaded_swarm.signature_container_id == chain_signature.key
 
 
 @pytest.mark.asyncio
@@ -115,17 +110,14 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
     )
     loaded_final = await assert_task_reloaded_as_type(final_task.key, TaskSignature)
 
-    await assert_single_success_callback(loaded_simple, swarm_task.key)
-    await assert_single_success_callback(loaded_swarm, final_task.key)
-    await assert_success_callback_is_chain_end(loaded_final)
+    assert loaded_simple.signature_container_id == chain_signature.key
+    assert loaded_swarm.signature_container_id == chain_signature.key
+    assert loaded_final.signature_container_id == chain_signature.key
 
-    error_task_ids = [
-        loaded_simple.error_callbacks[0],
-        loaded_swarm.error_callbacks[0],
-        loaded_final.error_callbacks[0],
-    ]
-    assert len(set(error_task_ids)) == 3
-    await assert_all_error_callbacks_are_chain_error(error_task_ids)
+    loaded_chain = await assert_task_reloaded_as_type(
+        chain_signature.key, ChainTaskSignature
+    )
+    assert loaded_chain.tasks == [simple_task.key, swarm_task.key, final_task.key]
 
 
 @pytest.mark.asyncio

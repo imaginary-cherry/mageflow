@@ -41,7 +41,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11', '3.12', '3.13']
-        hatchet-version: ['1.20', '1.21']
+        hatchet-version: ['1.20', '1.21', '1.22', '1.23']
 
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11', '3.12', '3.13']
-        hatchet-version: ['1.20', '1.21']
+        hatchet-version: ['1.20', '1.21', '1.22', '1.23']
 
     steps:
       - uses: actions/checkout@v4

@@ -17,7 +17,7 @@ async def assert_swarm_item_failed_state(
     failed_tasks = await setup.swarm_task.failed_tasks.aload()
     assert len(failed_tasks) == expected_failed_count
     if check_batch_in_failed:
-        assert setup.batch_task.key in failed_tasks
+        assert setup.task.key in failed_tasks
     # Check no duplicates
     assert len(set(failed_tasks)) == len(failed_tasks)
 
@@ -48,7 +48,7 @@ async def test_retry_with_prepopulated_failed_state_skips_update_idempotent(
     setup = swarm_item_failed_setup
 
     # Act
-    with patch.object(HatchetInvoker, "wait_task", side_effect=Exception):
+    with patch.object(HatchetInvoker, "run_task", side_effect=Exception):
         with pytest.raises(Exception):
             await swarm_item_failed(setup.msg, setup.ctx)
     await swarm_item_failed(setup.msg, setup.ctx)
@@ -67,7 +67,7 @@ async def test_crash_before_get_safe_retry_executes_normally_idempotent(
     setup = swarm_item_failed_setup
 
     # Act - First call crashes before get_safe
-    with patch.object(SwarmTaskSignature, "get_safe", side_effect=RuntimeError):
+    with patch.object(SwarmTaskSignature, "aget", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
             await swarm_item_failed(setup.msg, setup.ctx)
 
@@ -96,7 +96,7 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
     # Act
     with patch.object(
         HatchetInvoker,
-        "wait_task",
+        "run_task",
         side_effect=RuntimeError("Simulated wait_task failure"),
     ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):

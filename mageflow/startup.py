@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from redis.asyncio.client import Redis
 
 from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.hatchet import extract_hatchet_validator
 
 REGISTERED_TASKS: list[tuple[Standalone, str]] = []
 
@@ -34,10 +35,11 @@ async def teardown_mageflow():
 async def register_workflows():
     for reg_task in REGISTERED_TASKS:
         workflow, mageflow_task_name = reg_task
+        validator = extract_hatchet_validator(workflow)
         hatchet_task = HatchetTaskModel(
             mageflow_task_name=mageflow_task_name,
             task_name=workflow.name,
-            input_validator=workflow.input_validator,
+            input_validator=validator,
             retries=workflow.tasks[0].retries,
         )
         await hatchet_task.asave()

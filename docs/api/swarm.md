@@ -21,7 +21,7 @@ async def swarm(
 **Parameters:**
 - `tasks`: List of tasks to run in parallel
 - `success_callbacks`: Tasks executed when all tasks complete successfully
-- `error_callbacks`: Tasks executed when failure conditions are met  
+- `error_callbacks`: Tasks executed when failure conditions are met
 - `config`: Configuration object controlling swarm behavior
 - `task_name`: Optional name for the swarm
 - `is_swarm_closed`: Whether to close swarm immediately (prevents adding new tasks)
@@ -61,29 +61,38 @@ The main swarm class that manages parallel task execution.
 
 ### Methods
 
-#### add_task()
+#### aio_run_no_wait()
 
-Add a new task to the swarm.
+Start the swarm execution.
 
 ```python
-async def add_task(
-    self, 
-    task: TaskSignatureConvertible,
-    close_on_max_task: bool = True
-) -> BatchItemTaskSignature
+async def aio_run_no_wait(self, msg: BaseModel, **kwargs)
 ```
 
 **Parameters:**
-- `task`: Task signature, function, or name to add
-- `close_on_max_task`: If `True` and `max_task_allowed` is configured, automatically closes the swarm when the maximum task limit is reached (default: `True`)
+- `msg`: Message object to pass to tasks
 
-**Returns:** `BatchItemTaskSignature` - Wrapper task for the swarm
+#### aio_run_in_swarm()
+
+Add a task to the swarm and immediately schedule it for execution.
+
+```python
+async def aio_run_in_swarm(
+    self,
+    task: TaskSignatureConvertible,
+    msg: BaseModel,
+    close_on_max_task: bool = True,
+)
+```
+
+**Parameters:**
+- `task`: Task signature, function, or task name to add and run
+- `msg`: Message object with data specific to this task
+- `close_on_max_task`: Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
 
 **Raises:**
-- `TooManyTasksError`: If max_task_allowed limit exceeded
+- `TooManyTasksError`: If `max_task_allowed` limit exceeded
 - `SwarmIsCanceledError`: If swarm is canceled
-
-**Note:** When `close_on_max_task=True` and the swarm reaches its `max_task_allowed` limit after adding this task, the swarm will be automatically closed, preventing any further tasks from being added and triggering completion callbacks once all tasks finish.
 
 #### close_swarm()
 
@@ -95,28 +104,6 @@ async def close_swarm() -> SwarmTaskSignature
 
 **Returns:** The swarm instance
 
-#### aio_run_no_wait()
-
-Start the swarm execution.
-
-```python
-async def aio_run_no_wait(self, msg: BaseModel, **kwargs)
-```
-
-**Parameters:**
-- `msg`: Message object to pass to tasks
-- `**kwargs`: Additional execution options
-
-#### add_to_running_tasks()
-
-Internal method to manage task concurrency.
-
-```python
-async def add_to_running_tasks(self, task: TaskSignatureConvertible) -> bool
-```
-
-**Returns:** `True` if task can run immediately, `False` if queued
-
 #### is_swarm_done()
 
 Check if swarm has completed all tasks.
@@ -127,23 +114,6 @@ async def is_swarm_done() -> bool
 
 **Returns:** `True` if swarm is closed and all tasks finished
 
-## BatchItemTaskSignature
-
-Wrapper class for individual tasks within a swarm.
-
-### Properties
-
-- `swarm_id`: ID of the parent swarm
-- `original_task_id`: ID of the original task being wrapped
-
-### Methods
-
-Tasks within swarms are automatically wrapped in `BatchItemTaskSignature` instances that:
-- Manage concurrency within the swarm
-- Forward execution to the original task
-- Handle swarm lifecycle events
-- Inherit all TaskSignature methods (suspend, resume, interrupt)
-
 ## Error Classes
 
 ### TooManyTasksError
@@ -153,7 +123,3 @@ Raised when attempting to add tasks beyond `max_task_allowed` limit.
 ### SwarmIsCanceledError
 
 Raised when attempting to add tasks to a canceled swarm.
-
-### MissingSwarmItemError
-
-Raised when a swarm item task cannot be found during execution.

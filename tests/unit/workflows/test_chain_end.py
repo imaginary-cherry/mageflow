@@ -23,7 +23,6 @@ async def test_chain_end_task_sanity(mock_workflow_run):
     assert triggered_signature_id == setup.success_callback.key
 
     await assert_task_has_short_ttl(setup.chain_signature.key)
-    await assert_task_has_short_ttl(setup.current_task.key)
 
     for task in setup.chain_tasks:
         await assert_task_has_short_ttl(task.key)
