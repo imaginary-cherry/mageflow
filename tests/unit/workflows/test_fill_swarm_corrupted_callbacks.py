@@ -7,6 +7,7 @@ from mageflow.models.message import DEFAULT_RESULT_NAME
 from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
+from mageflow.utils.hatchet import extract_hatchet_validator
 from tests.unit.workflows.conftest import CompletedSwarmWithSuccessCallback
 
 
@@ -38,7 +39,8 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
         assert workflow._return_value_field == DEFAULT_RESULT_NAME
         reloaded_callback = await TaskSignature.get_safe(signature_id)
         assert reloaded_callback.model_validators is None
-        assert workflow.input_validator == EmptyModel
+        validator = extract_hatchet_validator(workflow)
+        assert validator == EmptyModel
 
 
 @pytest.mark.asyncio
@@ -64,4 +66,5 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
         assert reloaded_callback.model_validators is None
         assert signature_id in error_callbacks
         assert workflow._return_value_field == DEFAULT_RESULT_NAME
-        assert workflow.input_validator == EmptyModel
+        validator = extract_hatchet_validator(workflow)
+        assert validator == EmptyModel

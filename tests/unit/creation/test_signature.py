@@ -9,6 +9,7 @@ from mageflow.models.message import DEFAULT_RESULT_NAME
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.types import TaskIdentifierType
 from mageflow.task.model import HatchetTaskModel
+from mageflow.utils.hatchet import extract_hatchet_validator
 from tests.integration.hatchet.models import (
     ContextMessage,
     MessageWithData,
@@ -281,7 +282,7 @@ async def test__sign_task__sanity(
     expected_signature = expected_signature.model_copy()
     sign_params = sign_options.to_dict()
     if not (isinstance(task, str) or expected_signature.model_validators):
-        expected_signature.model_validators = task.input_validator
+        expected_signature.model_validators = extract_hatchet_validator(task)
 
     # Act
     signature = await mageflow.sign(task, **sign_params)
