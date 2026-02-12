@@ -36,7 +36,7 @@ class TaskSignature(AtomicRedisModel):
     task_name: str
     kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
-    model_validators: SafeLoad[Optional[Any]] = None
+    model_validators: SafeLoad[Optional[type[BaseModel]]] = None
     return_field_name: str = DEFAULT_RESULT_NAME
     success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
     error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
