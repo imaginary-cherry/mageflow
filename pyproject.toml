@@ -47,7 +47,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hatchet = [
-    "hatchet-sdk>=1.20.0,<1.22.0"
+    "hatchet-sdk>=1.20.0,<1.24.0"
 ]
 display = [
     "fastapi>=0.109.0,<1.0.0",

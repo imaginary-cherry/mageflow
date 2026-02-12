@@ -64,7 +64,7 @@ def task1_callback(msg):
 
 
 @hatchet.task(name="error_callback", input_validator=ContextMessage)
-def error_callback(msg):
+def error_callback(msg: ContextMessage):
     print(msg)
 
 
@@ -120,12 +120,12 @@ def return_multiple_values(msg):
     return [msg, msg, msg]
 
 
-@hatchet.task(execution_timeout=1)
-async def timeout_task(msg):
+@hatchet.task(execution_timeout=1, input_validator=ContextMessage)
+async def timeout_task(msg: ContextMessage):
     await asyncio.sleep(10)
 
 
-@hatchet.task(retries=3, execution_timeout=60)
+@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
 @hatchet.with_ctx
 async def retry_once(msg, ctx: Context):
     if ctx.attempt_number == 1:
@@ -133,7 +133,7 @@ async def retry_once(msg, ctx: Context):
     return "Nice"
 
 
-@hatchet.task(retries=3, execution_timeout=60)
+@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
 @hatchet.with_ctx
 async def normal_retry_once(msg, ctx: Context):
     if ctx.attempt_number == 1:
@@ -141,7 +141,7 @@ async def normal_retry_once(msg, ctx: Context):
     return msg
 
 
-@hatchet.task(retries=3, execution_timeout=60)
+@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
 @hatchet.with_signature
 async def retry_to_failure(msg, signature: TaskSignature):
     await mageflow_config.redis_client.set(
@@ -150,7 +150,7 @@ async def retry_to_failure(msg, signature: TaskSignature):
     raise ValueError("Test exception")
 
 
-@hatchet.task(retries=3, execution_timeout=60)
+@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
 async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 

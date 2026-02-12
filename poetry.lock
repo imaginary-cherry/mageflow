@@ -3095,4 +3095,4 @@ hatchet = ["hatchet-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "5d6f772b5611e577c54fcbd397c67853e835a0a9919f3c03ec787ccabc32b9ca"
+content-hash = "3d933bfbc4606326eb964bdff88159d7f2ba5b2cf55d0170931c191dc276f00a"
