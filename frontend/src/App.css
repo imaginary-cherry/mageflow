@@ -1,111 +1,42 @@
-/**
- * Global App Styles
- */
-
-/* Reset */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* Root variables */
-:root {
-  --color-bg-primary: #0a0a1a;
-  --color-bg-secondary: #10002b;
-  --color-purple-primary: #5a189a;
-  --color-purple-light: #7b2cbf;
-  --color-purple-lighter: #e0aaff;
-  --color-cyan: #40e0d0;
-  --color-blue: #00bbf9;
-  --color-pink: #ff6b9d;
-  --color-green: #52b788;
-  --color-red: #ff6b6b;
-  --color-yellow: #ffd60a;
-  --color-text-primary: #e0e0e0;
-  --color-text-secondary: #888888;
-  --color-text-muted: #666666;
-
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-}
-
-/* HTML & Body */
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 #root {
-  height: 100%;
-  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-.app {
-  height: 100%;
-  width: 100%;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-/* Scrollbar styles */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(90, 24, 154, 0.4);
-  border-radius: 4px;
+.card {
+  padding: 2em;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(90, 24, 154, 0.6);
-}
-
-/* Selection */
-::selection {
-  background: rgba(224, 170, 255, 0.3);
-}
-
-/* Focus styles */
-:focus-visible {
-  outline: 2px solid var(--color-purple-lighter);
-  outline-offset: 2px;
-}
-
-/* Button reset */
-button {
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-}
-
-/* Link reset */
-a {
-  color: var(--color-blue);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* Code/pre */
-code,
-pre {
-  font-family: var(--font-mono);
+.read-the-docs {
+  color: #888;
 }

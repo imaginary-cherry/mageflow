@@ -48,7 +48,7 @@ async def test_retry_with_prepopulated_failed_state_skips_update_idempotent(
     setup = swarm_item_failed_setup
 
     # Act
-    with patch.object(HatchetInvoker, "wait_task", side_effect=Exception):
+    with patch.object(HatchetInvoker, "run_task", side_effect=Exception):
         with pytest.raises(Exception):
             await swarm_item_failed(setup.msg, setup.ctx)
     await swarm_item_failed(setup.msg, setup.ctx)
@@ -96,7 +96,7 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
     # Act
     with patch.object(
         HatchetInvoker,
-        "wait_task",
+        "run_task",
         side_effect=RuntimeError("Simulated wait_task failure"),
     ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):

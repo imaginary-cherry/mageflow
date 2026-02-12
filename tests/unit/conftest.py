@@ -139,7 +139,7 @@ def mock_task_aio_run_no_wait():
 
 @pytest.fixture
 def mock_invoker_wait_task():
-    with patch.object(HatchetInvoker, "wait_task", new_callable=AsyncMock) as mock_fill:
+    with patch.object(HatchetInvoker, "run_task", new_callable=AsyncMock) as mock_fill:
         yield mock_fill
 
 
@@ -154,7 +154,7 @@ def mock_fill_running_tasks():
 @pytest.fixture
 def mock_handle_finish_tasks_error():
     with patch.object(
-        HatchetInvoker, "wait_task", side_effect=RuntimeError("Finish tasks error")
+        HatchetInvoker, "run_task", side_effect=RuntimeError("Finish tasks error")
     ) as mock_finish:
         yield mock_finish
 

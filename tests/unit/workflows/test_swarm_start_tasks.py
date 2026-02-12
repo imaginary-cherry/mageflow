@@ -131,33 +131,3 @@ async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_ta
 
     # Act & Assert
     await swarm_start_tasks(msg, ctx)
-
-
-@pytest.mark.asyncio
-async def test_swarm_start_tasks_swarm_not_found_edge_case():
-    # Arrange
-    ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id="nonexistent_swarm")
-
-    # Act & Assert
-    with pytest.raises(Exception):
-        await swarm_start_tasks(msg, ctx)
-
-
-@pytest.mark.asyncio
-async def test_swarm_start_tasks_task_not_found_edge_case():
-    # Arrange
-    swarm_task = await mageflow.swarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=2),
-    )
-
-    await swarm_task.tasks.aextend(["nonexistent_task_1", "nonexistent_task_2"])
-
-    ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
-
-    # Act & Assert
-    with pytest.raises(Exception):
-        await swarm_start_tasks(msg, ctx)

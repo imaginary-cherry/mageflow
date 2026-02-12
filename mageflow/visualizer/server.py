@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import rapyer
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
@@ -13,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.container import ContainerTaskSignature
 from mageflow.signature.model import TaskSignature
+from mageflow.signature.status import SignatureStatus
 from mageflow.swarm.model import SwarmTaskSignature
 from mageflow.visualizer.models import (
     BatchTasksRequest,
@@ -144,6 +146,41 @@ def register_api_routes(app: FastAPI):
     async def get_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
         return await fetch_task_callbacks(task_id)
 
+    @app.post("/api/tasks/{task_id}/cancel", status_code=status.HTTP_202_ACCEPTED)
+    async def cancel_task(task_id: str):
+        success = await TaskSignature.safe_change_status(
+            task_id, SignatureStatus.CANCELED
+        )
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+        return Response(status_code=status.HTTP_202_ACCEPTED)
+
+    @app.post("/api/tasks/{task_id}/pause", status_code=status.HTTP_202_ACCEPTED)
+    async def pause_task(task_id: str):
+        success = await TaskSignature.safe_change_status(
+            task_id, SignatureStatus.SUSPENDED
+        )
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+        return Response(status_code=status.HTTP_202_ACCEPTED)
+
+    @app.post("/api/tasks/{task_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+    async def retry_task(task_id: str):
+        try:
+            await TaskSignature.resume_from_key(task_id)
+            return Response(status_code=status.HTTP_202_ACCEPTED)
+        except KeyNotFound:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer", lifespan=lifespan)
@@ -165,5 +202,11 @@ def create_app() -> FastAPI:
 
 def create_dev_app() -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     register_api_routes(app)
     return app
