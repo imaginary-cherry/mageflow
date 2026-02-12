@@ -9,6 +9,7 @@ from tests.integration.hatchet.assertions import (
     assert_chain_done,
     get_runs,
     assert_signature_done,
+    assert_signature_failed,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -85,7 +86,9 @@ async def test_chain_fail(
     message = ContextMessage(base_data=test_ctx)
     base_data = {"fail": True}
 
-    chain_success_error_callback = await mageflow.sign(error_callback)
+    chain_success_error_callback = await mageflow.sign(
+        error_callback, base_data=base_data
+    )
     success_chain_signature = await mageflow.sign(chain_callback)
     fail_sign = await mageflow.sign(fail_task, base_data=base_data)
 
@@ -108,6 +111,7 @@ async def test_chain_fail(
 
     # Check that callback was called
     assert_signature_done(runs, chain_success_error_callback, base_data=base_data)
+    assert_signature_failed(runs, fail_sign)
 
     # Check redis is clean
     await assert_redis_is_clean(redis_client)
