@@ -1,7 +1,6 @@
 import asyncio
-import contextlib
 from datetime import datetime
-from typing import Optional, Self, Any, TypeAlias, AsyncGenerator, ClassVar, cast
+from typing import Optional, Self, Any, TypeAlias, ClassVar, cast
 
 import rapyer
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -17,8 +16,6 @@ from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
 from rapyer.fields import SafeLoad
 from rapyer.types import RedisDict, RedisList, RedisDatetime
-from rapyer.utils.redis import acquire_lock
-from typing_extensions import deprecated
 
 from mageflow.errors import MissingSignatureError
 from mageflow.models.message import DEFAULT_RESULT_NAME
@@ -229,7 +226,7 @@ class TaskSignature(AtomicRedisModel):
         cls, task_id: TaskIdentifierType, status: SignatureStatus
     ):
         try:
-            async with lock_from_key(cls, task_id) as task:
+            async with rapyer.alock_from_key(task_id) as task:
                 return await task.change_status(status)
         except Exception as e:
             return False
@@ -242,7 +239,8 @@ class TaskSignature(AtomicRedisModel):
 
     @classmethod
     async def resume_from_key(cls, task_key: TaskIdentifierType):
-        async with lock_from_key(cls, task_key) as task:
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
             await task.resume()
 
     async def resume(self):
@@ -255,7 +253,8 @@ class TaskSignature(AtomicRedisModel):
 
     @classmethod
     async def suspend_from_key(cls, task_key: TaskIdentifierType):
-        async with lock_from_key(cls, task_key) as task:
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
             await task.suspend()
 
     async def done(self):
@@ -276,7 +275,8 @@ class TaskSignature(AtomicRedisModel):
 
     @classmethod
     async def interrupt_from_key(cls, task_key: TaskIdentifierType):
-        async with lock_from_key(cls, task_key) as task:
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
             return task.interrupt()
 
     async def interrupt(self):
@@ -292,7 +292,8 @@ class TaskSignature(AtomicRedisModel):
         task_key: TaskIdentifierType,
         pause_type: PauseActionTypes = PauseActionTypes.SUSPEND,
     ):
-        async with lock_from_key(cls, task_key) as task:
+        async with rapyer.alock_from_key(task_key) as task:
+            task = cast(TaskSignature, task)
             await task.pause_task(pause_type)
 
     async def pause_task(self, pause_type: PauseActionTypes = PauseActionTypes.SUSPEND):
@@ -301,18 +302,6 @@ class TaskSignature(AtomicRedisModel):
         elif pause_type == PauseActionTypes.INTERRUPT:
             return await self.interrupt()
         raise NotImplementedError(f"Pause type {pause_type} not supported")
-
-
-@contextlib.asynccontextmanager
-@deprecated(f"You should switch to rapyer 1.1.1 with rapyer.lock_from_key")
-async def lock_from_key(
-    cls, key: str, action: str = "default", save_at_end: bool = False
-) -> AsyncGenerator[TaskSignature, None]:
-    async with acquire_lock(cls.Meta.redis, f"{key}/{action}"):
-        redis_model = await rapyer.aget(key)
-        yield redis_model
-        if save_at_end:
-            await redis_model.asave()
 
 
 TaskInputType: TypeAlias = TaskIdentifierType | TaskSignature
