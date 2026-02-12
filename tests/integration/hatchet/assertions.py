@@ -197,7 +197,7 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
     # Check kwargs were stored
     hatchet_call = wf_by_task_id[task_id]
     assert hatchet_call.status == V1TaskStatus.CANCELLED
-    expected_dump = task.model_validators.validate(hatchet_call.input["input"])
+    expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
     for key, value in expected_dump.model_dump().items():
         assert task.kwargs[key] == value, f"{key} != {value}"
 
