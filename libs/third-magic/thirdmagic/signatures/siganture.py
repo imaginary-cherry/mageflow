@@ -11,9 +11,11 @@ from rapyer.fields import SafeLoad, RapyerKey
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 
 from thirdmagic.client import BaseClientAdapter, DefaultClientAdapter
-from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.consts import REMOVED_TASK_TTL, TASK_ID_PARAM_NAME
+from thirdmagic.errors import MissingSignatureError
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
+from thirdmagic.task import MageflowTaskDefinition
 from thirdmagic.utils import return_value_field
 
 
@@ -57,7 +59,7 @@ class TaskSignature(AtomicRedisModel):
         error_callbacks: list[RapyerKey | Self] = None,
         **kwargs,
     ) -> Self:
-        validator = extract_hatchet_validator(task)
+        validator = cls.ClientAdapter.extract_validator(task)
         return_field_name = return_value_field(validator)
         signature = cls(
             task_name=task.name,
@@ -82,8 +84,8 @@ class TaskSignature(AtomicRedisModel):
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
         if not model_validators:
-            task_def = await HatchetTaskModel.safe_get(task_name)
-            model_validators = task_def.input_validator if task_def else None
+            task_def = await MageflowTaskDefinition.aget(task_name)
+            model_validators = task_def.input_validator
             task_name = task_def.mageflow_task_name if task_def else task_name
         return_field_name = return_value_field(model_validators)
 
@@ -234,7 +236,7 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.aio_run_no_wait(EmptyModel())
+            await self.ClientAdapter.acall_task(None)
         else:
             await self.change_status(last_status)
 
