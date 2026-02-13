@@ -3,34 +3,18 @@ from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, ClassVar, cast
 
 import rapyer
-from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Workflow
-from pydantic import (
-    BaseModel,
-    field_validator,
-    Field,
-)
+from pydantic import BaseModel, field_validator, Field
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
-from rapyer.fields import SafeLoad
+from rapyer.fields import SafeLoad, RapyerKey
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 
-from mageflow import MissingSignatureError
-from mageflow.models.message import DEFAULT_RESULT_NAME
-from mageflow import TASK_ID_PARAM_NAME, REMOVED_TASK_TTL
-from mageflow import (
-    TaskStatus,
-    SignatureStatus,
-    PauseActionTypes,
-)
-from mageflow.signature.types import TaskIdentifierType, HatchetTaskType
-from mageflow import mageflow_config
-from mageflow import HatchetTaskModel
-from mageflow.utils.hatchet import extract_hatchet_validator
-from mageflow.utils.models import return_value_field
-from mageflow import MageflowWorkflow
+from thirdmagic.client import BaseClientAdapter, DefaultClientAdapter
+from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.message import DEFAULT_RESULT_NAME
+from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
+from thirdmagic.utils import return_value_field
 
 
 class TaskSignature(AtomicRedisModel):
@@ -39,23 +23,24 @@ class TaskSignature(AtomicRedisModel):
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
     model_validators: SafeLoad[Optional[type[BaseModel]]] = None
     return_field_name: str = DEFAULT_RESULT_NAME
-    success_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
-    error_callbacks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    success_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
+    error_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
     signature_container_id: Optional[str] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
+    ClientAdapter: ClassVar[BaseClientAdapter] = DefaultClientAdapter()
 
     @field_validator("success_callbacks", "error_callbacks", mode="before")
     @classmethod
-    def validate_tasks_id(cls, v: list) -> list[TaskIdentifierType]:
+    def validate_tasks_id(cls, v: list) -> list[RapyerKey]:
         return [cls.validate_task_key(item) for item in v]
 
     @classmethod
-    def validate_task_key(cls, v) -> TaskIdentifierType:
+    def validate_task_key(cls, v) -> RapyerKey:
         if isinstance(v, bytes):
-            return v.decode()
-        if isinstance(v, TaskIdentifierType):
+            return RapyerKey(v.decode())
+        if isinstance(v, RapyerKey):
             return v
         elif isinstance(v, TaskSignature):
             return v.key
@@ -68,8 +53,8 @@ class TaskSignature(AtomicRedisModel):
     async def from_task(
         cls,
         task: HatchetTaskType,
-        success_callbacks: list[TaskIdentifierType | Self] = None,
-        error_callbacks: list[TaskIdentifierType | Self] = None,
+        success_callbacks: list[RapyerKey | Self] = None,
+        error_callbacks: list[RapyerKey | Self] = None,
         **kwargs,
     ) -> Self:
         validator = extract_hatchet_validator(task)
@@ -86,7 +71,7 @@ class TaskSignature(AtomicRedisModel):
         return signature
 
     @classmethod
-    async def get_safe(cls, task_key: TaskIdentifierType) -> Optional[Self]:
+    async def get_safe(cls, task_key: RapyerKey) -> Optional[Self]:
         try:
             return await rapyer.aget(task_key)
         except KeyNotFound:
@@ -205,7 +190,7 @@ class TaskSignature(AtomicRedisModel):
         await self.remove_task()
 
     @classmethod
-    async def remove_from_key(cls, task_key: TaskIdentifierType):
+    async def remove_from_key(cls, task_key: RapyerKey):
         async with rapyer.alock_from_key(task_key) as task:
             task = cast(TaskSignature, task)
             return await task.remove()
@@ -226,9 +211,7 @@ class TaskSignature(AtomicRedisModel):
 
     # When pausing signature from outside the task
     @classmethod
-    async def safe_change_status(
-        cls, task_id: TaskIdentifierType, status: SignatureStatus
-    ):
+    async def safe_change_status(cls, task_id: RapyerKey, status: SignatureStatus):
         try:
             async with rapyer.alock_from_key(task_id) as task:
                 return await task.change_status(status)
@@ -242,7 +225,7 @@ class TaskSignature(AtomicRedisModel):
         await self.remove()
 
     @classmethod
-    async def resume_from_key(cls, task_key: TaskIdentifierType):
+    async def resume_from_key(cls, task_key: RapyerKey):
         async with rapyer.alock_from_key(task_key) as task:
             task = cast(TaskSignature, task)
             await task.resume()
@@ -256,7 +239,7 @@ class TaskSignature(AtomicRedisModel):
             await self.change_status(last_status)
 
     @classmethod
-    async def suspend_from_key(cls, task_key: TaskIdentifierType):
+    async def suspend_from_key(cls, task_key: RapyerKey):
         async with rapyer.alock_from_key(task_key) as task:
             task = cast(TaskSignature, task)
             await task.suspend()
@@ -278,7 +261,7 @@ class TaskSignature(AtomicRedisModel):
         await self.change_status(SignatureStatus.SUSPENDED)
 
     @classmethod
-    async def interrupt_from_key(cls, task_key: TaskIdentifierType):
+    async def interrupt_from_key(cls, task_key: RapyerKey):
         async with rapyer.alock_from_key(task_key) as task:
             task = cast(TaskSignature, task)
             return task.interrupt()
@@ -293,7 +276,7 @@ class TaskSignature(AtomicRedisModel):
     @classmethod
     async def pause_from_key(
         cls,
-        task_key: TaskIdentifierType,
+        task_key: RapyerKey,
         pause_type: PauseActionTypes = PauseActionTypes.SUSPEND,
     ):
         async with rapyer.alock_from_key(task_key) as task:
@@ -308,4 +291,4 @@ class TaskSignature(AtomicRedisModel):
         raise NotImplementedError(f"Pause type {pause_type} not supported")
 
 
-TaskInputType: TypeAlias = TaskIdentifierType | TaskSignature
+TaskInputType: TypeAlias = RapyerKey | TaskSignature
