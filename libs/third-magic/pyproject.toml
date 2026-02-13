@@ -1,0 +1,20 @@
+[project]
+name = "thirdmagic"
+version = "0.2.0"
+description = "Core models and signatures for mageflow task orchestration"
+authors = [
+    {name = "imaginary-cherry", email = "yedidyakfir@gmail.com"}
+]
+license = {text = "MIT"}
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "rapyer>=1.2.1,<1.3.0",
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["thirdmagic"]
