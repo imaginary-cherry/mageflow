@@ -4,17 +4,31 @@ from hatchet_sdk import Hatchet, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
+from rapyer.fields import RapyerKey
 
 from thirdmagic.clients.base import BaseClientAdapter
-from thirdmagic.clients.hatchet.messages import ChainCallbackMessage, ChainErrorMessage
+from thirdmagic.clients.hatchet.messages import (
+    ChainCallbackMessage,
+    ChainErrorMessage,
+    SwarmResultsMessage,
+    SwarmErrorMessage,
+    SwarmMessage,
+)
 from thirdmagic.clients.hatchet.workflow import MageflowWorkflow
-from thirdmagic.clients.inner_task_names import ON_CHAIN_END, ON_CHAIN_ERROR
+from thirdmagic.clients.inner_task_names import (
+    ON_CHAIN_END,
+    ON_CHAIN_ERROR,
+    ON_SWARM_ITEM_DONE,
+    ON_SWARM_ITEM_ERROR,
+    ON_SWARM_START,
+)
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.task import MageflowTaskDefinition
 
 if TYPE_CHECKING:
     from thirdmagic.signatures.siganture import TaskSignature
     from thirdmagic.signatures.chain import ChainTaskSignature
+    from thirdmagic.signatures.swarm import SwarmTaskSignature
 
 
 class HatchetClientAdapter(BaseClientAdapter):
@@ -58,6 +72,43 @@ class HatchetClientAdapter(BaseClientAdapter):
             name=ON_CHAIN_ERROR, input_validator=ChainErrorMessage
         )
         return await stub.aio_run_no_wait(chain_err_msg)
+
+    async def astart_swarm(
+        self,
+        swarm: "SwarmTaskSignature",
+        options: TriggerWorkflowOptions = None,
+        **kwargs,
+    ):
+        start_swarm_msg = SwarmMessage(swarm_task_id=swarm.key)
+        params = dict(options=options) if options else {}
+        stub = self.hatchet.stubs.task(
+            name=ON_SWARM_START, input_validator=SwarmMessage
+        )
+        return await stub.aio_run_no_wait(start_swarm_msg, **params)
+
+    async def acall_swarm_item_done(
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
+        swarm_done_msg = SwarmResultsMessage(
+            swarm_task_id=swarm.key,
+            swarm_item_id=swarm_item.key,
+            mageflow_results=results,
+        )
+        stub = self.hatchet.stubs.task(
+            name=ON_SWARM_ITEM_DONE, input_validator=SwarmResultsMessage
+        )
+        return await stub.aio_run_no_wait(swarm_done_msg)
+
+    async def acall_swarm_item_error(
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
+        swarm_error_msg = SwarmErrorMessage(
+            swarm_task_id=swarm.key, swarm_item_id=swarm_item.key, error=str(error)
+        )
+        stub = self.hatchet.stubs.task(
+            name=ON_SWARM_ITEM_ERROR, input_validator=SwarmErrorMessage
+        )
+        return await stub.aio_run_no_wait(swarm_error_msg)
 
     def extract_validator(self, client_task: BaseWorkflow) -> type[BaseModel]:
         validator = client_task.input_validator

@@ -15,7 +15,12 @@ from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.task import MageflowTaskDefinition
-from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
+from thirdmagic.utils import (
+    return_value_field,
+    HAS_HATCHET,
+    HatchetTaskType,
+    TaskSignatureConvertible,
+)
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions

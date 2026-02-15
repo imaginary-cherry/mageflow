@@ -11,6 +11,7 @@ from thirdmagic.utils import HatchetTaskType
 if TYPE_CHECKING:
     from thirdmagic.signatures.siganture import TaskSignature
     from thirdmagic.signatures.chain import ChainTaskSignature
+    from thirdmagic.signatures.swarm import SwarmTaskSignature
 
 
 class BaseClientAdapter(ABC):
@@ -33,11 +34,19 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def acall_swarm_error(self, results: Any, chain: "ChainTaskSignature"):
+    async def astart_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
         pass
 
     @abc.abstractmethod
-    async def acall_swarm_item_done(self, results: Any, chain: "ChainTaskSignature"):
+    async def acall_swarm_item_error(
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
+        pass
+
+    @abc.abstractmethod
+    async def acall_swarm_item_done(
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
         pass
 
     @abc.abstractmethod

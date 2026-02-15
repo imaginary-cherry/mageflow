@@ -13,7 +13,9 @@ from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
 from thirdmagic.signatures.container import ContainerTaskSignature
 from thirdmagic.signatures.siganture import TaskSignature
+from thirdmagic.signatures.state import PublishState
 from thirdmagic.signatures.status import SignatureStatus
+from thirdmagic.utils import TaskSignatureConvertible, resolve_signatures
 
 
 class SwarmConfig(AtomicRedisModel):
@@ -60,20 +62,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        swarm_done_msg = SwarmResultsMessage(
-            swarm_task_id=self.key,
-            swarm_item_id=sub_task.key,
-            mageflow_results=results,
-        )
-        await HatchetInvoker.run_task(ON_SWARM_END, swarm_done_msg)
+        await self.ClientAdapter.acall_swarm_item_done(results, self, sub_task)
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
     ):
-        swarm_error_msg = SwarmErrorMessage(
-            swarm_task_id=self.key, swarm_item_id=sub_task.key, error=str(error)
-        )
-        await HatchetInvoker.run_task(ON_SWARM_ERROR, swarm_error_msg)
+        await self.ClientAdapter.acall_swarm_item_done(error, self, sub_task)
 
     @property
     def has_swarm_started(self):
@@ -85,9 +79,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         dump = msg.model_dump(mode="json", exclude_unset=True)
         dump |= kwargs
         await self.kwargs.aupdate(**dump)
-        start_swarm_msg = SwarmMessage(swarm_task_id=self.key)
-        params = dict(options=options) if options else {}
-        await HatchetInvoker.run_task(ON_SWARM_START, start_swarm_msg, **params)
+        await self.ClientAdapter.astart_swarm(self)
 
     async def aio_run_in_swarm(
         self,
@@ -113,7 +105,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
     ) -> list[TaskSignature]:
         """
         tasks - tasks signature to add to swarm
-        close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capcity
+        close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capacity
         """
         if not self.config.can_add_n_tasks(self, len(tasks)):
             raise TooManyTasksError(
@@ -124,7 +116,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 f"Swarm {self.task_name} is {self.task_status} - can't add task"
             )
 
-        tasks = await resolve_signature_keys(tasks)
+        tasks = await resolve_signatures(tasks)
         task_keys = [task.key for task in tasks]
 
         async with self.apipeline():
@@ -197,15 +189,11 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def has_published_errors(self):
         return self.task_status.status == SignatureStatus.FAILED
 
-    async def activate_error(self, msg, **kwargs):
-        full_kwargs = self.kwargs | kwargs
-        return await super().activate_error(msg, **full_kwargs)
-
-    async def activate_success(self, msg, **kwargs):
+    async def activate_success(self, msg):
         results = await self.tasks_results.aload()
         tasks_results = [res for res in results]
 
-        await super().activate_success(tasks_results, **kwargs)
+        await super().activate_success(tasks_results)
         await self.remove_branches(success=False)
         await self.remove_task()
 
