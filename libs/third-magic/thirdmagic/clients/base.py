@@ -10,6 +10,7 @@ from thirdmagic.utils import HatchetTaskType
 
 if TYPE_CHECKING:
     from thirdmagic.signatures.siganture import TaskSignature
+    from thirdmagic.signatures.chain import ChainTaskSignature
 
 
 class BaseClientAdapter(ABC):
@@ -18,7 +19,25 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def acall_task_identifier(self, task_id: str, **kwargs):
+    async def acall_chain_done(self, results: Any, chain: "ChainTaskSignature"):
+        pass
+
+    @abc.abstractmethod
+    async def acall_chain_error(
+        self,
+        original_msg: Any,
+        error: Exception,
+        chain: "ChainTaskSignature",
+        failed_task: TaskSignature,
+    ):
+        pass
+
+    @abc.abstractmethod
+    async def acall_swarm_error(self, results: Any, chain: "ChainTaskSignature"):
+        pass
+
+    @abc.abstractmethod
+    async def acall_swarm_item_done(self, results: Any, chain: "ChainTaskSignature"):
         pass
 
     @abc.abstractmethod

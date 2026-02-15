@@ -10,7 +10,7 @@ from rapyer.errors.base import KeyNotFound
 from rapyer.fields import SafeLoad, RapyerKey
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 
-from thirdmagic.clients.client import BaseClientAdapter, DefaultClientAdapter
+from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus

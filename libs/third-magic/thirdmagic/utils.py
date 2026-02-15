@@ -30,6 +30,20 @@ def return_value_field(model_validators: type[BaseModel]) -> Optional[str]:
     return return_field_name or DEFAULT_RESULT_NAME
 
 
+def deep_merge(base: dict, updates: dict) -> dict:
+    results = base.copy()
+    for key, value in updates.items():
+        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+            results[key] = deep_merge(base[key], value)
+        else:
+            results[key] = value
+    return results
+
+
+class ModelToDump(BaseModel):
+    value: Any
+
+
 # Which client is installed
 try:
     HAS_HATCHET = True
