@@ -11,12 +11,14 @@ from rapyer.fields import SafeLoad, RapyerKey
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 
 from thirdmagic.client import BaseClientAdapter, DefaultClientAdapter
-from thirdmagic.consts import REMOVED_TASK_TTL, TASK_ID_PARAM_NAME
-from thirdmagic.errors import MissingSignatureError
+from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.task import MageflowTaskDefinition
-from thirdmagic.utils import return_value_field
+from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
+
+if HAS_HATCHET:
+    from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 
 class TaskSignature(AtomicRedisModel):
@@ -62,7 +64,7 @@ class TaskSignature(AtomicRedisModel):
         validator = cls.ClientAdapter.extract_validator(task)
         return_field_name = return_value_field(validator)
         signature = cls(
-            task_name=task.name,
+            task_name=cls.ClientAdapter.task_name(task),
             model_validators=validator,
             return_field_name=return_field_name,
             success_callbacks=success_callbacks or [],
@@ -98,73 +100,28 @@ class TaskSignature(AtomicRedisModel):
         await signature.asave()
         return signature
 
-    def workflow(self, use_return_field: bool = True, **task_additional_params):
-        total_kwargs = self.kwargs | task_additional_params
-        task = self.task_name
-        return_field = self.return_field_name if use_return_field else None
+    if HAS_HATCHET:
 
-        workflow = mageflow_config.hatchet_client.workflow(
-            name=task, input_validator=self.model_validators
-        )
-        mageflow_wf = MageflowWorkflow(
-            workflow,
-            workflow_params=total_kwargs,
-            return_value_field=return_field,
-            task_ctx=self.task_ctx(),
-        )
-        return mageflow_wf
-
-    def task_ctx(self) -> dict:
-        return {TASK_ID_PARAM_NAME: self.key}
-
-    async def asend_callback(self, results: Any, **kwargs):
-        wf = self.workflow(**kwargs)
-        return await wf.aio_run_no_wait(results)
-
-    async def aio_run_no_wait(
-        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
-    ):
-        params = dict(options=options) if options else {}
-        workflow = self.workflow(use_return_field=False, **kwargs)
-        return await workflow.aio_run_no_wait(msg, **params)
-
-    async def callback_workflows(
-        self, with_success: bool = True, with_error: bool = True, **kwargs
-    ) -> list[Workflow]:
-        callback_ids = []
-        if with_success:
-            callback_ids.extend(self.success_callbacks)
-        if with_error:
-            callback_ids.extend(self.error_callbacks)
-        callbacks_signatures = await rapyer.afind(*callback_ids)
-        callbacks_signatures = cast(list[TaskSignature], callbacks_signatures)
-
-        if any([sign is None for sign in callbacks_signatures]):
-            raise MissingSignatureError(
-                f"Some callbacks not found {callback_ids}, signature can be called only once"
+        async def aio_run_no_wait(
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+        ):
+            params = dict(options=options) if options else {}
+            return await self.ClientAdapter.acall_signature(
+                self, msg, set_return_field=False, **params, **kwargs
             )
-        workflows = [callback.workflow(**kwargs) for callback in callbacks_signatures]
 
-        return workflows
-
-    async def activate_callbacks(
-        self, msg, with_success: bool = True, with_error: bool = True, **kwargs
-    ):
-        workflows = await self.callback_workflows(with_success, with_error, **kwargs)
-        await asyncio.gather(*[workflow.aio_run_no_wait(msg) for workflow in workflows])
-
-    async def activate_success(self, msg, **kwargs):
-        return await self.activate_callbacks(
-            msg, with_success=True, with_error=False, **kwargs
+    async def activate_success(self, msg):
+        success_signatures = await rapyer.afind(*self.success_callbacks)
+        success_signatures = cast(list[TaskSignature], success_signatures)
+        return await self.ClientAdapter.acall_signatures(
+            success_signatures, [msg] * len(success_signatures), True
         )
 
-    async def activate_error(self, msg, **kwargs):
-        return await self.activate_callbacks(
-            msg,
-            with_success=False,
-            with_error=True,
-            use_return_field=False,
-            **kwargs,
+    async def activate_error(self, msg):
+        error_signatures = await rapyer.afind(*self.error_callbacks)
+        error_signatures = cast(list[TaskSignature], error_signatures)
+        return await self.ClientAdapter.acall_signatures(
+            error_signatures, [msg] * len(error_signatures), True
         )
 
     async def remove_task(self):

@@ -1,5 +1,5 @@
 import dataclasses
-from typing import TypeVar, get_type_hints, Optional
+from typing import TypeVar, get_type_hints, Optional, Callable
 
 from pydantic import BaseModel
 
@@ -28,3 +28,19 @@ def return_value_field(model_validators: type[BaseModel]) -> Optional[str]:
     except (IndexError, TypeError):
         return_field_name = None
     return return_field_name or DEFAULT_RESULT_NAME
+
+
+# Which client is installed
+try:
+    HAS_HATCHET = True
+    from hatchet_sdk.workflows import BaseWorkflow
+
+    HatchetTaskType = BaseWorkflow | Callable
+except ImportError:
+    HAS_HATCHET = False
+
+try:
+    HAS_TEMPORAL = True
+    HatchetTaskType = None
+except ImportError:
+    HAS_TEMPORAL = False
