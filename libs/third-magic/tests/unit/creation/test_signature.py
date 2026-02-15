@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from rapyer.fields import RapyerKey
 
 import thirdmagic
+from tests.unit.creation.conftest import extract_hatchet_validator
 from tests.unit.messages import (
     ContextMessage,
     MessageWithData,
@@ -167,29 +168,6 @@ async def test__from_task_name__explicit_model_validators_with_return_value__ret
 
     # Assert
     assert signature.return_field_name == "task_result"
-
-
-@pytest.fixture
-def hatchet_task(orch):
-    @orch.task(name="test_task")
-    def test_task(msg):
-        return msg
-
-    yield test_task
-
-
-@pytest.fixture
-def hatchet_task_name(orch):
-    @orch.task(name="test_task")
-    def test_task(msg):
-        return msg
-
-    return "test_task"
-
-
-@pytest.fixture
-def task(request):
-    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.parametrize("task", ["hatchet_task", "hatchet_task_name"], indirect=True)
