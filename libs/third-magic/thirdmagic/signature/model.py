@@ -30,7 +30,7 @@ class TaskSignature(AtomicRedisModel):
     success_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     error_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
-    signature_container_id: Optional[str] = None
+    signature_container_id: Optional[RapyerKey] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
     ClientAdapter: ClassVar[BaseClientAdapter] = DefaultClientAdapter()
@@ -44,7 +44,7 @@ class TaskSignature(AtomicRedisModel):
     def validate_task_key(cls, v) -> RapyerKey:
         if isinstance(v, bytes):
             return RapyerKey(v.decode())
-        if isinstance(v, RapyerKey):
+        if isinstance(v, str):
             return v
         elif isinstance(v, TaskSignature):
             return v.key
