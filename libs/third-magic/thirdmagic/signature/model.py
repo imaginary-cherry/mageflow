@@ -12,6 +12,7 @@ from rapyer.types import RedisDict, RedisList, RedisDatetime
 
 from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.errors import UnrecognizedTaskError
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.task import MageflowTaskDefinition
@@ -86,7 +87,11 @@ class TaskSignature(AtomicRedisModel):
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
         if not model_validators:
-            task_def = await MageflowTaskDefinition.aget(task_name)
+            task_def = await MageflowTaskDefinition.aget(
+                task_name, raise_notfound=False
+            )
+            if not task_def:
+                raise UnrecognizedTaskError(f"Task {task_name} was not initialized")
             model_validators = task_def.input_validator
             task_name = task_def.mageflow_task_name if task_def else task_name
         return_field_name = return_value_field(model_validators)

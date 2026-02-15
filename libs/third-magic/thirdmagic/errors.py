@@ -20,3 +20,7 @@ class TooManyTasksError(SwarmError, RuntimeError):
 
 class SwarmIsCanceledError(SwarmError, RuntimeError):
     pass
+
+
+class UnrecognizedTaskError(MageflowError):
+    pass
