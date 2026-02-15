@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from thirdmagic.task import MageflowTaskDefinition
-from thirdmagic.utils import HatchetTaskType
 
 if TYPE_CHECKING:
-    from thirdmagic.signatures.siganture import TaskSignature
-    from thirdmagic.signatures.chain import ChainTaskSignature
-    from thirdmagic.signatures.swarm import SwarmTaskSignature
+    from thirdmagic.signature.model import TaskSignature
+    from thirdmagic.chain.model import ChainTaskSignature
+    from thirdmagic.swarm.swarm import SwarmTaskSignature
+    from thirdmagic.utils import HatchetTaskType
 
 
 class BaseClientAdapter(ABC):
@@ -29,7 +29,7 @@ class BaseClientAdapter(ABC):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: TaskSignature,
+        failed_task: "TaskSignature",
     ):
         pass
 
@@ -76,7 +76,7 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    def task_name(self, task: HatchetTaskType) -> str:
+    def task_name(self, task: "HatchetTaskType") -> str:
         pass
 
 
@@ -89,7 +89,7 @@ class DefaultClientAdapter(BaseClientAdapter):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: TaskSignature,
+        failed_task: "TaskSignature",
     ):
         raise NotImplementedError("Set a client before we start")
 
@@ -119,5 +119,5 @@ class DefaultClientAdapter(BaseClientAdapter):
     ) -> bool:
         raise NotImplementedError("Set a client before we start")
 
-    def task_name(self, task: HatchetTaskType) -> str:
+    def task_name(self, task: "HatchetTaskType") -> str:
         raise NotImplementedError("Set a client before we start")

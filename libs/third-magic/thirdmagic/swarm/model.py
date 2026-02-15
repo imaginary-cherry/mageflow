@@ -2,8 +2,6 @@ import asyncio
 from typing import Self, Any, Optional, cast
 
 import rapyer
-from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
 from rapyer.fields import RapyerKey
@@ -11,11 +9,16 @@ from rapyer.types import RedisList, RedisInt
 
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
-from thirdmagic.signatures.container import ContainerTaskSignature
-from thirdmagic.signatures.siganture import TaskSignature
-from thirdmagic.signatures.state import PublishState
-from thirdmagic.signatures.status import SignatureStatus
-from thirdmagic.utils import TaskSignatureConvertible, resolve_signatures
+from thirdmagic.signature.creator import TaskSignatureConvertible, resolve_signatures
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.swarm.state import PublishState
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.utils import HAS_HATCHET
+
+if HAS_HATCHET:
+    from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+    from hatchet_sdk.runnables.types import EmptyModel
 
 
 class SwarmConfig(AtomicRedisModel):
@@ -73,25 +76,29 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def has_swarm_started(self):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
-    async def aio_run_no_wait(
-        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
-    ):
-        dump = msg.model_dump(mode="json", exclude_unset=True)
-        dump |= kwargs
-        await self.kwargs.aupdate(**dump)
-        await self.ClientAdapter.astart_swarm(self)
+    if HAS_HATCHET:
 
-    async def aio_run_in_swarm(
-        self,
-        task: TaskSignatureConvertible,
-        msg: BaseModel,
-        options: TriggerWorkflowOptions = None,
-        close_on_max_task: bool = True,
-    ) -> Optional[TaskSignature]:
-        sub_task = await self.add_task(task, close_on_max_task)
-        await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
-        published_tasks = await self.fill_running_tasks(max_tasks=1, options=options)
-        return published_tasks[0] if published_tasks else None
+        async def aio_run_no_wait(
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+        ):
+            dump = msg.model_dump(mode="json", exclude_unset=True)
+            dump |= kwargs
+            await self.kwargs.aupdate(**dump)
+            await self.ClientAdapter.astart_swarm(self, options=options)
+
+        async def aio_run_in_swarm(
+            self,
+            task: TaskSignatureConvertible,
+            msg: BaseModel,
+            options: TriggerWorkflowOptions = None,
+            close_on_max_task: bool = True,
+        ) -> Optional[TaskSignature]:
+            sub_task = await self.add_task(task, close_on_max_task)
+            await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
+            published_tasks = await self.fill_running_tasks(
+                max_tasks=1, options=options
+            )
+            return published_tasks[0] if published_tasks else None
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [

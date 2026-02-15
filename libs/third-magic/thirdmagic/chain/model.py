@@ -2,14 +2,17 @@ import asyncio
 from typing import cast, Any
 
 import rapyer
-from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from pydantic import field_validator, Field, BaseModel
 from rapyer.fields import RapyerKey
 
 from thirdmagic.errors import MissingSignatureError
-from thirdmagic.signatures.container import ContainerTaskSignature
-from thirdmagic.signatures.siganture import TaskSignature
-from thirdmagic.signatures.status import SignatureStatus
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.utils import HAS_HATCHET
+
+if HAS_HATCHET:
+    from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 
 class ChainTaskSignature(ContainerTaskSignature):
@@ -46,15 +49,19 @@ class ChainTaskSignature(ContainerTaskSignature):
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
 
-    async def aio_run_no_wait(
-        self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
-    ):
-        first_task = await TaskSignature.get_safe(self.tasks[0])
-        if first_task is None:
-            raise MissingSignatureError(f"First task from chain {self.key} not found")
+    if HAS_HATCHET:
 
-        full_kwargs = self.kwargs | kwargs
-        return await first_task.aio_run_no_wait(msg, options, **full_kwargs)
+        async def aio_run_no_wait(
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+        ):
+            first_task = await TaskSignature.get_safe(self.tasks[0])
+            if first_task is None:
+                raise MissingSignatureError(
+                    f"First task from chain {self.key} not found"
+                )
+
+            full_kwargs = self.kwargs | kwargs
+            return await first_task.aio_run_no_wait(msg, options, **full_kwargs)
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [

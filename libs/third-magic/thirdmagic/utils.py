@@ -1,12 +1,9 @@
 import dataclasses
-from typing import TypeVar, get_type_hints, Optional, Callable, TypeAlias, Any
+from typing import TypeVar, get_type_hints, Optional, Callable, Any
 
-import rapyer
 from pydantic import BaseModel
-from rapyer.fields import RapyerKey
 
 from thirdmagic.message import ReturnValueAnnotation, DEFAULT_RESULT_NAME
-from thirdmagic.signatures.siganture import TaskSignature
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
 
@@ -50,7 +47,7 @@ class ModelToDump(BaseModel):
 # Which client is installed
 try:
     HAS_HATCHET = True
-    from hatchet_sdk.workflows import BaseWorkflow
+    from hatchet_sdk.runnables.workflow import BaseWorkflow
 
     HatchetTaskType = BaseWorkflow | Callable
 except ImportError:
@@ -61,44 +58,3 @@ try:
     HatchetTaskType = None
 except ImportError:
     HAS_TEMPORAL = False
-
-
-TaskSignatureConvertible: TypeAlias = RapyerKey | TaskSignature | HatchetTaskType | str
-
-
-async def resolve_signatures(
-    tasks: list[TaskSignatureConvertible],
-) -> list["TaskSignature"]:
-    result: list[Optional[TaskSignature]] = [None] * len(tasks)
-    identifier_entries: list[tuple[int, RapyerKey]] = []
-    hatchet_entries: list[tuple[int, HatchetTaskType]] = []
-    task_names: list[tuple[int, str]] = []
-
-    for i, task in enumerate(tasks):
-        if isinstance(task, TaskSignature):
-            result[i] = task
-        elif isinstance(task, RapyerKey):
-            identifier_entries.append((i, task))
-        elif isinstance(task, str):
-            task_names.append((i, task))
-        else:
-            hatchet_entries.append((i, task))
-
-    if identifier_entries:
-        keys = [key for _, key in identifier_entries]
-        found = await rapyer.afind(*keys, skip_missing=True)
-        found_by_key = {sig.key: sig for sig in found}
-        for i, key in identifier_entries:
-            result[i] = found_by_key.get(key)
-
-    if hatchet_entries:
-        async with rapyer.apipeline():
-            for i, task in hatchet_entries:
-                result[i] = await TaskSignature.from_task(task)
-
-    if task_names:
-        async with rapyer.apipeline():
-            for i, task_name in task_names:
-                result[i] = await TaskSignature.from_task_name(task_name)
-
-    return result

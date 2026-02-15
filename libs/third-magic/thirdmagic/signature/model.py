@@ -13,14 +13,9 @@ from rapyer.types import RedisDict, RedisList, RedisDatetime
 from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.message import DEFAULT_RESULT_NAME
-from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
+from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.task import MageflowTaskDefinition
-from thirdmagic.utils import (
-    return_value_field,
-    HAS_HATCHET,
-    HatchetTaskType,
-    TaskSignatureConvertible,
-)
+from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
