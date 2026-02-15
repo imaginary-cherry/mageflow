@@ -53,8 +53,8 @@ try:
 except ImportError:
     HAS_HATCHET = False
 
-try:
-    HAS_TEMPORAL = True
-    HatchetTaskType = None
-except ImportError:
-    HAS_TEMPORAL = False
+# try:
+#     HAS_TEMPORAL = True
+#     HatchetTaskType = None
+# except ImportError:
+#     HAS_TEMPORAL = False
