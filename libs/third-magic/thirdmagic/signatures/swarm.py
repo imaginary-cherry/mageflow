@@ -6,30 +6,14 @@ from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import Field, field_validator, BaseModel
 from rapyer import AtomicRedisModel
+from rapyer.fields import RapyerKey
 from rapyer.types import RedisList, RedisInt
 
-from mageflow import TooManyTasksError, SwarmIsCanceledError
-from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow import REMOVED_TASK_TTL
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow import (
-    TaskSignatureConvertible,
-    resolve_signature_keys,
-)
-from mageflow import TaskSignature
-from mageflow import SignatureStatus
-from mageflow.signature.types import TaskIdentifierType
-from mageflow.swarm import (
-    ON_SWARM_END,
-    ON_SWARM_ERROR,
-    ON_SWARM_START,
-)
-from mageflow.swarm import (
-    SwarmResultsMessage,
-    SwarmErrorMessage,
-    SwarmMessage,
-)
-from mageflow.swarm import PublishState
+from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
+from thirdmagic.signatures.container import ContainerTaskSignature
+from thirdmagic.signatures.siganture import TaskSignature
+from thirdmagic.signatures.status import SignatureStatus
 
 
 class SwarmConfig(AtomicRedisModel):
@@ -48,10 +32,10 @@ class SwarmConfig(AtomicRedisModel):
 
 class SwarmTaskSignature(ContainerTaskSignature):
     # TODO - TASKS list should be set once we enable this in rapyer
-    tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
-    tasks_left_to_run: RedisList[TaskIdentifierType] = Field(default_factory=list)
-    finished_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
-    failed_tasks: RedisList[TaskIdentifierType] = Field(default_factory=list)
+    tasks: RedisList[RapyerKey] = Field(default_factory=list)
+    tasks_left_to_run: RedisList[RapyerKey] = Field(default_factory=list)
+    finished_tasks: RedisList[RapyerKey] = Field(default_factory=list)
+    failed_tasks: RedisList[RapyerKey] = Field(default_factory=list)
     tasks_results: RedisList[Any] = Field(default_factory=list)
     # This flag is raised when no more tasks can be added to the swarm
     is_swarm_closed: bool = False

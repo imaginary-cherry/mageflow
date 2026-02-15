@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from mageflow.signature.model import TaskSignature
+from thirdmagic.signatures.siganture import TaskSignature
 
 
 class ContainerTaskSignature(TaskSignature, ABC):

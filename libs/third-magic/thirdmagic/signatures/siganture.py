@@ -10,7 +10,7 @@ from rapyer.errors.base import KeyNotFound
 from rapyer.fields import SafeLoad, RapyerKey
 from rapyer.types import RedisDict, RedisList, RedisDatetime
 
-from thirdmagic.client import BaseClientAdapter, DefaultClientAdapter
+from thirdmagic.clients.client import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signatures.status import TaskStatus, PauseActionTypes, SignatureStatus
@@ -193,7 +193,7 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.ClientAdapter.acall_task(None)
+            await self.ClientAdapter.acall_signature(None)
         else:
             await self.change_status(last_status)
 

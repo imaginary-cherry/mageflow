@@ -18,10 +18,6 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def acall_task(self, client_task, **kwargs):
-        pass
-
-    @abc.abstractmethod
     async def acall_task_identifier(self, task_id: str, **kwargs):
         pass
 
@@ -58,9 +54,6 @@ class BaseClientAdapter(ABC):
 
 class DefaultClientAdapter(BaseClientAdapter):
     def extract_validator(self, client_task) -> type[BaseModel]:
-        raise NotImplementedError("Set a client before we start")
-
-    async def acall_task(self, client_task, **kwargs):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_task_identifier(self, task_id: str, **kwargs):

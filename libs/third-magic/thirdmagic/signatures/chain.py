@@ -4,21 +4,16 @@ from typing import cast, Any
 import rapyer
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from pydantic import field_validator, Field, BaseModel
+from rapyer.fields import RapyerKey
 
-from mageflow.chain.consts import ON_CHAIN_END, ON_CHAIN_ERROR
-from mageflow.chain.messages import (
-    ChainCallbackMessage,
-    ChainErrorMessage,
-)
-from mageflow import MissingSignatureError
-from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow import TaskSignature, TaskIdentifierType
-from mageflow import SignatureStatus
+from thirdmagic.errors import MissingSignatureError
+from thirdmagic.signatures.container import ContainerTaskSignature
+from thirdmagic.signatures.siganture import TaskSignature
+from thirdmagic.signatures.status import SignatureStatus
 
 
 class ChainTaskSignature(ContainerTaskSignature):
-    tasks: list[TaskIdentifierType] = Field(default_factory=list)
+    tasks: list[RapyerKey] = Field(default_factory=list)
 
     @field_validator("tasks", mode="before")
     @classmethod
@@ -36,7 +31,7 @@ class ChainTaskSignature(ContainerTaskSignature):
             chain_end_msg = ChainCallbackMessage(
                 chain_results=results, chain_task_id=self.key
             )
-            await HatchetInvoker.run_task(ON_CHAIN_END, chain_end_msg)
+            await self.ClientAdapter.acall_task_identifier(ON_CHAIN_END, chain_end_msg)
         else:
             next_task_key = self.tasks[sub_task_idx + 1]
             next_task = await rapyer.aget(next_task_key)
@@ -52,7 +47,7 @@ class ChainTaskSignature(ContainerTaskSignature):
             original_msg=original_msg.model_dump(mode="json"),
             error_task_key=sub_task.key,
         )
-        await HatchetInvoker.run_task(ON_CHAIN_ERROR, chain_err_msg)
+        await self.ClientAdapter.acall_task_identifier(ON_CHAIN_ERROR, chain_err_msg)
 
     async def sub_tasks(self) -> list[TaskSignature]:
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
