@@ -116,11 +116,6 @@ class HatchetClientAdapter(BaseClientAdapter):
             validator = validator._type
         return validator
 
-    async def acall_task_identifier(
-        self, task_id: str, options: TriggerWorkflowOptions = None, **kwargs
-    ):
-        workflow = self.hatchet.workflow(name=task_id)
-
     async def acall_signature(
         self,
         signature: "TaskSignature",
