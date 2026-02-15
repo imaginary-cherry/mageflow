@@ -81,6 +81,31 @@ class BaseClientAdapter(ABC):
 
 
 class DefaultClientAdapter(BaseClientAdapter):
+    async def acall_chain_done(self, results: Any, chain: "ChainTaskSignature"):
+        raise NotImplementedError("Set a client before we start")
+
+    async def acall_chain_error(
+        self,
+        original_msg: Any,
+        error: Exception,
+        chain: "ChainTaskSignature",
+        failed_task: TaskSignature,
+    ):
+        raise NotImplementedError("Set a client before we start")
+
+    async def astart_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
+        raise NotImplementedError("Set a client before we start")
+
+    async def acall_swarm_item_error(
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
+        raise NotImplementedError("Set a client before we start")
+
+    async def acall_swarm_item_done(
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+    ):
+        raise NotImplementedError("Set a client before we start")
+
     def extract_validator(self, client_task) -> type[BaseModel]:
         raise NotImplementedError("Set a client before we start")
 
