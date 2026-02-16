@@ -1,19 +1,18 @@
+from thirdmagic.chain.creator import chain
+from thirdmagic.signature.creator import sign
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.creator import swarm
+
 from mageflow.callbacks import register_task, handle_task_callback
-from mageflow.chain.creator import chain
 from mageflow.client import Mageflow
 from mageflow.init import init_mageflow_hatchet_tasks
-from mageflow.signature.creator import (
-    sign,
-    load_signature,
-    resume_task,
-    lock_task,
-    resume,
-    pause,
-    remove,
-)
-from mageflow.signature.status import TaskStatus
-from mageflow.swarm.creator import swarm
 
+resume_task = TaskSignature.resume_from_key
+lock_task = TaskSignature.alock_from_key
+resume = TaskSignature.resume_from_key
+pause = TaskSignature.pause_from_key
+remove = TaskSignature.remove_from_key
+load_signature = TaskSignature.get_safe
 
 __all__ = [
     "load_signature",

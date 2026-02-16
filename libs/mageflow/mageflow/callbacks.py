@@ -8,9 +8,9 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
+from thirdmagic.task import MageflowTaskDefinition
 
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.task.model import HatchetTaskModel
 from mageflow.utils.pythonic import flexible_call
 
 
@@ -33,7 +33,7 @@ def handle_task_callback(
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             invoker = HatchetInvoker.from_task_data(message, ctx)
-            task_model = await HatchetTaskModel.aget(ctx.action.job_name)
+            task_model = await MageflowTaskDefinition.aget(ctx.action.job_name)
             if not await invoker.should_run_task(message):
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)

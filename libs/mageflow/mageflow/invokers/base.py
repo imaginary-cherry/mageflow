@@ -5,10 +5,9 @@ from typing import Any, cast, Optional
 
 import rapyer
 from pydantic import BaseModel
-
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
 
 
 class BaseInvoker(ABC):

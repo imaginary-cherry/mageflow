@@ -3,11 +3,11 @@ from typing import Optional
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
 
 from mageflow.invokers.base import BaseInvoker
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
 
 
 class HatchetInvoker(BaseInvoker):

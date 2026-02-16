@@ -2,7 +2,6 @@ from hatchet_sdk import Context, EmptyModel
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
 
 
 async def chain_end_task(msg: ChainCallbackMessage, ctx: Context):

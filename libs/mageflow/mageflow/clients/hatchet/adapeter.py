@@ -4,17 +4,7 @@ from hatchet_sdk import Hatchet, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
-from rapyer.fields import RapyerKey
-
 from thirdmagic.clients.base import BaseClientAdapter
-from thirdmagic.clients.hatchet.messages import (
-    ChainCallbackMessage,
-    ChainErrorMessage,
-    SwarmResultsMessage,
-    SwarmErrorMessage,
-    SwarmMessage,
-)
-from thirdmagic.clients.hatchet.workflow import MageflowWorkflow
 from thirdmagic.clients.inner_task_names import (
     ON_CHAIN_END,
     ON_CHAIN_ERROR,
@@ -25,10 +15,14 @@ from thirdmagic.clients.inner_task_names import (
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.task import MageflowTaskDefinition
 
+from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
+from mageflow.clients.hatchet.workflow import MageflowWorkflow
+from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
+
 if TYPE_CHECKING:
-    from thirdmagic.signatures.siganture import TaskSignature
-    from thirdmagic.signatures.chain import ChainTaskSignature
-    from thirdmagic.signatures.swarm import SwarmTaskSignature
+    from thirdmagic.signature.model import TaskSignature
+    from thirdmagic.chain.model import ChainTaskSignature
+    from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 class HatchetClientAdapter(BaseClientAdapter):

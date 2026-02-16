@@ -1,14 +1,11 @@
-from typing import cast
-
-import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
+from thirdmagic.swarm.model import SwarmTaskSignature
 
+from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.consts import SWARM_FILL_TASK, SWARM_ACTION_FILL
+from mageflow.swarm.consts import SWARM_ACTION_FILL
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
-from mageflow.swarm.model import SwarmTaskSignature
 
 
 async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):

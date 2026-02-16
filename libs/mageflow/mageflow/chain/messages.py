@@ -2,15 +2,13 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from mageflow.models.message import ReturnValue
-
 
 class ChainMessage(BaseModel):
     chain_task_id: str
 
 
 class ChainCallbackMessage(ChainMessage):
-    chain_results: ReturnValue[Any]
+    chain_results: Any
 
 
 class ChainErrorMessage(ChainMessage):
