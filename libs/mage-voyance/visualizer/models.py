@@ -2,9 +2,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
 
 TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
 

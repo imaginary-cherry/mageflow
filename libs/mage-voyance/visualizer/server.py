@@ -11,11 +11,11 @@ from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
-from mageflow.swarm.model import SwarmTaskSignature
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.visualizer.models import (
     BatchTasksRequest,
     RootTasksResponse,
@@ -154,7 +154,7 @@ def register_api_routes(app: FastAPI):
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task {task_id} not found"
+                detail=f"Task {task_id} not found",
             )
         return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -166,7 +166,7 @@ def register_api_routes(app: FastAPI):
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task {task_id} not found"
+                detail=f"Task {task_id} not found",
             )
         return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -178,7 +178,7 @@ def register_api_routes(app: FastAPI):
         except KeyNotFound:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Task {task_id} not found"
+                detail=f"Task {task_id} not found",
             )
 
 
