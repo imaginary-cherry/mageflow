@@ -12,7 +12,7 @@ from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetu
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
-    failed_swarm_setup, mock_activate_error
+    failed_swarm_setup, mock_activate_error, redis_client
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -35,14 +35,14 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
 
     # Assert - activate_error and remove were called
     mock_activate_error.assert_called()
-    await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.task.key)
-    await assert_task_has_short_ttl(setup.task.key)
+    await assert_task_has_short_ttl(redis_client, setup.swarm_task.key)
+    await assert_task_has_short_ttl(redis_client, setup.task.key)
+    await assert_task_has_short_ttl(redis_client, setup.task.key)
 
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
-    failed_swarm_setup, mock_activate_error
+    failed_swarm_setup, mock_activate_error, redis_client
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -61,9 +61,9 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - both activate_error and remove were called on retry
-    await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.task.key)
-    await assert_task_has_short_ttl(setup.task.key)
+    await assert_task_has_short_ttl(redis_client, setup.swarm_task.key)
+    await assert_task_has_short_ttl(redis_client, setup.task.key)
+    await assert_task_has_short_ttl(redis_client, setup.task.key)
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
 
 @pytest.mark.asyncio
 async def test_on_remove_task__finish_removing_all(
-    completed_swarm_setup, mock_task_run
+    completed_swarm_setup, mock_task_run, redis_client
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
@@ -101,5 +101,5 @@ async def test_on_remove_task__finish_removing_all(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert
-    await assert_task_has_short_ttl(setup.swarm_task.key)
-    await assert_task_has_short_ttl(setup.task.key)
+    await assert_task_has_short_ttl(redis_client, setup.swarm_task.key)
+    await assert_task_has_short_ttl(redis_client, setup.task.key)
