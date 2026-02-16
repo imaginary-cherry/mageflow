@@ -230,7 +230,7 @@ async def test__suspended_signature__kwargs_updated():
 
 
 @pytest.mark.asyncio
-async def test__canceled_signature__removed():
+async def test__canceled_signature__removed(redis_client):
     # Arrange
     signature, _ = await task_signature_factory(status=SignatureStatus.CANCELED)
     ctx = create_mock_hatchet_context(
@@ -246,7 +246,7 @@ async def test__canceled_signature__removed():
         await default_handler(message, ctx)
 
     # Assert
-    await assert_task_has_short_ttl(signature.key)
+    await assert_task_has_short_ttl(redis_client, signature.key)
 
 
 @pytest.mark.asyncio
