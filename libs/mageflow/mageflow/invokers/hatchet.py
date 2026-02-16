@@ -15,9 +15,11 @@ class HatchetInvoker(BaseInvoker):
     # TODO - This should be in init, and the entire class created via factory in mageflow_config
     client: Hatchet = None
 
-    def __init__(self, message: BaseModel, task_key: str, workflow_id: Optional[str]):
+    def __init__(
+        self, message: BaseModel, task_key: RapyerKey, workflow_id: Optional[str]
+    ):
         self.message = message
-        self.task_key = RapyerKey(task_key)
+        self.task_key = task_key
         self.workflow_id = workflow_id
 
     @classmethod
@@ -26,10 +28,11 @@ class HatchetInvoker(BaseInvoker):
         hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
         hatchet_ctx_metadata.pop(TASK_ID_PARAM_NAME, None)
         ctx_additional_metadata.set(hatchet_ctx_metadata)
+        task_key = RapyerKey(task_key) if task_key else None
         return cls(message, task_key, ctx.workflow_id)
 
     @classmethod
-    def from_no_task(cls, message: BaseModel, task_id: str) -> "HatchetInvoker":
+    def from_no_task(cls, message: BaseModel, task_id: RapyerKey) -> "HatchetInvoker":
         return cls(message, task_id, None)
 
     async def task_signature(self) -> Optional[TaskSignature]:
