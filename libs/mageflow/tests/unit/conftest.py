@@ -107,14 +107,6 @@ def mock_close_swarm():
 
 
 @pytest.fixture
-def mock_task_aio_run_no_wait():
-    with patch.object(
-        TaskSignature, "aio_run_no_wait", new_callable=AsyncMock
-    ) as mock_run:
-        yield mock_run
-
-
-@pytest.fixture
 def mock_invoker_wait_task():
     with patch.object(HatchetInvoker, "run_task", new_callable=AsyncMock) as mock_fill:
         yield mock_fill
@@ -235,19 +227,6 @@ def mock_adapter():
     adapter = AsyncMock(spec=BaseClientAdapter)
     TaskSignature.ClientAdapter = adapter
     yield adapter
-
-
-@pytest.fixture
-def mock_workflow_run_with_args():
-    captured_calls = []
-
-    async def capture_and_mock(self, *args, **kwargs):
-        captured_calls.append(
-            WorkflowCallCapture(workflow=self, args=args, kwargs=kwargs)
-        )
-
-    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock):
-        yield captured_calls
 
 
 @pytest.fixture

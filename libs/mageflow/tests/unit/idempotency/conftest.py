@@ -2,15 +2,13 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest_asyncio
-import rapyer
-from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
-
-import mageflow
 from thirdmagic.signature.model import TaskSignature
-from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
+
+import mageflow
+from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata, SwarmItemDoneSetup
 
@@ -111,67 +109,3 @@ async def swarm_item_done_setup(swarm_setup):
     )
 
     return SwarmItemDoneSetup(swarm_task=swarm_task, task=task, ctx=ctx, msg=msg)
-
-
-@dataclass
-class TaskRunSetup:
-    swarm_task: SwarmTaskSignature
-    task: TaskSignature
-    msg: BaseModel
-
-
-@pytest_asyncio.fixture
-async def task_run_setup(publish_state):
-    swarm_task = await mageflow.aswarm(
-        task_name="test_swarm_batch_item",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=2),
-    )
-    original_task = await mageflow.asign("item_task", model_validators=ContextMessage)
-    task = await swarm_task.add_task(original_task)
-    msg = EmptyModel()
-
-    return TaskRunSetup(swarm_task=swarm_task, task=task, msg=msg)
-
-
-@pytest_asyncio.fixture
-async def task_run_setup_at_max_concurrency(publish_state):
-    swarm_task = await mageflow.aswarm(
-        task_name="test_swarm_batch_item_max",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=2),
-    )
-    original_task = await mageflow.asign("item_task", model_validators=ContextMessage)
-    task = await swarm_task.add_task(original_task)
-
-    async with swarm_task.alock() as locked_swarm:
-        await locked_swarm.current_running_tasks.aincrease(2)
-
-    msg = EmptyModel()
-
-    return TaskRunSetup(swarm_task=swarm_task, task=task, msg=msg)
-
-
-async def swarm_with_running_tasks(
-    original_tasks: list[TaskSignature],
-    task_to_run: int = None,
-    max_concurrency: int = 5,
-) -> tuple[SwarmTaskSignature, PublishState, list[str]]:
-    swarm_signature = await mageflow.aswarm(
-        task_name="test_swarm",
-        model_validators=ContextMessage,
-        config=SwarmConfig(max_concurrency=max_concurrency),
-    )
-    await rapyer.ainsert(swarm_signature, *original_tasks)
-    publish_state = await PublishState.aget(swarm_signature.publishing_state_id)
-    tasks_to_run = task_to_run or len(original_tasks)
-
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
-    task_keys = [task.key for task in tasks]
-    desired_keys = task_keys[:tasks_to_run]
-    await swarm_signature.tasks_left_to_run.aclear()
-    await swarm_signature.tasks_left_to_run.aextend(desired_keys)
-    return swarm_signature, publish_state, desired_keys

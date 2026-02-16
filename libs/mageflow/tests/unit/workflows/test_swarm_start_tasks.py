@@ -1,10 +1,9 @@
 import pytest
-from hatchet_sdk.runnables.types import EmptyModel
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 
 import mageflow
 from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.swarm.messages import SwarmMessage
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_start_tasks
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata
@@ -25,7 +24,7 @@ async def test_swarm_start_tasks_sanity_basic_flow(mock_invoker_wait_task):
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
     expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
@@ -36,9 +35,7 @@ async def test_swarm_start_tasks_sanity_basic_flow(mock_invoker_wait_task):
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_sanity_all_tasks_start(
-    mock_task_aio_run_no_wait, mock_invoker_wait_task
-):
+async def test_swarm_start_tasks_sanity_all_tasks_start(mock_invoker_wait_task):
     # Arrange
     original_tasks = [
         await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
@@ -52,7 +49,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
     expected_msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
@@ -66,7 +63,7 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 
 
 @pytest.mark.asyncio
-async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_wait):
+async def test_swarm_start_tasks_already_started_edge_case(mock_adapter):
     # Arrange
     original_tasks = [
         await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
@@ -82,18 +79,19 @@ async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_
         await locked_swarm.aupdate(current_running_tasks=1)
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    mock_task_aio_run_no_wait.assert_not_awaited()
+    mock_adapter.acall_signatures.assert_not_awaited()
+    mock_adapter.acall_signature.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
-    mock_task_aio_run_no_wait, mock_invoker_wait_task
+    mock_adapter, mock_invoker_wait_task
 ):
     # Arrange
     original_tasks = [
@@ -108,13 +106,14 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
     await swarm_start_tasks(msg, ctx)
 
     # Assert
-    mock_task_aio_run_no_wait.assert_not_awaited()
+    mock_adapter.acall_signatures.assert_not_awaited()
+    mock_adapter.acall_signature.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -127,7 +126,7 @@ async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_ta
     )
 
     ctx = create_mock_context_with_metadata()
-    msg = EmptyModel(swarm_task_id=swarm_task.key)
+    msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act & Assert
     await swarm_start_tasks(msg, ctx)
