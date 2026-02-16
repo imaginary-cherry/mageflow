@@ -126,7 +126,7 @@ class TaskSignature(AtomicRedisModel):
         error_signatures = await rapyer.afind(*self.error_callbacks)
         error_signatures = cast(list[TaskSignature], error_signatures)
         return await self.ClientAdapter.acall_signatures(
-            error_signatures, [msg] * len(error_signatures), True
+            error_signatures, [msg] * len(error_signatures), False
         )
 
     async def remove_task(self):
