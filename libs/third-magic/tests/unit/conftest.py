@@ -65,8 +65,8 @@ async def test_task_def():
 
 @pytest.fixture
 def mock_task_def():
-    with patch.object(MageflowTaskDefinition, "aget") as mock_get:
-        mock_get.side_effect = lambda task_name, raise_notfound: MageflowTaskDefinition(
+    with patch.object(MageflowTaskDefinition, "afind_one") as mock_get:
+        mock_get.side_effect = lambda task_name: MageflowTaskDefinition(
             mageflow_task_name=task_name, task_name=task_name
         )
         yield mock_get

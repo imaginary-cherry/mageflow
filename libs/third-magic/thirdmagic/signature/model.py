@@ -87,9 +87,7 @@ class TaskSignature(AtomicRedisModel):
         cls, task_name: str, model_validators: type[BaseModel] = None, **kwargs
     ) -> Self:
         if not model_validators:
-            task_def = await MageflowTaskDefinition.aget(
-                task_name, raise_notfound=False
-            )
+            task_def = await MageflowTaskDefinition.afind_one(task_name)
             if not task_def:
                 raise UnrecognizedTaskError(f"Task {task_name} was not initialized")
             model_validators = task_def.input_validator
