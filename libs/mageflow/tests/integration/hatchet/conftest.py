@@ -244,41 +244,41 @@ def test_ctx():
 @pytest_asyncio.fixture(loop_scope="session")
 async def sign_task(req):
     task = req.params
-    signature = await mageflow.sign(task)
+    signature = await mageflow.asign(task)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_task1():
-    signature = await mageflow.sign(task1)
+    signature = await mageflow.asign(task1)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_task2():
-    signature = await mageflow.sign(task2)
+    signature = await mageflow.asign(task2)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_task3():
-    signature = await mageflow.sign(task3)
+    signature = await mageflow.asign(task3)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_callback1():
-    signature = await mageflow.sign(task1_callback)
+    signature = await mageflow.asign(task1_callback)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_fail_task():
-    signature = await mageflow.sign(fail_task)
+    signature = await mageflow.asign(fail_task)
     return signature
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sign_chain_callback():
-    signature = await mageflow.sign(chain_callback)
+    signature = await mageflow.asign(chain_callback)
     return signature

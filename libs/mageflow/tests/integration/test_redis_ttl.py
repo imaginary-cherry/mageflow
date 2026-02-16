@@ -29,17 +29,17 @@ async def test_redis_ttl_verification_sanity(real_redis, dummy_task, entity_type
 
     # Act
     if entity_type == "signature":
-        entity = await mageflow.sign(dummy_task)
+        entity = await mageflow.asign(dummy_task)
         key = entity.key
     elif entity_type == "chain":
-        sig1 = await mageflow.sign(dummy_task, step=1)
-        sig2 = await mageflow.sign(dummy_task, step=2)
-        entity = await mageflow.chain([sig1, sig2], name="test_chain")
+        sig1 = await mageflow.asign(dummy_task, step=1)
+        sig2 = await mageflow.asign(dummy_task, step=2)
+        entity = await mageflow.achain([sig1, sig2], name="test_chain")
         key = entity.key
     elif entity_type == "swarm":
-        sig1 = await mageflow.sign(dummy_task, worker=1)
-        sig2 = await mageflow.sign(dummy_task, worker=2)
-        entity = await mageflow.swarm([sig1, sig2], task_name="test_swarm")
+        sig1 = await mageflow.asign(dummy_task, worker=1)
+        sig2 = await mageflow.asign(dummy_task, worker=2)
+        entity = await mageflow.aswarm([sig1, sig2], task_name="test_swarm")
         key = entity.key
     else:
         raise ValueError(f"Unknown entity type: {entity_type}")

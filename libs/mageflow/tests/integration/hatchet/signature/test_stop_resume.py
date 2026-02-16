@@ -32,10 +32,10 @@ async def test__paused_signature_dont_trigger_callbacks(
         hatchet_client_init.hatchet,
     )
 
-    callback_signature = await mageflow.sign(callback_with_redis)
-    second_callback_signature = await mageflow.sign(callback_with_redis)
-    error_callback = await mageflow.sign(task1_callback)
-    main_signature = await mageflow.sign(
+    callback_signature = await mageflow.asign(callback_with_redis)
+    second_callback_signature = await mageflow.asign(callback_with_redis)
+    error_callback = await mageflow.asign(task1_callback)
+    main_signature = await mageflow.asign(
         sleep_task,
         success_callbacks=[callback_signature, second_callback_signature],
         error_callbacks=[error_callback],
@@ -65,8 +65,8 @@ async def test_signature_pause_with_continue_with_params(
     )
     message = ContextMessage(base_data=test_ctx)
 
-    callback_signature = await mageflow.sign(task2_with_result)
-    main_signature = await mageflow.sign(task1, success_callbacks=[callback_signature])
+    callback_signature = await mageflow.asign(task2_with_result)
+    main_signature = await mageflow.asign(task1, success_callbacks=[callback_signature])
 
     # Act - 1
     await callback_signature.pause_task()

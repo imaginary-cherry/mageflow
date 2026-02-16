@@ -28,9 +28,9 @@ async def test__swarm_soft_paused_data_is_saved_in_redis__then_resume_check_fini
         hatchet_client_init.hatchet,
     )
     sleep_time = 4
-    swarm_sleep_task_sign = await mageflow.sign(sleep_task, sleep_time=sleep_time)
+    swarm_sleep_task_sign = await mageflow.asign(sleep_task, sleep_time=sleep_time)
     sleep_tasks = await swarm_sleep_task_sign.aduplicate_many(3)
-    swarm_signature = await mageflow.swarm(
+    swarm_signature = await mageflow.aswarm(
         tasks=[task1, swarm_sleep_task_sign, *sleep_tasks, task1, task2, task3],
         config=SwarmConfig(max_concurrency=3),
     )

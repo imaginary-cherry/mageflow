@@ -21,7 +21,7 @@ async def test__sub_task_is_cancelled__swarm_still_finish(
         hatchet_client_init.hatchet,
     )
     swarm_tasks = [timeout_task]
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         tasks=swarm_tasks, config=SwarmConfig(max_concurrency=1)
     )
 

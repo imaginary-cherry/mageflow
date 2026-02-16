@@ -42,24 +42,24 @@ async def test__swarm_with_swarms_and_chains__sanity(
     chain_tasks: list[ChainTaskSignature] = []
     field_int_val = 13
     for i in range(4):
-        error_signature = await hatchet.sign(task2_with_result)
-        task_sign = await hatchet.sign(
+        error_signature = await hatchet.asign(task2_with_result)
+        task_sign = await hatchet.asign(
             task_with_data, field_int=field_int_val, field_list=[]
         )
-        chain = await hatchet.chain(
+        chain = await hatchet.achain(
             [task1_callback, retry_once, task_sign], error=error_signature
         )
         chain_tasks.append(chain)
-    triggered_error = await hatchet.sign(error_callback)
-    not_triggered_success = await hatchet.sign(task1_callback)
-    failed_chain = await hatchet.chain(
+    triggered_error = await hatchet.asign(error_callback)
+    not_triggered_success = await hatchet.asign(task1_callback)
+    failed_chain = await hatchet.achain(
         [task3, cancel_retry], error=triggered_error, success=not_triggered_success
     )
 
-    base_swarm = await hatchet.swarm(tasks=[task2, task3], is_swarm_closed=True)
-    final_swarm_success = await hatchet.sign(task2_with_result)
+    base_swarm = await hatchet.aswarm(tasks=[task2, task3], is_swarm_closed=True)
+    final_swarm_success = await hatchet.asign(task2_with_result)
 
-    main_swarm = await hatchet.swarm(
+    main_swarm = await hatchet.aswarm(
         tasks=chain_tasks + [failed_chain, base_swarm],
         is_swarm_closed=True,
         success_callbacks=[final_swarm_success],
