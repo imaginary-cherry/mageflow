@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import fakeredis
 import pytest
@@ -8,6 +8,8 @@ from hatchet_sdk import ClientConfig, Hatchet
 
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import MageflowTaskDefinition
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
@@ -42,3 +44,29 @@ def hatchet_mock():
     hatchet = Hatchet(config=config_obj)
 
     yield hatchet
+
+
+@pytest.fixture
+def mock_close_swarm():
+    with patch.object(
+        SwarmTaskSignature, "close_swarm", new_callable=AsyncMock
+    ) as mock_close:
+        yield mock_close
+
+
+@pytest_asyncio.fixture
+async def test_task_def():
+    task_df = MageflowTaskDefinition(
+        mageflow_task_name="test_task", task_name="test_task"
+    )
+    await task_df.asave()
+    return task_df
+
+
+@pytest.fixture
+def mock_task_def():
+    with patch.object(MageflowTaskDefinition, "aget") as mock_get:
+        mock_get.side_effect = lambda task_name, raise_notfound: MageflowTaskDefinition(
+            mageflow_task_name=task_name, task_name=task_name
+        )
+        yield mock_get

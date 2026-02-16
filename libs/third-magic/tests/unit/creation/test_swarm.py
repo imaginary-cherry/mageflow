@@ -5,7 +5,7 @@ from thirdmagic.swarm.model import SwarmConfig
 
 
 @pytest.mark.asyncio
-async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm):
+async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm, mock_task_def):
     # Arrange
     swarm_signature = await thirdmagic.swarm(
         task_name="test_swarm",
@@ -25,7 +25,7 @@ async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm):
 
 
 @pytest.mark.asyncio
-async def test_add_task_not_reaching_max(mock_close_swarm):
+async def test_add_task_not_reaching_max(mock_close_swarm, test_task_def):
     # Arrange
     swarm_signature = await thirdmagic.swarm(
         task_name="test_swarm",
@@ -42,7 +42,7 @@ async def test_add_task_not_reaching_max(mock_close_swarm):
 
 
 @pytest.mark.asyncio
-async def test_add_task_reaches_max_but_no_close(mock_close_swarm):
+async def test_add_task_reaches_max_but_no_close(mock_close_swarm, mock_task_def):
     # Arrange
     swarm_signature = await thirdmagic.swarm(
         task_name="test_swarm",

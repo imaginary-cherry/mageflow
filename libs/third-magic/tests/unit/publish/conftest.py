@@ -32,7 +32,7 @@ async def swarm_with_kwargs():
     swarm = await thirdmagic.swarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
-        kwargs=swarm_kwargs,
+        **swarm_kwargs,
         config=SwarmConfig(max_concurrency=5),
     )
     return swarm, swarm_kwargs

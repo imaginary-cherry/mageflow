@@ -1,4 +1,5 @@
 import pytest
+from rapyer.fields import RapyerKey
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
@@ -90,7 +91,7 @@ async def test__resolve_signature_keys__mixed_types__preserves_order(hatchet_tas
 async def test__resolve_signature_keys__missing_string_keys__returns_none():
     # Arrange
     existing = await thirdmagic.sign("existing_task", model_validators=ContextMessage)
-    missing_key = "TaskSignature:nonexistent_key"
+    missing_key = RapyerKey("TaskSignature:nonexistent_key")
     inputs = [existing.key, missing_key]
 
     # Act
