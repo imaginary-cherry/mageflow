@@ -10,11 +10,11 @@ from tests.unit.conftest import WorkflowCallCapture
 @pytest_asyncio.fixture
 async def chain_with_two_tasks():
     first_task_kwargs = {"first_param": "first_value"}
-    first_task = await mageflow.sign(
+    first_task = await mageflow.asign(
         "first_task", model_validators=ContextMessage, **first_task_kwargs
     )
-    second_task = await mageflow.sign("second_task", model_validators=ContextMessage)
-    chain = await mageflow.chain([first_task, second_task])
+    second_task = await mageflow.asign("second_task", model_validators=ContextMessage)
+    chain = await mageflow.achain([first_task, second_task])
     return chain, first_task, first_task_kwargs
 
 

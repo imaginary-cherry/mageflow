@@ -31,24 +31,24 @@ class SwarmTestSetup:
 @pytest_asyncio.fixture
 async def completed_swarm_with_success_callback():
     # Arrange
-    success_callback = await mageflow.sign(
+    success_callback = await mageflow.asign(
         "unittest_success_callback_task", model_validators=MessageWithResult
     )
-    error_callback = await mageflow.sign(
+    error_callback = await mageflow.asign(
         "unittest_error_callback_task", model_validators=MessageWithResult
     )
-    error_callback2 = await mageflow.sign(
+    error_callback2 = await mageflow.asign(
         "unittest_error_callback_task", model_validators=MessageWithResult
     )
 
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm_completed_with_callback",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
         success_callbacks=[success_callback],
         error_callbacks=[error_callback, error_callback2],
     )
-    original_task = await mageflow.sign("item_task")
+    original_task = await mageflow.asign("item_task")
     task = await swarm_task.add_task(original_task)
 
     async with swarm_task.apipeline():
@@ -73,7 +73,7 @@ async def create_swarm_item_test_setup(
     failed_indices: list[int] | None = None,
     finished_indices: list[int] | None = None,
 ) -> SwarmTestSetup:
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(
@@ -82,7 +82,7 @@ async def create_swarm_item_test_setup(
         ),
     )
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(num_tasks)
     ]
     tasks = await swarm_task.add_tasks(original_tasks)
@@ -100,7 +100,7 @@ async def create_swarm_item_test_setup(
             [tasks[i].key for i in tasks_left_indices]
         )
 
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
     ctx = create_mock_context_with_metadata(task_id=item_task.key)
 
     return SwarmTestSetup(
@@ -128,20 +128,20 @@ async def create_chain_test_setup(
 ) -> ChainTestSetup:
     # Arrange
     chain_tasks = [
-        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"chain_task_{i}", model_validators=ContextMessage)
         for i in range(num_chain_tasks)
     ]
 
     # Arrange
-    success_callback = await mageflow.sign(
+    success_callback = await mageflow.asign(
         "chain_success_callback", model_validators=MessageWithResult
     )
-    error_callback = await mageflow.sign(
+    error_callback = await mageflow.asign(
         "chain_error_callback", model_validators=MessageWithResult
     )
 
     # Arrange
-    chain_signature = await mageflow.chain(
+    chain_signature = await mageflow.achain(
         [task.key for task in chain_tasks],
         success=success_callback,
         error=error_callback,

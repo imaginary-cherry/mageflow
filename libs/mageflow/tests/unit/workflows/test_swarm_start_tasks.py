@@ -14,10 +14,10 @@ from tests.unit.conftest import create_mock_context_with_metadata
 async def test_swarm_start_tasks_sanity_basic_flow(mock_invoker_wait_task):
     # Arrange
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(5)
     ]
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
@@ -41,10 +41,10 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 ):
     # Arrange
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=5),
@@ -69,10 +69,10 @@ async def test_swarm_start_tasks_sanity_all_tasks_start(
 async def test_swarm_start_tasks_already_started_edge_case(mock_task_aio_run_no_wait):
     # Arrange
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
@@ -97,10 +97,10 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
 ):
     # Arrange
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=0),
@@ -120,7 +120,7 @@ async def test_swarm_start_tasks_max_concurrency_zero_edge_case(
 @pytest.mark.asyncio
 async def test_swarm_start_tasks_empty_tasks_list_edge_case(mock_invoker_wait_task):
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),

@@ -14,7 +14,7 @@ async def test_aio_run_no_wait_calls_workflow_with_correct_params(
     task_kwargs = {"task_param": "task_value", "nested": {"key": "value"}}
     base_data = {"test": "data"}
     test_ctx = {"ctx_key": "ctx_value"}
-    signature = await mageflow.sign(
+    signature = await mageflow.asign(
         "test_task",
         model_validators=ContextMessage,
         **task_kwargs,
@@ -38,7 +38,7 @@ async def test_aio_run_no_wait_passes_hatchet_options(
     mock_workflow_run_with_args: list[WorkflowCallCapture],
 ):
     # Arrange
-    signature = await mageflow.sign("test_task", model_validators=ContextMessage)
+    signature = await mageflow.asign("test_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"test": "data"})
     options = TriggerWorkflowOptions(additional_metadata={"custom": "metadata"})
 

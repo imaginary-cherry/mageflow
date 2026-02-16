@@ -60,12 +60,12 @@ async def publish_state():
 @pytest_asyncio.fixture
 async def failed_swarm_setup():
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm_failed",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1, stop_after_n_failures=1),
     )
-    original_task = await mageflow.sign("item_task")
+    original_task = await mageflow.asign("item_task")
     task = await swarm_task.add_task(original_task)
     async with swarm_task.apipeline():
         swarm_task.tasks_left_to_run.remove_range(0, len(swarm_task.tasks_left_to_run))
@@ -81,12 +81,12 @@ async def failed_swarm_setup():
 @pytest_asyncio.fixture
 async def completed_swarm_setup():
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm_completed",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
     )
-    original_task = await mageflow.sign("item_task")
+    original_task = await mageflow.asign("item_task")
     task = await swarm_task.add_task(original_task)
 
     # Mark task as finished and swarm as closed/done
@@ -133,12 +133,12 @@ class TaskRunSetup:
 
 @pytest_asyncio.fixture
 async def task_run_setup(publish_state):
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm_batch_item",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
     )
-    original_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    original_task = await mageflow.asign("item_task", model_validators=ContextMessage)
     task = await swarm_task.add_task(original_task)
     msg = EmptyModel()
 
@@ -147,12 +147,12 @@ async def task_run_setup(publish_state):
 
 @pytest_asyncio.fixture
 async def task_run_setup_at_max_concurrency(publish_state):
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm_batch_item_max",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
     )
-    original_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    original_task = await mageflow.asign("item_task", model_validators=ContextMessage)
     task = await swarm_task.add_task(original_task)
 
     async with swarm_task.alock() as locked_swarm:
@@ -183,7 +183,7 @@ async def swarm_with_running_tasks(
     task_to_run: int = None,
     max_concurrency: int = 5,
 ) -> tuple[SwarmTaskSignature, PublishState, list[str]]:
-    swarm_signature = await mageflow.swarm(
+    swarm_signature = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=max_concurrency),

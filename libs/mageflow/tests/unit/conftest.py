@@ -90,11 +90,11 @@ def mock_aio_run_no_wait():
 @pytest_asyncio.fixture
 async def chain_with_tasks():
     task_signatures = [
-        await mageflow.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"chain_task_{i}", model_validators=ContextMessage)
         for i in range(1, 4)
     ]
 
-    chain_signature = await mageflow.chain([task.key for task in task_signatures])
+    chain_signature = await mageflow.achain([task.key for task in task_signatures])
 
     return ChainTestData(
         task_signatures=task_signatures, chain_signature=chain_signature
@@ -214,12 +214,12 @@ def create_mock_context_with_metadata(task_id=None):
 
 @pytest_asyncio.fixture
 async def swarm_setup():
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
     )
-    swarm_item_task = await mageflow.sign("item_task")
+    swarm_item_task = await mageflow.asign("item_task")
     task = await swarm_task.add_task(swarm_item_task)
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks += 1
@@ -239,7 +239,7 @@ def mock_context():
 
 @pytest_asyncio.fixture
 async def empty_swarm():
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
@@ -251,7 +251,7 @@ async def empty_swarm():
 @pytest_asyncio.fixture
 async def swarm_task(empty_swarm: SwarmTaskSignature):
     swarm_task = empty_swarm
-    task = await mageflow.sign("item_task")
+    task = await mageflow.asign("item_task")
     await swarm_task.add_task(task)
     return swarm_task
 

@@ -39,7 +39,7 @@ def mock_run_task():
 @pytest_asyncio.fixture
 async def swarm_with_kwargs():
     swarm_kwargs = {"existing": "value"}
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         kwargs=swarm_kwargs,
@@ -115,7 +115,7 @@ async def test_aio_run_in_swarm_adds_task_and_publishes_it(
 ):
     # Arrange
     swarm, _ = swarm_with_kwargs
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "value"})
 
     # Act
@@ -135,7 +135,7 @@ async def test_aio_run_in_swarm_updates_task_kwargs_with_message_data(
 ):
     # Arrange
     swarm, _ = swarm_with_kwargs
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     base_data = {"msg": "data"}
     test_ctx = {"ctx": "info"}
     msg = ContextMessage(base_data=base_data, test_ctx=test_ctx)
@@ -156,7 +156,7 @@ async def test_aio_run_in_swarm_passes_options_to_published_task(
 ):
     # Arrange
     swarm, _ = swarm_with_kwargs
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
     options = TriggerWorkflowOptions(additional_metadata={"custom": "meta"})
 
@@ -174,14 +174,14 @@ async def test_aio_run_in_swarm_at_max_concurrency_returns_empty(
     mock_task_aio_run_no_wait,
 ):
     # Arrange
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=2),
     )
     async with swarm.apipeline():
         swarm.current_running_tasks += 2
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
 
     # Act
@@ -198,12 +198,12 @@ async def test_aio_run_in_swarm_close_on_max_task_true_triggers_close_swarm(
     mock_task_aio_run_no_wait,
 ):
     # Arrange
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_task_allowed=1),
     )
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
 
     # Act
@@ -219,12 +219,12 @@ async def test_aio_run_in_swarm_close_on_max_task_false_does_not_close_swarm(
     mock_task_aio_run_no_wait,
 ):
     # Arrange
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_task_allowed=1),
     )
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
 
     # Act
@@ -237,14 +237,14 @@ async def test_aio_run_in_swarm_close_on_max_task_false_does_not_close_swarm(
 @pytest.mark.asyncio
 async def test_aio_run_in_swarm_raises_too_many_tasks_error_when_over_limit():
     # Arrange
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_task_allowed=1),
     )
-    first_task = await mageflow.sign("first_task", model_validators=ContextMessage)
+    first_task = await mageflow.asign("first_task", model_validators=ContextMessage)
     await swarm.add_task(first_task, close_on_max_task=False)
-    second_task = await mageflow.sign("second_task", model_validators=ContextMessage)
+    second_task = await mageflow.asign("second_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
 
     # Act & Assert
@@ -255,13 +255,13 @@ async def test_aio_run_in_swarm_raises_too_many_tasks_error_when_over_limit():
 @pytest.mark.asyncio
 async def test_aio_run_in_swarm_raises_swarm_is_canceled_error():
     # Arrange
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
     )
     swarm.task_status.status = SignatureStatus.CANCELED
     await swarm.asave()
-    sub_task = await mageflow.sign("sub_task", model_validators=ContextMessage)
+    sub_task = await mageflow.asign("sub_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "val"})
 
     # Act & Assert

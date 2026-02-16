@@ -11,9 +11,9 @@ from tests.integration.hatchet.models import ContextMessage
 async def test_add_task_exceeds_max_task_allowed_error(max_task_allowed):
     # Arrange
     initial_tasks = [
-        await mageflow.sign(f"test_task_{i}") for i in range(max_task_allowed)
+        await mageflow.asign(f"test_task_{i}") for i in range(max_task_allowed)
     ]
-    swarm_signature = await mageflow.swarm(
+    swarm_signature = await mageflow.aswarm(
         task_name="test_swarm",
         tasks=initial_tasks,
         model_validators=ContextMessage,
@@ -21,6 +21,6 @@ async def test_add_task_exceeds_max_task_allowed_error(max_task_allowed):
     )
 
     # Act & Assert
-    extra_task = await mageflow.sign("test_task_last")
+    extra_task = await mageflow.asign("test_task_last")
     with pytest.raises(TooManyTasksError):
         await swarm_signature.add_task(extra_task)

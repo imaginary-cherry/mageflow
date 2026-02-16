@@ -69,7 +69,7 @@ async def task_signature_factory(
     )
     await task_model.asave()
 
-    signature = await mageflow.sign(
+    signature = await mageflow.asign(
         task_name,
         model_validators=ContextMessage,
         success_callbacks=[cb.key for cb in (success_callbacks or [])],
@@ -107,12 +107,12 @@ def handler_factory(
 
 @pytest_asyncio.fixture
 async def callback_signature():
-    return await mageflow.sign("callback_task", model_validators=ContextMessage)
+    return await mageflow.asign("callback_task", model_validators=ContextMessage)
 
 
 @pytest_asyncio.fixture
 async def error_callback_signature():
-    return await mageflow.sign("error_callback_task", model_validators=ContextMessage)
+    return await mageflow.asign("error_callback_task", model_validators=ContextMessage)
 
 
 @pytest.fixture(autouse=True)

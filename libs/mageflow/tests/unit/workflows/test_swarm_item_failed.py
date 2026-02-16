@@ -94,19 +94,19 @@ async def test_swarm_item_failed_below_threshold_edge_case(
     mock_invoker_wait_task,
 ):
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1, stop_after_n_failures=3),
     )
 
-    original_task = await mageflow.sign("test_task", model_validators=ContextMessage)
+    original_task = await mageflow.asign("test_task", model_validators=ContextMessage)
     task = await swarm_task.add_task(original_task)
 
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = 1
 
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmErrorMessage(swarm_task_id=swarm_task.key, swarm_item_id=task.key)
@@ -133,20 +133,20 @@ async def test_swarm_item_failed_missing_task_key_edge_case(mock_context):
 @pytest.mark.asyncio
 async def test_swarm_item_failed_concurrent_failures_edge_case():
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=3, stop_after_n_failures=5),
     )
 
     original_tasks = [
-        await mageflow.sign(f"test_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"test_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
     tasks = [await swarm_task.add_task(task) for task in original_tasks]
 
     item_tasks = [
-        await mageflow.sign(f"item_task_{i}", model_validators=ContextMessage)
+        await mageflow.asign(f"item_task_{i}", model_validators=ContextMessage)
         for i in range(3)
     ]
 

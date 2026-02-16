@@ -91,7 +91,7 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
 @pytest.mark.asyncio
 async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmResultsMessage(
@@ -110,19 +110,19 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     mock_handle_finish_tasks_error,
 ):
     # Arrange
-    swarm_task = await mageflow.swarm(
+    swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
     )
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = 1
 
-    original_task = await mageflow.sign(
+    original_task = await mageflow.asign(
         "original_task", model_validators=ContextMessage
     )
     task = await swarm_task.add_task(original_task)
 
-    item_task = await mageflow.sign("item_task", model_validators=ContextMessage)
+    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
 
     ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmResultsMessage(
