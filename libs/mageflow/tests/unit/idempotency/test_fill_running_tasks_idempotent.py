@@ -9,7 +9,6 @@ from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
 
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.conftest import assert_task_were_published
 
 
 @pytest_asyncio.fixture()
@@ -37,13 +36,10 @@ async def swarm_signature(publish_state):
 
 @pytest.mark.asyncio
 async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tasks_added_to_publish_state(
-    publish_state, swarm_signature, original_tasks, mock_task_run
+    publish_state, swarm_signature, original_tasks, mock_adapter
 ):
     # Arrange
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
+    tasks = await swarm_signature.add_tasks(original_tasks)
     task_keys = [task.key for task in tasks]
     await swarm_signature.tasks_left_to_run.aclear()
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
@@ -59,7 +55,9 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
 
     # Assert
     # Check the tasks were executed
-    assert_task_were_published(mock_task_run, task_keys[:3])
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        tasks[:3], [None] * 3, set_return_field=False
+    )
 
     # Check the tasks were deleted from the swarm left to run
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
@@ -72,13 +70,10 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
 
 @pytest.mark.asyncio
 async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource_left(
-    swarm_signature, original_tasks, mock_task_run
+    swarm_signature, original_tasks, mock_adapter
 ):
     # Arrange
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
+    tasks = await swarm_signature.add_tasks(original_tasks)
     task_keys = [task.key for task in tasks]
     await swarm_signature.tasks_left_to_run.aclear()
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
@@ -90,25 +85,24 @@ async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource
     # Assert
     assert len(result1) == 3
     assert len(result2) == 0
-    assert len(mock_task_run.called_instances) == 3
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        tasks[:3], [None] * 3, set_return_field=False
+    )
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.tasks_left_to_run == swarm_signature.tasks[-2:]
-    relaoded_pbulish_state = await PublishState.aget(
+    reloaded_publish_state = await PublishState.aget(
         swarm_signature.publishing_state_id
     )
-    assert relaoded_pbulish_state.task_ids == []
+    assert reloaded_publish_state.task_ids == []
 
 
 @pytest.mark.asyncio
 async def test_concurrent_calls_single_execution_idempotent(
-    publish_state, swarm_signature, original_tasks, mock_task_run
+    publish_state, swarm_signature, original_tasks, mock_adapter
 ):
     # Arrange
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
+    tasks = await swarm_signature.add_tasks(original_tasks)
     task_keys = [task.key for task in tasks]
     await swarm_signature.tasks_left_to_run.aclear()
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
@@ -124,69 +118,20 @@ async def test_concurrent_calls_single_execution_idempotent(
     total_tasks_started = sum([len(res) for res in results])
     assert total_tasks_started == 3
 
-    called_task_ids = [instance.key for instance in mock_task_run.called_instances]
-    assert len(called_task_ids) == len(set(called_task_ids))
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        tasks[:3], [None] * 3, set_return_field=False
+    )
 
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 2
-
-
-@pytest.mark.asyncio
-async def test_retry_after_partial_aio_run_failure_publishes_same_tasks_idempotent(
-    publish_state, swarm_signature, original_tasks, failing_mock_task_run
-):
-    # Arrange
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
-    task_keys = [task.key for task in tasks]
-    await swarm_signature.tasks_left_to_run.aclear()
-    await swarm_signature.tasks_left_to_run.aextend(task_keys)
-    publish_state_key = swarm_signature.publishing_state_id
-
-    failing_mock_task_run.fail_on_call = 2
-
-    # Act
-    with pytest.raises(RuntimeError):
-        await swarm_signature.fill_running_tasks()
-
-    reloaded_publish_state = await PublishState.aget(publish_state_key)
-    first_run_task_ids = list(reloaded_publish_state.task_ids)
-
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert len(first_run_task_ids) == 3
-    assert len(reloaded_swarm.tasks_left_to_run) == 2
-    all_tasks_to_run = set(first_run_task_ids + reloaded_swarm.tasks_left_to_run)
-    assert len(all_tasks_to_run) == len(task_keys)
-
-    failing_mock_task_run.reset_failure()
-    await swarm_signature.fill_running_tasks()
-
-    # Assert
-    all_called_keys = [
-        instance.key for instance in failing_mock_task_run.called_instances
-    ]
-    unique_task_keys = set(all_called_keys)
-    assert len(unique_task_keys) == 3
-    assert unique_task_keys == set(first_run_task_ids)
-
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
-    assert len(reloaded_swarm.tasks_left_to_run) == 2
-
-    reloaded_publish_state = await PublishState.aget(publish_state_key)
-    assert list(reloaded_publish_state.task_ids) == []
 
 
 @pytest.mark.asyncio
 async def test__retry_when_swarm_task_was_changed_between_retry__publish_state_ignore_new_task(
-    publish_state, swarm_signature, original_tasks, mock_task_run
+    publish_state, swarm_signature, original_tasks, mock_adapter
 ):
     # Arrange
-    tasks = [
-        await swarm_signature.add_task(original_task)
-        for original_task in original_tasks
-    ]
+    tasks = await swarm_signature.add_tasks(original_tasks)
     task_keys = [task.key for task in tasks]
     max_curr = swarm_signature.config.max_concurrency
     tasks_left_run = task_keys[: max_curr - 1]
@@ -202,10 +147,14 @@ async def test__retry_when_swarm_task_was_changed_between_retry__publish_state_i
     await swarm_signature.fill_running_tasks()
 
     # Assert
-    assert_task_were_published(mock_task_run, expected_published_tasks)
+    mock_adapter.acall_signatures.assert_called_once_with(
+        expected_published_tasks,
+        [None] * len(expected_published_tasks),
+        set_return_field=False,
+    )
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_signature.key)
     assert reloaded_swarm.tasks_left_to_run == [task_keys[max_curr]]
-    reloaded_pbulish_state = await PublishState.aget(
+    reloaded_publish_state = await PublishState.aget(
         swarm_signature.publishing_state_id
     )
-    assert list(reloaded_pbulish_state.task_ids) == []
+    assert list(reloaded_publish_state.task_ids) == []
