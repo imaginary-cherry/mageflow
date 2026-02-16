@@ -5,7 +5,7 @@ import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
 
 import mageflow
-from mageflow.signature.model import TaskSignature
+from thirdmagic.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     get_runs,
     assert_signature_done,

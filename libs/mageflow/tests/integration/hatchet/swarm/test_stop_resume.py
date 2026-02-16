@@ -2,10 +2,10 @@ import asyncio
 from datetime import datetime
 
 import pytest
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmConfig
 
 import mageflow
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_paused,

@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 import mageflow
-from mageflow.signature.model import TaskSignature
+from thirdmagic.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_task_was_paused,

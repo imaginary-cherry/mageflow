@@ -4,17 +4,17 @@ from datetime import datetime
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 from pydantic import BaseModel
-
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.consts import (
-    TASK_ID_PARAM_NAME,
+from rapyer.fields import RapyerKey
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.consts import (
     MAGEFLOW_TASK_INITIALS,
+    TASK_ID_PARAM_NAME,
     REMOVED_TASK_TTL,
 )
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.types import TaskIdentifierType
-from mageflow.swarm.model import SwarmTaskSignature
-from mageflow.utils.models import return_value_field
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.utils import return_value_field
+
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -95,7 +95,7 @@ def get_task_param(wf: V1TaskSummary, param_name: str):
 
 def assert_signature_done(
     runs: HatchetRuns,
-    task_sign: TaskSignature | TaskIdentifierType,
+    task_sign: TaskSignature | RapyerKey,
     hatchet_task_results=None,
     check_called_once=True,
     check_finished_once=True,

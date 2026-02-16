@@ -20,12 +20,12 @@ import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from redis.asyncio.client import Redis
+from thirdmagic.task import MageflowTaskDefinition
 
 import mageflow
 from mageflow import Mageflow
 from mageflow.client import HatchetMageflow
-from mageflow.startup import mageflow_config, init_mageflow
-from mageflow.task.model import HatchetTaskModel
+from mageflow.startup import init_mageflow
 from tests.integration.hatchet.worker import (
     config_obj,
     task1,
@@ -37,7 +37,7 @@ from tests.integration.hatchet.worker import (
 )
 
 # If redis key starts with one of these, it shouldn't be removed
-STATIC_REDIS_PREFIX_KEYS = [HatchetTaskModel.__name__]
+STATIC_REDIS_PREFIX_KEYS = [MageflowTaskDefinition.__name__]
 pytest.register_assert_rewrite("tests.assertions")
 
 
@@ -74,10 +74,8 @@ async def init_settings(hatchet_client_init: HatchetInitData):
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    mageflow_config.redis_client = redis_client
-    mageflow_config.hatchet_client = hatchet
     # Load the subclasses of the task signature
-    await init_mageflow()
+    await init_mageflow(redis_client)
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)

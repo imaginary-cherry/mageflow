@@ -1,10 +1,10 @@
 import asyncio
 
 import pytest
+from thirdmagic.chain.model import ChainTaskSignature
 
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_chain_done,
     assert_redis_is_clean,

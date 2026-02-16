@@ -3,7 +3,8 @@ import json
 import os
 from datetime import datetime
 
-from mageflow.signature.model import TaskSignature
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature.model import TaskSignature
 
 # Start coverage if COVERAGE_PROCESS_START is set
 if os.environ.get("COVERAGE_PROCESS_START"):
@@ -21,8 +22,6 @@ from hatchet_sdk import Hatchet, ClientConfig, Context, NonRetryableException
 from hatchet_sdk.config import HealthcheckConfig
 
 import mageflow
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.startup import mageflow_config
 from tests.integration.hatchet.models import (
     ContextMessage,
     MessageWithData,
@@ -109,7 +108,7 @@ async def sleep_task(msg: SleepTaskMessage):
 async def callback_with_redis(msg: CommandMessageWithResult, ctx: Context):
     task_id = ctx.additional_metadata[TASK_ID_PARAM_NAME]
 
-    await mageflow_config.redis_client.set(
+    await TaskSignature.Meta.redis.set(
         f"activated-task-{task_id}", json.dumps(msg.task_result)
     )
     return msg
@@ -144,7 +143,7 @@ async def normal_retry_once(msg, ctx: Context):
 @hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
 @hatchet.with_signature
 async def retry_to_failure(msg, signature: TaskSignature):
-    await mageflow_config.redis_client.set(
+    await TaskSignature.Meta.redis.set(
         f"finish-{signature.key}", datetime.now().isoformat()
     )
     raise ValueError("Test exception")

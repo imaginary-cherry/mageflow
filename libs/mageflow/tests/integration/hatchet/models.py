@@ -1,8 +1,7 @@
 from typing import Any
 
 from pydantic import BaseModel, Field
-
-from mageflow.models.message import ReturnValue
+from thirdmagic.message import ReturnValue
 
 
 class BaseWorkerMessage(BaseModel):

@@ -1,10 +1,10 @@
 import asyncio
 
 import pytest
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmConfig
 
 import mageflow
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import get_runs, assert_swarm_task_done
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage

@@ -3,10 +3,10 @@ from typing import cast
 
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmConfig
 
 import mageflow
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_swarm_task_done,
