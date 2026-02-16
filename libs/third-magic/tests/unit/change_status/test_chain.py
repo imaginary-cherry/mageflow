@@ -1,3 +1,5 @@
+from unittest.mock import call
+
 import pytest
 
 import thirdmagic
@@ -67,6 +69,7 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     task_names: list[str],
     tasks_to_delete_indices: list[int],
     new_status: SignatureStatus,
+    mock_task_def,
 ):
     # Arrange
     task_signatures = [await thirdmagic.sign(name) for name in task_names]
@@ -125,9 +128,10 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     ],
 )
 async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
-    mock_aio_run_no_wait,
+    mock_adapter,
     task_configs: list[TaskResumeConfig],
     tasks_to_delete_indices: list[int],
+    mock_task_def,
 ):
     # Arrange
     task_signatures = []
@@ -170,7 +174,10 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
     )
 
     await assert_tasks_not_exists(deleted_task_ids)
-    assert mock_aio_run_no_wait.call_count == num_of_aio_run
+    assert mock_adapter.acall_signature.call_count == num_of_aio_run
+    mock_adapter.acall_signature.assert_has_awaits(
+        [call(None) for _ in range(num_of_aio_run)]
+    )
 
 
 @pytest.mark.asyncio
