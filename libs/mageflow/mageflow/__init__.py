@@ -12,6 +12,9 @@ resume = TaskSignature.resume_from_key
 pause = TaskSignature.pause_from_key
 remove = TaskSignature.remove_from_key
 load_signature = TaskSignature.get_safe
+achain = chain
+asign = sign
+aswarm = swarm
 
 __all__ = [
     "load_signature",
@@ -20,10 +23,10 @@ __all__ = [
     "resume",
     "remove",
     "pause",
-    "sign",
+    "asign",
     "register_task",
     "handle_task_callback",
     "Mageflow",
-    "chain",
-    "swarm",
+    "achain",
+    "aswarm",
 ]
