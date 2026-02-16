@@ -17,7 +17,7 @@ from tests.unit.callbacks.conftest import (
 
 @pytest.mark.asyncio
 async def test__pending_signature__success__returns_wrapped_result(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory(status=SignatureStatus.PENDING)
@@ -39,7 +39,7 @@ async def test__pending_signature__success__returns_wrapped_result(
 
 @pytest.mark.asyncio
 async def test__pending_signature__success_wrap_false__returns_raw(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory(status=SignatureStatus.PENDING)
@@ -62,7 +62,7 @@ async def test__pending_signature__success_wrap_false__returns_raw(
 
 @pytest.mark.asyncio
 async def test__pending_signature__error_with_retry__raises_without_failing(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory(
@@ -80,7 +80,7 @@ async def test__pending_signature__error_with_retry__raises_without_failing(
 
     reloaded = await TaskSignature.get_safe(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -113,7 +113,7 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
 
 @pytest.mark.asyncio
 async def test__active_signature__success__marks_done(
-    mock_workflow_run,
+    mock_adapter,
     callback_signature,
 ):
     # Arrange
@@ -123,7 +123,8 @@ async def test__active_signature__success__marks_done(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    returning_handler, _ = handler_factory(return_value="done")
+    task_return_value = "done"
+    returning_handler, _ = handler_factory(return_value=task_return_value)
     message = ContextMessage()
 
     # Act
@@ -131,15 +132,18 @@ async def test__active_signature__success__marks_done(
 
     # Assert
     await assert_tasks_changed_status([signature.key], SignatureStatus.DONE)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [callback_signature], [task_return_value], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__active_signature__error__marks_failed(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         status=SignatureStatus.ACTIVE,
         retries=1,
@@ -156,7 +160,9 @@ async def test__active_signature__error__marks_failed(
         await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
@@ -285,7 +291,7 @@ async def test__failed_signature__should_not_run():
 
 @pytest.mark.asyncio
 async def test__no_task_id__success__returns_directly(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     await task_signature_factory()
@@ -306,7 +312,7 @@ async def test__no_task_id__success__returns_directly(
 
 @pytest.mark.asyncio
 async def test__no_task_id__error__raises_directly(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     await task_signature_factory()
@@ -320,12 +326,12 @@ async def test__no_task_id__error__raises_directly(
     with pytest.raises(ValueError, match="vanilla error"):
         await raising_handler(message, ctx)
 
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test__no_task_id__no_workflow_calls(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     await task_signature_factory()
@@ -339,7 +345,7 @@ async def test__no_task_id__no_workflow_calls(
     await returning_handler(message, ctx)
 
     # Assert
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -365,10 +371,11 @@ async def test__invalid_task_id__should_not_run():
 
 @pytest.mark.asyncio
 async def test__no_retries__error__marks_failed(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         retries=None, error_callbacks=[error_callback_signature]
     )
@@ -383,12 +390,14 @@ async def test__no_retries__error__marks_failed(
         await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__retries_3_attempt_1__error__not_failed(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory(retries=3)
@@ -404,15 +413,16 @@ async def test__retries_3_attempt_1__error__not_failed(
 
     reloaded = await TaskSignature.get_safe(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test__retries_3_attempt_3__error__marks_failed(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         retries=3, error_callbacks=[error_callback_signature]
     )
@@ -427,15 +437,18 @@ async def test__retries_3_attempt_3__error__marks_failed(
         await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__non_retryable_exception__always_fails(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         retries=5, error_callbacks=[error_callback_signature]
     )
@@ -452,12 +465,14 @@ async def test__non_retryable_exception__always_fails(
         await non_retryable_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__with_success_callbacks__on_success__triggered(
-    mock_workflow_run,
+    mock_adapter,
     callback_signature,
 ):
     # Arrange
@@ -472,13 +487,14 @@ async def test__with_success_callbacks__on_success__triggered(
     await returning_handler(message, ctx)
 
     # Assert
-    assert len(mock_workflow_run) == 1
-    assert mock_workflow_run[0].config.name == "callback_task"
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [callback_signature], ["success"], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__with_success_callbacks__on_error__not_triggered(
-    mock_workflow_run,
+    mock_adapter,
     callback_signature,
 ):
     # Arrange
@@ -495,15 +511,16 @@ async def test__with_success_callbacks__on_error__not_triggered(
     with pytest.raises(RuntimeError):
         await raising_handler(message, ctx)
 
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test__with_error_callbacks__on_error_no_retry__triggered(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         retries=None, error_callbacks=[error_callback_signature]
     )
@@ -517,13 +534,14 @@ async def test__with_error_callbacks__on_error_no_retry__triggered(
     with pytest.raises(RuntimeError):
         await raising_handler(message, ctx)
 
-    assert len(mock_workflow_run) == 1
-    assert mock_workflow_run[0].config.name == "error_callback_task"
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__with_error_callbacks__on_error_with_retry__not_triggered(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
@@ -540,12 +558,12 @@ async def test__with_error_callbacks__on_error_with_retry__not_triggered(
     with pytest.raises(RuntimeError):
         await raising_handler(message, ctx)
 
-    assert len(mock_workflow_run) == 0
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test__with_both_callbacks__on_success__only_success_triggered(
-    mock_workflow_run,
+    mock_adapter,
     callback_signature,
     error_callback_signature,
 ):
@@ -564,17 +582,19 @@ async def test__with_both_callbacks__on_success__only_success_triggered(
     await returning_handler(message, ctx)
 
     # Assert
-    assert len(mock_workflow_run) == 1
-    assert mock_workflow_run[0].config.name == "callback_task"
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [callback_signature], ["ok"], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__with_both_callbacks__on_error__only_error_triggered(
-    mock_workflow_run,
+    mock_adapter,
     callback_signature,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         retries=None,
         success_callbacks=[callback_signature],
@@ -590,13 +610,14 @@ async def test__with_both_callbacks__on_error__only_error_triggered(
     with pytest.raises(RuntimeError):
         await raising_handler(message, ctx)
 
-    assert len(mock_workflow_run) == 1
-    assert mock_workflow_run[0].config.name == "error_callback_task"
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
 async def test__just_message__func_receives_only_message(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory()
@@ -619,7 +640,7 @@ async def test__just_message__func_receives_only_message(
 
 @pytest.mark.asyncio
 async def test__no_ctx__func_receives_message_and_kwargs(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory()
@@ -639,7 +660,7 @@ async def test__no_ctx__func_receives_message_and_kwargs(
 
 @pytest.mark.asyncio
 async def test__all__func_receives_message_and_ctx(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory()
@@ -661,7 +682,7 @@ async def test__all__func_receives_message_and_ctx(
 
 @pytest.mark.asyncio
 async def test__send_signature_true__in_kwargs(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory()
@@ -682,7 +703,7 @@ async def test__send_signature_true__in_kwargs(
 
 @pytest.mark.asyncio
 async def test__send_signature_false__not_in_kwargs(
-    mock_workflow_run,
+    mock_adapter,
 ):
     # Arrange
     signature, _ = await task_signature_factory()
