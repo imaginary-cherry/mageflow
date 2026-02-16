@@ -1,10 +1,11 @@
 from typing import Any
 
 from pydantic import BaseModel
+from rapyer.fields import RapyerKey
 
 
 class ChainMessage(BaseModel):
-    chain_task_id: str
+    chain_task_id: RapyerKey
 
 
 class ChainCallbackMessage(ChainMessage):
@@ -14,4 +15,4 @@ class ChainCallbackMessage(ChainMessage):
 class ChainErrorMessage(ChainMessage):
     error: str
     original_msg: dict
-    error_task_key: str
+    error_task_key: RapyerKey

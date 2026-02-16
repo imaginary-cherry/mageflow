@@ -3,6 +3,7 @@ from typing import Optional
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
+from rapyer.fields import RapyerKey
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
@@ -16,7 +17,7 @@ class HatchetInvoker(BaseInvoker):
 
     def __init__(self, message: BaseModel, task_key: str, workflow_id: Optional[str]):
         self.message = message
-        self.task_key = task_key
+        self.task_key = RapyerKey(task_key)
         self.workflow_id = workflow_id
 
     @classmethod
@@ -37,7 +38,7 @@ class HatchetInvoker(BaseInvoker):
         return None
 
     @property
-    def task_id(self) -> str | None:
+    def task_id(self) -> RapyerKey | None:
         return self.task_key
 
     def is_vanilla_run(self):

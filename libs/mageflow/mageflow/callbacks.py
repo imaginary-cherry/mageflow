@@ -8,6 +8,7 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
+from thirdmagic.signature.model import TaskSignature
 from thirdmagic.task import MageflowTaskDefinition
 
 from mageflow.invokers.hatchet import HatchetInvoker
@@ -56,7 +57,9 @@ def handle_task_callback(
             except (Exception, asyncio.CancelledError) as e:
                 if is_normal_run:
                     raise
-                if not task_model.should_retry(ctx.attempt_number, e):
+                if not TaskSignature.ClientAdapter.should_task_retry(
+                    task_model, ctx.attempt_number, e
+                ):
                     await invoker.task_failed(message, e)
                 raise
             else:
