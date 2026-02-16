@@ -174,13 +174,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 tasks = await rapyer.afind(*task_ids_to_run)
                 tasks = cast(list[TaskSignature], tasks)
                 full_kwargs = swarm_task.kwargs | pub_kwargs
-                publish_coroutine = [
-                    self.ClientAdapter.acall_signature(
-                        next_task, None, set_return_field=False, **full_kwargs
-                    )
-                    for next_task in tasks
-                ]
-                await asyncio.gather(*publish_coroutine)
+                await self.ClientAdapter.acall_signatures(
+                    tasks, [None] * len(tasks), set_return_field=False, **full_kwargs
+                )
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
                     swarm_task.current_running_tasks += num_of_task_to_run
