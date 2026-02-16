@@ -1,11 +1,11 @@
 from unittest.mock import patch, AsyncMock
 
 import pytest
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import TaskSignature
 
-from mageflow.chain.model import ChainTaskSignature
 from mageflow.chain.workflows import chain_end_task, chain_error_task
-from mageflow.signature.container import ContainerTaskSignature
-from mageflow.signature.model import TaskSignature
 from tests.unit.workflows.conftest import create_chain_test_setup
 
 
@@ -43,7 +43,9 @@ async def test_chain_end_crash_at_remove_current_task_retry_succeeds_idempotent(
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
     # Act - First call crashes at remove_references
-    with patch.object(ContainerTaskSignature, "remove_references", side_effect=RuntimeError):
+    with patch.object(
+        ContainerTaskSignature, "remove_references", side_effect=RuntimeError
+    ):
         with pytest.raises(RuntimeError):
             await chain_end_task(setup.msg, setup.ctx)
 
@@ -105,7 +107,9 @@ async def test_chain_error_crash_at_remove_current_task_retry_succeeds_idempoten
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
     # Act - First call crashes at remove_references
-    with patch.object(ContainerTaskSignature, "remove_references", side_effect=RuntimeError):
+    with patch.object(
+        ContainerTaskSignature, "remove_references", side_effect=RuntimeError
+    ):
         with pytest.raises(RuntimeError):
             await chain_error_task(setup.error_msg, setup.ctx)
 

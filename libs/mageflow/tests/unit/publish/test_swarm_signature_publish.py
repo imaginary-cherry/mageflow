@@ -5,15 +5,15 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from thirdmagic.errors import SwarmIsCanceledError, TooManyTasksError
 
 import mageflow
-from mageflow.errors import TooManyTasksError, SwarmIsCanceledError
+from mageflow.clients.inner_task_names import ON_SWARM_START
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
-from mageflow.swarm.consts import ON_SWARM_START
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
 from mageflow.swarm.messages import SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import TaskRunTracker, assert_task_were_published
 

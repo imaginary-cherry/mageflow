@@ -1,9 +1,9 @@
 import pytest
 
 import mageflow
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
+from thirdmagic.consts import TASK_ID_PARAM_NAME
 from mageflow.swarm.messages import SwarmResultsMessage
-from mageflow.swarm.model import SwarmTaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata

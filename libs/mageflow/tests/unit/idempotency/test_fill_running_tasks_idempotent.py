@@ -4,9 +4,10 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 import rapyer
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
-from mageflow.swarm.state import PublishState
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.state import PublishState
+
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import assert_task_were_published
 

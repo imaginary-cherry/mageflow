@@ -4,9 +4,9 @@ import pytest
 from rapyer.errors import KeyNotFound
 
 import mageflow
-from mageflow.signature.status import SignatureStatus
+from thirdmagic.signature.status import SignatureStatus
 from mageflow.swarm.messages import SwarmErrorMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata

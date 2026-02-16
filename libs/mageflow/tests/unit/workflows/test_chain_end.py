@@ -1,6 +1,6 @@
 import pytest
+from thirdmagic.consts import TASK_ID_PARAM_NAME
 
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
 from mageflow.chain.workflows import chain_end_task
 from tests.unit.assertions import assert_task_has_short_ttl
 from tests.unit.workflows.conftest import create_chain_test_setup

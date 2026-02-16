@@ -1,19 +1,17 @@
 from typing import TypeVar, Literal
 
-from mageflow.chain.consts import ON_CHAIN_ERROR, ON_CHAIN_END
-from mageflow.signature.consts import REMOVED_TASK_TTL
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
-from mageflow.signature.types import TaskIdentifierType
-from mageflow.startup import mageflow_config
-from mageflow.swarm.model import SwarmTaskSignature
+from rapyer.fields import RapyerKey
+from redis.asyncio import Redis
+from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.signature.model import TaskSignature
+
 
 T = TypeVar("T", bound=TaskSignature)
 SwarmListName = Literal["finished_tasks", "failed_tasks", "tasks_results", "tasks"]
 
 
 async def assert_task_reloaded_as_type(
-    task_key: TaskIdentifierType,
+    task_key: RapyerKey,
     expected_type: type[T],
 ) -> T:
     reloaded = await TaskSignature.get_safe(task_key)
@@ -26,8 +24,8 @@ async def assert_task_reloaded_as_type(
 
 def assert_callback_contains(
     task: TaskSignature,
-    success_keys: list[TaskIdentifierType] | None = None,
-    error_keys: list[TaskIdentifierType] | None = None,
+    success_keys: list[RapyerKey] | None = None,
+    error_keys: list[RapyerKey] | None = None,
 ) -> None:
     for success_key in success_keys or []:
         assert (
@@ -74,7 +72,6 @@ async def assert_redis_keys_do_not_contain_sub_task_ids(redis_client, sub_task_i
         ), f"Found Redis keys containing deleted sub-task ID {sub_task_id}: {keys_containing_sub_task}"
 
 
-async def assert_task_has_short_ttl(task_key: str):
-    redis_client = mageflow_config.redis_client
-    ttl = await redis_client.ttl(task_key)
+async def assert_task_has_short_ttl(redis: Redis, task_key: str):
+    ttl = await redis.ttl(task_key)
     assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"

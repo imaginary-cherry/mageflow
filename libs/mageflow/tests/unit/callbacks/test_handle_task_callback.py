@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 from hatchet_sdk import NonRetryableException
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
 
 from mageflow.callbacks import AcceptParams, HatchetResult
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.assertions import assert_tasks_changed_status, assert_task_has_short_ttl
 from tests.unit.callbacks.conftest import (
@@ -86,10 +86,11 @@ async def test__pending_signature__error_with_retry__raises_without_failing(
 
 @pytest.mark.asyncio
 async def test__pending_signature__error_exhausted_retries__marks_failed(
-    mock_workflow_run,
+    mock_adapter,
     error_callback_signature,
 ):
     # Arrange
+    mock_adapter.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
         status=SignatureStatus.PENDING,
         retries=3,
@@ -106,7 +107,7 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
         await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    assert len(mock_workflow_run) == 1
+    mock_adapter.acall_signatures.assert_awaited_once_with(signature, [message], False)
 
 
 @pytest.mark.asyncio

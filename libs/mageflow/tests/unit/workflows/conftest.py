@@ -5,10 +5,10 @@ import pytest_asyncio
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.model import TaskSignature
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 

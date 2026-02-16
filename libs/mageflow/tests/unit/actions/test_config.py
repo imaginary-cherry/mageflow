@@ -1,8 +1,8 @@
 import pytest
+from thirdmagic.errors import TooManyTasksError
+from thirdmagic.swarm.model import SwarmConfig
 
 import mageflow
-from mageflow.errors import TooManyTasksError
-from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.models import ContextMessage
 
 

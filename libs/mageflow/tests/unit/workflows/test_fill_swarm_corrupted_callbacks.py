@@ -3,11 +3,11 @@ import base64
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
 
-from mageflow.models.message import DEFAULT_RESULT_NAME
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.model import TaskSignature
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.message import DEFAULT_RESULT_NAME
+from thirdmagic.signature.model import TaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
-from mageflow.utils.hatchet import extract_hatchet_validator
+
 from tests.unit.workflows.conftest import CompletedSwarmWithSuccessCallback
 
 

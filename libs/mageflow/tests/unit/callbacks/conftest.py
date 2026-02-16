@@ -3,15 +3,17 @@ from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock, AsyncMock
 
+import pytest
 import pytest_asyncio
 from hatchet_sdk import Context
+from thirdmagic.clients import BaseClientAdapter
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import MageflowTaskDefinition
 
 import mageflow
 from mageflow.callbacks import handle_task_callback, AcceptParams
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus
-from mageflow.task.model import HatchetTaskModel
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -58,8 +60,8 @@ async def task_signature_factory(
     status: SignatureStatus = SignatureStatus.PENDING,
     success_callbacks: list[TaskSignature] = None,
     error_callbacks: list[TaskSignature] = None,
-) -> tuple[TaskSignature, HatchetTaskModel]:
-    task_model = HatchetTaskModel(
+) -> tuple[TaskSignature, MageflowTaskDefinition]:
+    task_model = MageflowTaskDefinition(
         mageflow_task_name=task_name,
         task_name=task_name,
         input_validator=ContextMessage,
@@ -111,3 +113,10 @@ async def callback_signature():
 @pytest_asyncio.fixture
 async def error_callback_signature():
     return await mageflow.sign("error_callback_task", model_validators=ContextMessage)
+
+
+@pytest.fixture(autouse=True)
+def mock_adapter():
+    adapter = AsyncMock(spec=BaseClientAdapter)
+    TaskSignature.ClientAdapter = adapter
+    yield adapter

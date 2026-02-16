@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.swarm.model import SwarmTaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.unit.conftest import SwarmItemDoneSetup
 

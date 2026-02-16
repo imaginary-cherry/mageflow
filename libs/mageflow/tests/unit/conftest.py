@@ -6,19 +6,24 @@ import pytest
 import pytest_asyncio
 import rapyer
 from hatchet_sdk import Hatchet, ClientConfig, Context
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 
 import mageflow
+from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.invokers.hatchet import HatchetInvoker
-from mageflow.signature.consts import TASK_ID_PARAM_NAME
-from mageflow.signature.model import TaskSignature
-from mageflow.startup import mageflow_config
 from mageflow.swarm.messages import SwarmResultsMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
-from mageflow.workflows import MageflowWorkflow
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.change_status.conftest import ChainTestData
 
 pytest.register_assert_rewrite("tests.assertions")
+
+
+@dataclass
+class ChainTestData:
+    task_signatures: list
+    chain_signature: ChainTaskSignature
 
 
 @dataclass
@@ -44,7 +49,6 @@ class SwarmItemDoneSetup:
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def redis_client():
     client = fakeredis.aioredis.FakeRedis()
-    mageflow_config.redis_client = client
     await client.flushall()
     try:
         yield client
@@ -60,7 +64,6 @@ def hatchet_mock():
         tls_strategy="tls",
     )
     hatchet = Hatchet(config=config_obj)
-    mageflow_config.hatchet_client = hatchet
 
     yield hatchet
 

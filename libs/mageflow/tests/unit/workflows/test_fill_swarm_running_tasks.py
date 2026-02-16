@@ -1,7 +1,7 @@
 import pytest
 
 from mageflow.swarm.messages import SwarmMessage
-from mageflow.swarm.model import SwarmTaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 
 

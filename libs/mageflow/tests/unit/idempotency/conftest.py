@@ -8,10 +8,10 @@ from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
 
 import mageflow
-from mageflow.signature.model import TaskSignature
+from thirdmagic.signature.model import TaskSignature
 from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
-from mageflow.swarm.state import PublishState
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.state import PublishState
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata, SwarmItemDoneSetup
 
