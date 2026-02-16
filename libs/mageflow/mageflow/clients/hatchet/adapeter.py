@@ -54,7 +54,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: TaskSignature,
+        failed_task: "TaskSignature",
     ):
         chain_err_msg = ChainErrorMessage(
             chain_task_id=chain.key,
