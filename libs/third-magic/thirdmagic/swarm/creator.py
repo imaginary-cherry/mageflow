@@ -34,6 +34,7 @@ async def swarm(
     task_name = task_name or f"swarm-task-{uuid.uuid4()}"
     publish_state = PublishState()
     model_fields = list(SwarmTaskSignature.model_fields.keys())
+    direct_kwargs_param = options.pop("kwargs", {})
     kwargs = {
         field_name: options.pop(field_name)
         for field_name in model_fields
@@ -43,7 +44,7 @@ async def swarm(
         **kwargs,
         task_name=task_name,
         publishing_state_id=publish_state.key,
-        kwargs=options,
+        kwargs=direct_kwargs_param | options,
     )
     await rapyer.ainsert(publish_state, swarm_signature)
     await swarm_signature.add_tasks(tasks)
