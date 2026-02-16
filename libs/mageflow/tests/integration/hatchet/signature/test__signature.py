@@ -163,7 +163,9 @@ async def test_task_with_success_callback_execution_and_redis_cleanup_sanity(
         hatchet_client_init.hatchet,
     )
 
-    success_callback_signature = await mageflow.asign(task1_callback, base_data=test_ctx)
+    success_callback_signature = await mageflow.asign(
+        task1_callback, base_data=test_ctx
+    )
     message = ContextMessage(base_data=test_ctx)
     task = await mageflow.asign(
         task2, success_callbacks=[success_callback_signature.key], base_data=test_ctx
