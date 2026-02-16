@@ -207,6 +207,7 @@ async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
     await asyncio.sleep(5)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, task, base_data=test_ctx, allow_fails=True)
+    # Ensure we send the original msg back as callback
     assert_signature_done(runs, error_callback_signature, base_data=test_ctx)
     await assert_redis_is_clean(redis_client)
 
