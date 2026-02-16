@@ -2,8 +2,7 @@ import asyncio
 
 import pytest
 from hatchet_sdk import NonRetryableException
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.signature import TaskSignature, SignatureStatus
 
 from mageflow.callbacks import AcceptParams, HatchetResult
 from tests.integration.hatchet.models import ContextMessage
@@ -107,7 +106,9 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
         await raising_handler(message, ctx)
 
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
-    mock_adapter.acall_signatures.assert_awaited_once_with(signature, [message], False)
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature], [message], True
+    )
 
 
 @pytest.mark.asyncio
