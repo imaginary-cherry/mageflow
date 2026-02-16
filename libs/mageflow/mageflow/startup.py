@@ -1,27 +1,16 @@
 import rapyer
-from hatchet_sdk import Hatchet
 from hatchet_sdk.runnables.workflow import Standalone
-from pydantic import BaseModel
-from redis.asyncio.client import Redis
+from redis.asyncio import Redis
+from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import MageflowTaskDefinition
 
 REGISTERED_TASKS: list[tuple[Standalone, str]] = []
 
 
-class ConfigModel(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
-
-
-class MageFlowConfigModel(ConfigModel):
-    hatchet_client: Hatchet | None = None
-    redis_client: Redis | None = None
-
-
-mageflow_config = MageFlowConfigModel()
-
-
-async def init_mageflow():
-    await rapyer.init_rapyer(mageflow_config.redis_client, prefer_normal_json_dump=True)
+async def init_mageflow(redis: Redis):
+    # Init redis in local async loop
+    redis = Redis(**redis.connection_pool.connection_kwargs)
+    await rapyer.init_rapyer(redis, prefer_normal_json_dump=True)
     await register_workflows()
 
 
@@ -32,8 +21,8 @@ async def teardown_mageflow():
 async def register_workflows():
     for reg_task in REGISTERED_TASKS:
         workflow, mageflow_task_name = reg_task
-        validator = extract_hatchet_validator(workflow)
-        hatchet_task = HatchetTaskModel(
+        validator = TaskSignature.ClientAdapter.extract_validator(workflow)
+        hatchet_task = MageflowTaskDefinition(
             mageflow_task_name=mageflow_task_name,
             task_name=workflow.name,
             input_validator=validator,
@@ -42,8 +31,10 @@ async def register_workflows():
         await hatchet_task.asave()
 
 
-async def lifespan_initialize():
-    await init_mageflow()
+async def lifespan_initialize(redis: Redis):
+    # Init redis in local async loop
+    redis = Redis(**redis.connection_pool.connection_kwargs)
+    await init_mageflow(redis)
     # yield makes the function usable as a Hatchet lifespan context manager (can also be used for FastAPI):
     # - code before yield runs at startup (init config, register workers, etc.)
     # - code after yield would run at shutdown

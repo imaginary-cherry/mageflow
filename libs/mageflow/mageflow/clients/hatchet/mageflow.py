@@ -63,8 +63,8 @@ class WorkerOptions(TypedDict, total=False):
     lifespan: LifespanFn | None
 
 
-async def merge_lifespan(original_lifespan: LifespanFn):
-    await init_mageflow()
+async def merge_lifespan(redis: Redis, original_lifespan: LifespanFn):
+    await init_mageflow(redis)
     async for res in original_lifespan():
         yield res
     await teardown_mageflow()
@@ -124,9 +124,9 @@ class HatchetMageflow(Hatchet):
         mageflow_flows = init_mageflow_hatchet_tasks(self.hatchet)
         workflows += mageflow_flows
         if lifespan is None:
-            lifespan = lifespan_initialize
+            lifespan = functools.partial(lifespan_initialize, self.redis)
         else:
-            lifespan = functools.partial(merge_lifespan, lifespan)
+            lifespan = functools.partial(merge_lifespan, self.redis, lifespan)
 
         return super().worker(
             name, *args, workflows=workflows, lifespan=lifespan, **kwargs
