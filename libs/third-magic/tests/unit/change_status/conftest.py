@@ -85,7 +85,7 @@ async def swarm_with_tasks():
 
 
 @pytest.fixture()
-def client_adapter(mock_adapter):
+def hatchet_client_adapter(mock_adapter):
     mock_adapter.extract_validator.side_effect = extract_hatchet_validator
     mock_adapter.task_name.side_effect = lambda fn: fn.name
     yield mock_adapter

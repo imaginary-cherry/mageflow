@@ -8,7 +8,7 @@ from thirdmagic.signature.status import SignatureStatus
 
 @pytest.mark.asyncio
 async def test__safe_change_status__signature_deleted_from_redis__raises_error__edge_case(
-    hatchet_mock, redis_client, client_adapter
+    hatchet_mock, redis_client, hatchet_client_adapter
 ):
     # Arrange
     @hatchet_mock.task(name="test_task")
@@ -38,7 +38,7 @@ async def test__safe_change_status__signature_deleted_from_redis__raises_error__
     ],
 )
 async def test_signature_resume_with_various_statuses_sanity(
-    client_adapter,
+    hatchet_client_adapter,
     hatchet_mock,
     initial_status,
     last_status,
@@ -48,7 +48,7 @@ async def test_signature_resume_with_various_statuses_sanity(
     def test_task(msg):
         return msg
 
-    client_adapter.extract_validator.return_value = None
+    hatchet_client_adapter.extract_validator.return_value = None
     signature = await TaskSignature.from_task(test_task)
     signature.task_status.status = initial_status
     signature.task_status.last_status = last_status
@@ -59,8 +59,8 @@ async def test_signature_resume_with_various_statuses_sanity(
 
     # Assert
     if last_status == SignatureStatus.ACTIVE:
-        client_adapter.acall_signature.assert_awaited_once_with(None)
+        hatchet_client_adapter.acall_signature.assert_awaited_once_with(None)
         last_status = SignatureStatus.PENDING
     else:
-        client_adapter.assert_not_called()
+        hatchet_client_adapter.assert_not_called()
     await assert_tasks_changed_status([signature.key], last_status, initial_status)
