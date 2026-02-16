@@ -1,5 +1,4 @@
 import pytest
-from thirdmagic.consts import TASK_ID_PARAM_NAME
 
 from mageflow.chain.workflows import chain_end_task
 from tests.unit.assertions import assert_task_has_short_ttl
@@ -7,21 +6,18 @@ from tests.unit.workflows.conftest import create_chain_test_setup
 
 
 @pytest.mark.asyncio
-async def test_chain_end_task_sanity(redis_client, mock_workflow_run):
+async def test_chain_end_task_sanity(redis_client, mock_adapter):
     # Arrange
-    setup = await create_chain_test_setup(
-        num_chain_tasks=3,
-        results={"status": "success", "value": 42},
-    )
+    results = {"status": "success", "value": 42}
+    setup = await create_chain_test_setup(num_chain_tasks=3, results=results)
 
     # Act
     await chain_end_task(setup.msg, setup.ctx)
 
     # Assert
-    assert len(mock_workflow_run) == 1
-    triggered_signature_id = mock_workflow_run[0]._task_ctx[TASK_ID_PARAM_NAME]
-    assert triggered_signature_id == setup.success_callback.key
-
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        [setup.success_callback], [results], True
+    )
     await assert_task_has_short_ttl(redis_client, setup.chain_signature.key)
 
     for task in setup.chain_tasks:

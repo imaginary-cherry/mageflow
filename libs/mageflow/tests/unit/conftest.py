@@ -7,9 +7,11 @@ import pytest_asyncio
 import rapyer
 from hatchet_sdk import Hatchet, ClientConfig, Context
 from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.task import MageflowTaskDefinition
 
 import mageflow
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
@@ -257,15 +259,10 @@ async def swarm_task(empty_swarm: SwarmTaskSignature):
 
 
 @pytest.fixture
-def mock_workflow_run():
-    captured_workflows = []
-
-    async def capture_and_mock(self, *args, **kwargs):
-        captured_workflows.append(self)
-
-    with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock) as mock:
-        mock.captured_workflows = captured_workflows
-        yield captured_workflows
+def mock_adapter():
+    adapter = AsyncMock(spec=BaseClientAdapter)
+    TaskSignature.ClientAdapter = adapter
+    yield adapter
 
 
 @pytest.fixture
@@ -279,3 +276,12 @@ def mock_workflow_run_with_args():
 
     with patch.object(MageflowWorkflow, "aio_run_no_wait", capture_and_mock):
         yield captured_calls
+
+
+@pytest.fixture
+def mock_task_def():
+    with patch.object(MageflowTaskDefinition, "aget") as mock_get:
+        mock_get.side_effect = lambda task_name: MageflowTaskDefinition(
+            mageflow_task_name=task_name, task_name=task_name
+        )
+        yield mock_get

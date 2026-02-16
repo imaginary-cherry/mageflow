@@ -1,10 +1,7 @@
 import base64
 
 import pytest
-from hatchet_sdk.runnables.types import EmptyModel
 
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature.model import TaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 
@@ -19,7 +16,7 @@ async def corrupt_model_validators_in_redis(signature_key: str, redis_client):
 @pytest.mark.asyncio
 async def test_activate_success_with_corrupted_callback_model_validators_succeeds(
     completed_swarm_with_success_callback: CompletedSwarmWithSuccessCallback,
-    mock_workflow_run,
+    mock_adapter,
     redis_client,
 ):
     # Arrange
@@ -32,21 +29,20 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert
-    assert len(mock_workflow_run) == len(success_callbacks)
-    for workflow in mock_workflow_run:
-        signature_id = workflow._task_ctx[TASK_ID_PARAM_NAME]
-        assert signature_id in success_callbacks
-        assert workflow._return_value_field == DEFAULT_RESULT_NAME
-        reloaded_callback = await TaskSignature.get_safe(signature_id)
+    # The signature was corrupted, so we only check the key was in the params
+    mock_adapter.acall_signatures.assert_awaited_once()
+    called_signatures = mock_adapter.acall_signatures.call_args[0][0]
+    assert len(called_signatures) == len(success_callbacks)
+    for sig in called_signatures:
+        assert sig.key in success_callbacks
+        reloaded_callback = await TaskSignature.get_safe(sig.key)
         assert reloaded_callback.model_validators is None
-        validator = extract_hatchet_validator(workflow)
-        assert validator == EmptyModel
 
 
 @pytest.mark.asyncio
 async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
     completed_swarm_with_success_callback: CompletedSwarmWithSuccessCallback,
-    mock_workflow_run,
+    mock_adapter,
     redis_client,
 ):
     # Arrange
@@ -59,12 +55,11 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert
-    assert len(mock_workflow_run) == len(error_callbacks)
-    for workflow in mock_workflow_run:
-        signature_id = workflow._task_ctx[TASK_ID_PARAM_NAME]
-        reloaded_callback = await TaskSignature.get_safe(signature_id)
+    # The signature was corrupted, so we only check the key was in the params
+    mock_adapter.acall_signatures.assert_awaited_once()
+    called_signatures = mock_adapter.acall_signatures.call_args[0][0]
+    assert len(called_signatures) == len(error_callbacks)
+    for sig in called_signatures:
+        assert sig.key in error_callbacks
+        reloaded_callback = await TaskSignature.get_safe(sig.key)
         assert reloaded_callback.model_validators is None
-        assert signature_id in error_callbacks
-        assert workflow._return_value_field == DEFAULT_RESULT_NAME
-        validator = extract_hatchet_validator(workflow)
-        assert validator == EmptyModel

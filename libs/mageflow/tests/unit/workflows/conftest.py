@@ -18,6 +18,9 @@ class CompletedSwarmWithSuccessCallback:
     swarm_task: SwarmTaskSignature
     ctx: MagicMock
     msg: SwarmMessage
+    sub_tasks: list[TaskSignature]
+    success: list[TaskSignature]
+    error: list[TaskSignature]
 
 
 @dataclass
@@ -29,7 +32,7 @@ class SwarmTestSetup:
 
 
 @pytest_asyncio.fixture
-async def completed_swarm_with_success_callback():
+async def completed_swarm_with_success_callback(mock_task_def):
     # Arrange
     success_callback = await mageflow.asign(
         "unittest_success_callback_task", model_validators=MessageWithResult
@@ -41,12 +44,14 @@ async def completed_swarm_with_success_callback():
         "unittest_error_callback_task", model_validators=MessageWithResult
     )
 
+    error_callback = [error_callback, error_callback2]
+    success = [success_callback]
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm_completed_with_callback",
         model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=1),
-        success_callbacks=[success_callback],
-        error_callbacks=[error_callback, error_callback2],
+        success_callbacks=success,
+        error_callbacks=error_callback,
     )
     original_task = await mageflow.asign("item_task")
     task = await swarm_task.add_task(original_task)
@@ -61,7 +66,14 @@ async def completed_swarm_with_success_callback():
     ctx = create_mock_context_with_metadata()
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
 
-    return CompletedSwarmWithSuccessCallback(swarm_task=swarm_task, ctx=ctx, msg=msg)
+    return CompletedSwarmWithSuccessCallback(
+        swarm_task=swarm_task,
+        ctx=ctx,
+        msg=msg,
+        success=success,
+        error=error_callback,
+        sub_tasks=[original_task],
+    )
 
 
 async def create_swarm_item_test_setup(
