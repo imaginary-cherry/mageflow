@@ -47,9 +47,10 @@ async def test_fill_running_tasks_sanity(
     await swarm_signature.fill_running_tasks(options=options)
 
     # Assert
-    mock_adapter.acall_signature.assert_has_awaits(
-        [
-            call(signature, None, set_return_field=False, options=options, new_value=1)
-            for signature in tasks_to_queue[:expected_started]
-        ]
+    mock_adapter.acall_signatures.assert_awaited_once_with(
+        tasks_to_queue[:expected_started],
+        [None] * expected_started,
+        options=options,
+        new_value=1,
+        set_return_field=False,
     )
