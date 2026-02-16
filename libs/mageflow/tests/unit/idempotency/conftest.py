@@ -47,7 +47,7 @@ async def publish_state():
 
 
 @pytest_asyncio.fixture
-async def failed_swarm_setup():
+async def failed_swarm_setup(mock_task_def):
     # Arrange
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm_failed",
@@ -68,7 +68,7 @@ async def failed_swarm_setup():
 
 
 @pytest_asyncio.fixture
-async def completed_swarm_setup():
+async def completed_swarm_setup(mock_task_def):
     # Arrange
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm_completed",
