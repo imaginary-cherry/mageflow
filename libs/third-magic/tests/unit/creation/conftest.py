@@ -1,15 +1,8 @@
 import pytest
 import pytest_asyncio
-from pydantic import TypeAdapter
 
+from tests.unit.utils import extract_hatchet_validator
 from thirdmagic.task import MageflowTaskDefinition
-
-
-def extract_hatchet_validator(workflow):
-    validator = workflow.input_validator
-    if isinstance(validator, TypeAdapter):
-        validator = validator._type
-    return validator
 
 
 @pytest.fixture(autouse=True)

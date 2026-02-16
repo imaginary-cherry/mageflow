@@ -89,6 +89,7 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     task_names: list[str],
     tasks_to_delete_indices: list[int],
     new_status: SignatureStatus,
+    mock_task_def,
 ):
     # Arrange
     task_signatures = [await thirdmagic.sign(name) for name in task_names]
@@ -177,7 +178,7 @@ async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_red
     ],
 )
 async def test_swarm_resume_with_status_changes_sanity(
-    mock_aio_run_no_wait, swarm_with_tasks, last_status
+    mock_adapter, swarm_with_tasks, last_status
 ):
     # Arrange
     initial_status = SignatureStatus.SUSPENDED

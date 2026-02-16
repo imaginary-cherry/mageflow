@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
+import pytest
 import pytest_asyncio
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
+from tests.unit.utils import extract_hatchet_validator
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
@@ -51,6 +53,20 @@ def get_non_deleted_task_keys(
 
 
 @pytest_asyncio.fixture
+async def chain_with_tasks():
+    task_signatures = [
+        await thirdmagic.sign(f"chain_task_{i}", model_validators=ContextMessage)
+        for i in range(1, 4)
+    ]
+
+    chain_signature = await thirdmagic.chain([task.key for task in task_signatures])
+
+    return ChainTestData(
+        task_signatures=task_signatures, chain_signature=chain_signature
+    )
+
+
+@pytest_asyncio.fixture
 async def swarm_with_tasks():
     task_signatures = [
         await thirdmagic.sign(f"swarm_task_{i}", model_validators=ContextMessage)
@@ -66,3 +82,10 @@ async def swarm_with_tasks():
     return SwarmTestData(
         task_signatures=task_signatures, swarm_signature=swarm_signature
     )
+
+
+@pytest.fixture()
+def client_adapter(mock_adapter):
+    mock_adapter.extract_validator.side_effect = extract_hatchet_validator
+    mock_adapter.task_name.side_effect = lambda fn: fn.name
+    yield mock_adapter
