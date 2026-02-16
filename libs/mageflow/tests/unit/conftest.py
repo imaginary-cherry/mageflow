@@ -29,11 +29,6 @@ class ChainTestData:
 
 
 @dataclass
-class TaskRunTracker:
-    called_instances: list
-
-
-@dataclass
 class WorkflowCallCapture:
     workflow: MageflowWorkflow
     args: tuple
@@ -109,29 +104,6 @@ def mock_close_swarm():
         SwarmTaskSignature, "close_swarm", new_callable=AsyncMock
     ) as mock_close:
         yield mock_close
-
-
-@pytest.fixture
-def mock_task_run():
-    called_instances = []
-
-    async def track_calls(self, *args, **kwargs):
-        called_instances.append(self)
-        return None
-
-    with patch.object(TaskSignature, "aio_run_no_wait", new=track_calls):
-        yield TaskRunTracker(called_instances=called_instances)
-
-
-def assert_task_were_published(
-    task_run_tracker: TaskRunTracker, expected_signatures: list[TaskSignature | str]
-):
-    assert len(task_run_tracker.called_instances) == len(expected_signatures)
-    called_task_ids = [instance.key for instance in task_run_tracker.called_instances]
-    expected_keys = [
-        task if isinstance(task, str) else task.key for task in expected_signatures
-    ]
-    assert set(called_task_ids) == set(expected_keys)
 
 
 @pytest.fixture
@@ -215,7 +187,7 @@ def create_mock_context_with_metadata(task_id=None):
 
 
 @pytest_asyncio.fixture
-async def swarm_setup():
+async def swarm_setup(mock_task_def):
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
@@ -251,7 +223,7 @@ async def empty_swarm():
 
 
 @pytest_asyncio.fixture
-async def swarm_task(empty_swarm: SwarmTaskSignature):
+async def swarm_task(empty_swarm: SwarmTaskSignature, mock_task_def):
     swarm_task = empty_swarm
     task = await mageflow.asign("item_task")
     await swarm_task.add_task(task)
@@ -281,7 +253,7 @@ def mock_workflow_run_with_args():
 @pytest.fixture
 def mock_task_def():
     with patch.object(MageflowTaskDefinition, "aget") as mock_get:
-        mock_get.side_effect = lambda task_name: MageflowTaskDefinition(
+        mock_get.side_effect = lambda task_name, **kwargs: MageflowTaskDefinition(
             mageflow_task_name=task_name, task_name=task_name
         )
         yield mock_get

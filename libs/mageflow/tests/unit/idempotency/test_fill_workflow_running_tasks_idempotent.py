@@ -85,7 +85,7 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
 
 @pytest.mark.asyncio
 async def test_on_remove_task__finish_removing_all(
-    completed_swarm_setup, mock_task_run, redis_client
+    completed_swarm_setup, mock_adapter, redis_client
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
