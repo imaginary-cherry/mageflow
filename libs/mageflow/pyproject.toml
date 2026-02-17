@@ -68,7 +68,7 @@ Repository = "https://github.com/imaginary-cherry/mageflow"
 "Changelog" = "https://github.com/imaginary-cherry/mageflow/releases"
 
 [tool.uv.sources]
-thirdmagic = { path = "../third-magic" }
+thirdmagic = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
