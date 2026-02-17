@@ -196,7 +196,7 @@ class TaskSignature(AtomicRedisModel):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:
             await self.change_status(SignatureStatus.PENDING)
-            await self.ClientAdapter.acall_signature(None)
+            await self.ClientAdapter.acall_signature(self, None, set_return_field=False)
         else:
             await self.change_status(last_status)
 
