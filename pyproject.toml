@@ -1,2 +1,5 @@
 # This file exists only so uv recognizes the repo root.
 # Each package under libs/ manages its own dependencies independently.
+
+[tool.uv.workspace]
+members = ["libs/*"]
