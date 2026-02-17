@@ -21,9 +21,6 @@ dev = [
     "black>=26.1.0",
 ]
 
-[tool.uv.sources]
-rapyer = { path = "../../../rapyer" }
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
