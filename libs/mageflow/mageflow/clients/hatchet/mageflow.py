@@ -132,10 +132,10 @@ class HatchetMageflow(Hatchet):
             name, *args, workflows=workflows, lifespan=lifespan, **kwargs
         )
 
-    async def sign(self, task: str | HatchetTaskType, **options: Any) -> TaskSignature:
+    async def asign(self, task: str | HatchetTaskType, **options: Any) -> TaskSignature:
         return await sign(task, **options)
 
-    async def chain(
+    async def achain(
         self,
         tasks: list[TaskSignatureConvertible],
         name: str = None,
@@ -144,7 +144,7 @@ class HatchetMageflow(Hatchet):
     ):
         return await chain(tasks, name, error, success)
 
-    async def swarm(
+    async def aswarm(
         self,
         tasks: list[TaskSignatureConvertible] = None,
         task_name: str = None,
