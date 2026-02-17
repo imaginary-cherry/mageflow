@@ -70,7 +70,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
     ):
-        await self.ClientAdapter.acall_swarm_item_done(error, self, sub_task)
+        await self.ClientAdapter.acall_swarm_item_error(error, self, sub_task)
 
     @property
     def has_swarm_started(self):
