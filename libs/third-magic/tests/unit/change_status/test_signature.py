@@ -2,6 +2,7 @@ import pytest
 
 
 from tests.unit.assertions import assert_tasks_changed_status
+from tests.unit.change_status.assertions import assert_resume_signature
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
 
@@ -59,7 +60,7 @@ async def test_signature_resume_with_various_statuses_sanity(
 
     # Assert
     if last_status == SignatureStatus.ACTIVE:
-        hatchet_client_adapter.acall_signature.assert_awaited_once_with(None)
+        assert_resume_signature(signature, hatchet_client_adapter)
         last_status = SignatureStatus.PENDING
     else:
         hatchet_client_adapter.assert_not_called()

@@ -1,5 +1,3 @@
-from unittest.mock import call
-
 import pytest
 
 import thirdmagic
@@ -8,6 +6,7 @@ from tests.unit.assertions import (
     assert_tasks_not_exists,
     assert_redis_keys_do_not_contain_sub_task_ids,
 )
+from tests.unit.change_status.assertions import assert_resume_signature
 from tests.unit.change_status.conftest import (
     TaskResumeConfig,
     delete_tasks_by_indices,
@@ -164,6 +163,7 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
         new_status = expected_statuses[i]
         if new_status == SignatureStatus.ACTIVE:
             new_status = SignatureStatus.PENDING
+            assert_resume_signature(task, mock_adapter)
             num_of_aio_run += 1
         await assert_tasks_changed_status(
             [task.key], new_status, SignatureStatus.SUSPENDED
@@ -175,9 +175,6 @@ async def test_chain_resume_with_optional_deleted_sub_tasks_sanity(
 
     await assert_tasks_not_exists(deleted_task_ids)
     assert mock_adapter.acall_signature.call_count == num_of_aio_run
-    mock_adapter.acall_signature.assert_has_awaits(
-        [call(None) for _ in range(num_of_aio_run)]
-    )
 
 
 @pytest.mark.asyncio
