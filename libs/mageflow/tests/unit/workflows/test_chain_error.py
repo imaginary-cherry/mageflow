@@ -16,7 +16,7 @@ async def test_chain_error_task_sanity(redis_client, mock_adapter):
 
     # Assert
     mock_adapter.acall_signatures.assert_awaited_once_with(
-        [setup.error_callback], [EmptyModel(**setup.error_msg.original_msg)], True
+        [setup.error_callback], [EmptyModel(**setup.error_msg.original_msg)], False
     )
 
     await assert_task_has_short_ttl(redis_client, setup.chain_signature.key)

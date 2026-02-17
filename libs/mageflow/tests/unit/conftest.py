@@ -231,7 +231,7 @@ def mock_adapter():
 
 @pytest.fixture
 def mock_task_def():
-    with patch.object(MageflowTaskDefinition, "aget") as mock_get:
+    with patch.object(MageflowTaskDefinition, "afind_one") as mock_get:
         mock_get.side_effect = lambda task_name, **kwargs: MageflowTaskDefinition(
             mageflow_task_name=task_name, task_name=task_name
         )
