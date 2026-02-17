@@ -399,16 +399,16 @@ wheels = [
 
 [[package]]
 name = "fakeredis"
-version = "2.33.0"
+version = "2.34.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "redis" },
     { name = "sortedcontainers" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5f/f9/57464119936414d60697fcbd32f38909bb5688b616ae13de6e98384433e0/fakeredis-2.33.0.tar.gz", hash = "sha256:d7bc9a69d21df108a6451bbffee23b3eba432c21a654afc7ff2d295428ec5770", size = 175187, upload-time = "2025-12-16T19:45:52.269Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/44/c403963727d707e03f49a417712b0a23e853d33ae50729679040b6cfe281/fakeredis-2.34.0.tar.gz", hash = "sha256:72bc51a7ab39bedf5004f0cf1b5206822619c1be8c2657fd878d1f4250256c57", size = 177156, upload-time = "2026-02-16T15:56:34.318Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/78/a850fed8aeef96d4a99043c90b818b2ed5419cd5b24a4049fd7cfb9f1471/fakeredis-2.33.0-py3-none-any.whl", hash = "sha256:de535f3f9ccde1c56672ab2fdd6a8efbc4f2619fc2f1acc87b8737177d71c965", size = 119605, upload-time = "2025-12-16T19:45:51.08Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/8e/af19c00753c432355f9b76cec3ab0842578de43ba575e82735b18c1b3ec9/fakeredis-2.34.0-py3-none-any.whl", hash = "sha256:bc45d362c6cc3a537f8287372d8ea532538dfbe7f5d635d0905d7b3464ec51d2", size = 122063, upload-time = "2026-02-16T15:56:21.227Z" },
 ]
 
 [package.optional-dependencies]
@@ -725,6 +725,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "black" },
     { name = "coverage", extra = ["toml"] },
     { name = "dynaconf" },
     { name = "fakeredis", extra = ["json", "lua"] },
@@ -739,9 +740,10 @@ hatchet = [
 
 [package.metadata]
 requires-dist = [
+    { name = "black", marker = "extra == 'dev'", specifier = ">=26.1.0" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7.0.0,<8.0.0" },
     { name = "dynaconf", marker = "extra == 'dev'", specifier = ">=3.2.12,<4.0.0" },
-    { name = "fakeredis", extras = ["json", "lua"], marker = "extra == 'dev'", specifier = ">=2.32.1,<3.0.0" },
+    { name = "fakeredis", extras = ["json", "lua"], marker = "extra == 'dev'", specifier = ">=2.34.0,<3.0.0" },
     { name = "hatchet-sdk", marker = "extra == 'hatchet'", specifier = ">=1.20.0,<1.24.0" },
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=7.1.3,<8.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2,<10.0.0" },
@@ -1249,23 +1251,16 @@ wheels = [
 
 [[package]]
 name = "rapyer"
-version = "1.2.2"
-source = { directory = "../../../rapyer" }
+version = "1.2.3"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "redis" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "fakeredis", extras = ["lua", "json"], marker = "extra == 'test'", specifier = ">=2.20.0" },
-    { name = "pydantic", specifier = ">=2.11.0,<2.13.0" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.4.2" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.25.0" },
-    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.0.0" },
-    { name = "redis", extras = ["async"], specifier = ">=6.0.0,<7.1.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/b7/d7/402b6a1565192cb31623f2f45a662195ac35e72ba4b3f5e206fd4dbc8a04/rapyer-1.2.3.tar.gz", hash = "sha256:02c1db7e1e52f761ed613d091d5bc4abb7a888b3da3e54df0bf91e1052da4ef0", size = 30624, upload-time = "2026-02-17T09:33:34.18Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/3a/4d081cd33f294d6d398ba9618d9e09f3dbdcbcf8e9a275b774cb150af75a/rapyer-1.2.3-py3-none-any.whl", hash = "sha256:ee937a4bb2b90e0701824fdfe7f77388dfa108a73b00c0189ae01a83665125bb", size = 43961, upload-time = "2026-02-17T09:33:32.565Z" },
 ]
-provides-extras = ["test"]
 
 [[package]]
 name = "redis"
@@ -1335,25 +1330,20 @@ name = "thirdmagic"
 version = "0.2.0"
 source = { directory = "../third-magic" }
 dependencies = [
-    { name = "black" },
     { name = "pydantic" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
     { name = "rapyer" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "black", specifier = ">=26.1.0" },
+    { name = "black", marker = "extra == 'dev'", specifier = ">=26.1.0" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7.0.0,<8.0.0" },
     { name = "fakeredis", extras = ["json", "lua"], marker = "extra == 'dev'", specifier = ">=2.32.1,<3.0.0" },
     { name = "hatchet-sdk", marker = "extra == 'dev'", specifier = ">=1.23.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
-    { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2,<10.0.0" },
-    { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0,<2.0.0" },
-    { name = "rapyer", directory = "../../../rapyer" },
+    { name = "rapyer", specifier = ">=1.2.3,<1.3.0" },
 ]
 provides-extras = ["dev"]
 
