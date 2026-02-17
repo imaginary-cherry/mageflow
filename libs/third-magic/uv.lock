@@ -1100,16 +1100,23 @@ wheels = [
 
 [[package]]
 name = "rapyer"
-version = "1.2.2"
-source = { registry = "https://pypi.org/simple" }
+version = "1.2.3"
+source = { directory = "../../../rapyer" }
 dependencies = [
     { name = "pydantic" },
     { name = "redis" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/03/805626eb61676025135250552d83ccf4cc273c5429b50e111cd16da37e64/rapyer-1.2.2.tar.gz", hash = "sha256:006059fa434a84d1180c758d2f97bd1f1c8ab1a57ab03349bcc1eeaeb0f2c8f9", size = 29877, upload-time = "2026-02-12T10:45:33.014Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/ad/5655a03e74835266e722de4d8a3100357b2abf4f3135e5de0d794185597a/rapyer-1.2.2-py3-none-any.whl", hash = "sha256:e4bb9b17caa5467c49a18bc4459b6335b007f5dbf6b5bd010bb23c09855a08cc", size = 43168, upload-time = "2026-02-12T10:45:31.891Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "fakeredis", extras = ["lua", "json"], marker = "extra == 'test'", specifier = ">=2.20.0" },
+    { name = "pydantic", specifier = ">=2.11.0,<2.13.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.25.0" },
+    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.0.0" },
+    { name = "redis", extras = ["async"], specifier = ">=6.0.0,<7.1.0" },
 ]
+provides-extras = ["test"]
 
 [[package]]
 name = "redis"
@@ -1164,15 +1171,13 @@ name = "thirdmagic"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [
-    { name = "black" },
     { name = "pydantic" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
     { name = "rapyer" },
 ]
 
 [package.optional-dependencies]
 dev = [
+    { name = "black" },
     { name = "coverage", extra = ["toml"] },
     { name = "fakeredis", extra = ["json", "lua"] },
     { name = "hatchet-sdk" },
@@ -1182,16 +1187,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "black", specifier = ">=26.1.0" },
+    { name = "black", marker = "extra == 'dev'", specifier = ">=26.1.0" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7.0.0,<8.0.0" },
     { name = "fakeredis", extras = ["json", "lua"], marker = "extra == 'dev'", specifier = ">=2.32.1,<3.0.0" },
     { name = "hatchet-sdk", marker = "extra == 'dev'", specifier = ">=1.23.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
-    { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2,<10.0.0" },
-    { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0,<2.0.0" },
-    { name = "rapyer", specifier = ">=1.2.1,<1.3.0" },
+    { name = "rapyer", directory = "../../../rapyer" },
 ]
 provides-extras = ["dev"]
 
