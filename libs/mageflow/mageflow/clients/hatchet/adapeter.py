@@ -2,6 +2,7 @@ from typing import Any, TYPE_CHECKING
 
 from hatchet_sdk import Hatchet, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
 from thirdmagic.clients.base import BaseClientAdapter
@@ -59,7 +60,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         chain_err_msg = ChainErrorMessage(
             chain_task_id=chain.key,
             error=str(error),
-            original_msg=original_msg.model_dump(mode="json"),
+            original_msg=original_msg,
             error_task_key=failed_task.key,
         )
         stub = self.hatchet.stubs.task(
@@ -118,6 +119,8 @@ class HatchetClientAdapter(BaseClientAdapter):
         options: TriggerWorkflowOptions = None,
         **kwargs,
     ):
+        if msg is None:
+            msg = EmptyModel()
         options = self._update_options(signature, options)
         total_kwargs = signature.kwargs | kwargs
         workflow = self.hatchet.workflow(
