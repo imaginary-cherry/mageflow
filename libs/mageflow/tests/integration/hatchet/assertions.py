@@ -251,7 +251,7 @@ def assert_swarm_task_done(
         task = task_map[sub_task_id]
         wf = assert_signature_done(
             runs,
-            sub_task_id,
+            task,
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
