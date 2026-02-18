@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from tests.integration.hatchet.conftest import HatchetInitData
 

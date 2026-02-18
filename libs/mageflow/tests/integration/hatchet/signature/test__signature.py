@@ -5,7 +5,7 @@ from hatchet_sdk.clients.rest import V1TaskStatus
 from thirdmagic.utils import return_value_field
 
 import mageflow
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_signature_done,

@@ -20,7 +20,7 @@ import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from redis.asyncio.client import Redis
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow import Mageflow

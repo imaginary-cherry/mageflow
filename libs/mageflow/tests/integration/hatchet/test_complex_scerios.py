@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from thirdmagic.chain.model import ChainTaskSignature
 
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import (
     assert_chain_done,

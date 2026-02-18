@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks

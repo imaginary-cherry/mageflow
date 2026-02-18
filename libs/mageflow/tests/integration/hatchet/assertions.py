@@ -11,7 +11,7 @@ from thirdmagic.consts import (
     TASK_ID_PARAM_NAME,
     REMOVED_TASK_TTL,
 )
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.utils import return_value_field
 

@@ -2,7 +2,7 @@ import base64
 
 import pytest
 
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 
 from tests.unit.workflows.conftest import CompletedSwarmWithSuccessCallback

@@ -8,9 +8,9 @@ import pytest_asyncio
 from hatchet_sdk import Context
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.callbacks import handle_task_callback, AcceptParams

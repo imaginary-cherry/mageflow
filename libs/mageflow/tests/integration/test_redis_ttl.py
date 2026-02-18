@@ -3,7 +3,7 @@ import pytest_asyncio
 
 import mageflow
 from mageflow.startup import init_mageflow
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 TASK_NAME = "dummy_ttl_test_task"
 EXPECTED_TTL = 24 * 60 * 60  # 1 day in seconds

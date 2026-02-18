@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 import rapyer
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
 

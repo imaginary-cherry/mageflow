@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest_asyncio
 from pydantic import BaseModel
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
 

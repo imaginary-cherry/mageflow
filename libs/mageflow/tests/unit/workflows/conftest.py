@@ -6,7 +6,7 @@ import pytest_asyncio
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 from mageflow.swarm.messages import SwarmMessage
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult

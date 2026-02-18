@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 
 # Start coverage if COVERAGE_PROCESS_START is set
 if os.environ.get("COVERAGE_PROCESS_START"):
