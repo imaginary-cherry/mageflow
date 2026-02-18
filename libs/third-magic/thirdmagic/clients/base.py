@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
@@ -81,11 +82,11 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def create_lifecycle(self, *args):
+    async def create_lifecycle(self, *args) -> BaseLifecycle:
         pass
 
     @abc.abstractmethod
-    async def lifecycle_from_signature(self, *args):
+    async def lifecycle_from_signature(self, *args) -> BaseLifecycle:
         pass
 
 
@@ -131,8 +132,8 @@ class DefaultClientAdapter(BaseClientAdapter):
     def task_name(self, task: "HatchetTaskType") -> str:
         raise NotImplementedError("Set a client before we start")
 
-    def create_lifecycle(self, *args):
+    def create_lifecycle(self, *args) -> BaseLifecycle:
         raise NotImplementedError("Set a client before we start")
 
-    async def lifecycle_from_signature(self, *args):
+    async def lifecycle_from_signature(self, *args) -> BaseLifecycle:
         pass
