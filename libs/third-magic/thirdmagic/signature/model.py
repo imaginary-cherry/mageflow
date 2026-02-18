@@ -111,10 +111,10 @@ class TaskSignature(AtomicRedisModel):
     if HAS_HATCHET:
 
         async def aio_run_no_wait(
-            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None
         ):
             params = dict(options=options) if options else {}
-            return await self.acall(msg, set_return_field=False, **params, **kwargs)
+            return await self.acall(msg, set_return_field=False, **params)
 
     async def activate_success(self, msg):
         success_signatures = await rapyer.afind(*self.success_callbacks)
