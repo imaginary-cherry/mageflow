@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 import pytest_asyncio
 from pydantic import BaseModel
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage

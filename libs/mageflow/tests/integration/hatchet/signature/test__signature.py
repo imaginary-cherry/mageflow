@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
 
 import mageflow
-from thirdmagic.task import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_signature_done,

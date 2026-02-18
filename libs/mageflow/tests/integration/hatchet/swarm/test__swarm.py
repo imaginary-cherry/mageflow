@@ -3,8 +3,8 @@ from typing import cast
 
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (

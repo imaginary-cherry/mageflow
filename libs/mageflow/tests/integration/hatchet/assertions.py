@@ -11,8 +11,8 @@ from thirdmagic.consts import (
     TASK_ID_PARAM_NAME,
     REMOVED_TASK_TTL,
 )
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
 
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis

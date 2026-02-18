@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pytest
-
-from thirdmagic.task import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 from tests.unit.assertions import assert_task_has_short_ttl
 from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetup
@@ -23,14 +23,14 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
             await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - swarm still exists (interrupt failed before remove)
-    swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert swarm is not None
 
     # Act - Retry succeeds
     await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - linked tasks status changed (via interrupt -> suspend)
-    original_task = await TaskSignature.get_safe(setup.task.key)
+    original_task = await TaskSignature.aget(setup.task.key)
     assert original_task.task_status.status == SignatureStatus.SUSPENDED
 
     # Assert - activate_error and remove were called
@@ -53,7 +53,7 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
         await fill_swarm_running_tasks(setup.msg, setup.ctx)
 
     # Assert - swarm still exists (remove wasn't called due to crash)
-    swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert swarm is not None
 
     # Act - Retry succeeds (activate_error can be called multiple times - it's idempotent)

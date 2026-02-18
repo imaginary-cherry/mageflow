@@ -1,9 +1,9 @@
 import asyncio
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from thirdmagic.task import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_task_was_paused,
@@ -76,7 +76,7 @@ async def test_signature_pause_with_continue_with_params(
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
-    loaded_callback_signature = await TaskSignature.get_safe(callback_signature.key)
+    loaded_callback_signature = await TaskSignature.aget(callback_signature.key)
     assert_task_was_paused(runs, loaded_callback_signature)
 
     # Act - 2

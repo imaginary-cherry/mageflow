@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest_asyncio
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.task import TaskSignature
 from mageflow.swarm.messages import SwarmMessage
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 

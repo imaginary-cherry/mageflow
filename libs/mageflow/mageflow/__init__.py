@@ -1,4 +1,7 @@
+import rapyer
+from rapyer.fields import RapyerKey
 from thirdmagic.chain.creator import chain as achain
+from thirdmagic.signature import Signature
 from thirdmagic.task import sign as asign, TaskSignature
 from thirdmagic.swarm.creator import swarm as aswarm
 
@@ -10,7 +13,13 @@ lock_task = TaskSignature.alock_from_key
 resume = TaskSignature.resume_from_key
 pause = TaskSignature.pause_from_key
 remove = TaskSignature.remove_from_key
-load_signature = TaskSignature.get_safe
+
+
+async def load_sign(key: RapyerKey) -> Signature:
+    return await rapyer.afind_one(key)
+
+
+load_signature = rapyer.afind_one
 
 
 __all__ = [

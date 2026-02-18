@@ -1,9 +1,9 @@
 import pytest
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 import mageflow
-from thirdmagic.consts import TASK_ID_PARAM_NAME
 from mageflow.swarm.messages import SwarmResultsMessage
-from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata
@@ -29,7 +29,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     await swarm_item_done(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
 
     assert setup.tasks[0].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 1
@@ -62,7 +62,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
     await swarm_item_done(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert setup.tasks[1].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 2
     mock_invoker_wait_task.assert_called_once()

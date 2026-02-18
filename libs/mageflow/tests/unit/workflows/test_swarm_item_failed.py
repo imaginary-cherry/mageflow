@@ -2,11 +2,11 @@ import asyncio
 
 import pytest
 from rapyer.errors import KeyNotFound
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 
 import mageflow
-from thirdmagic.signature.status import SignatureStatus
 from mageflow.swarm.messages import SwarmErrorMessage
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata
@@ -29,7 +29,7 @@ async def test_swarm_item_failed_sanity_continue_after_failure(mock_invoker_wait
     await swarm_item_failed(msg, setup.ctx)
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
 
     assert setup.tasks[0].key in reloaded_swarm.failed_tasks
     assert len(reloaded_swarm.failed_tasks) == 1
@@ -84,7 +84,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
 
     mock_invoker_wait_task.assert_called_once()
 
-    reloaded_swarm = await SwarmTaskSignature.get_safe(setup.swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert reloaded_swarm.task_status.status != SignatureStatus.CANCELED
 
 
@@ -172,7 +172,7 @@ async def test_swarm_item_failed_concurrent_failures_edge_case():
     )
 
     # Assert
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(swarm_task.key)
 
     assert len(reloaded_swarm.failed_tasks) == 3
     for task in tasks:

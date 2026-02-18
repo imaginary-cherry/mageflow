@@ -1,11 +1,12 @@
 import asyncio
 from datetime import datetime
-from hatchet_sdk import NonRetryableException
+
 import pytest
+from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from thirdmagic.task import TaskSignature
 from tests.integration.hatchet.assertions import (
     get_runs,
     assert_signature_done,
@@ -257,7 +258,7 @@ async def test__suspended_task_with_retries__does_not_retry(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    loaded_signature = await TaskSignature.get_safe(retry_task_sign.key)
+    loaded_signature = await TaskSignature.aget(retry_task_sign.key)
     assert_task_was_paused(runs, loaded_signature)
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)

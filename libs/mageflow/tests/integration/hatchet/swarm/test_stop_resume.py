@@ -2,8 +2,8 @@ import asyncio
 from datetime import datetime
 
 import pytest
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (

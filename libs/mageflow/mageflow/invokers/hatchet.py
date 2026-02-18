@@ -36,7 +36,7 @@ class HatchetInvoker(BaseInvoker):
 
     async def task_signature(self) -> Optional[TaskSignature]:
         if self.task_id:
-            return await TaskSignature.get_safe(self.task_id)
+            return await TaskSignature.afind_one(self.task_id)
         return None
 
     @property
@@ -47,11 +47,11 @@ class HatchetInvoker(BaseInvoker):
         return self.task_id is None
 
     async def start_task(self) -> TaskSignature | None:
-        task_id = self.task_id
-        if task_id:
-            async with TaskSignature.alock_from_key(task_id) as signature:
+        task = await self.task_signature()
+        if task:
+            async with task.apipeline() as signature:
                 await signature.change_status(SignatureStatus.ACTIVE)
-                await signature.task_status.aupdate(worker_task_id=self.workflow_id)
+                signature.worker_task_id = self.workflow_id
                 return signature
         return None
 

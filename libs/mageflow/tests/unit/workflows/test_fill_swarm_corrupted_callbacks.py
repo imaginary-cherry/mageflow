@@ -1,10 +1,9 @@
 import base64
 
 import pytest
-
 from thirdmagic.task import TaskSignature
-from mageflow.swarm.workflows import fill_swarm_running_tasks
 
+from mageflow.swarm.workflows import fill_swarm_running_tasks
 from tests.unit.workflows.conftest import CompletedSwarmWithSuccessCallback
 
 
@@ -35,7 +34,7 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
     assert len(called_signatures) == len(success_callbacks)
     for sig in called_signatures:
         assert sig.key in success_callbacks
-        reloaded_callback = await TaskSignature.get_safe(sig.key)
+        reloaded_callback = await TaskSignature.aget(sig.key)
         assert reloaded_callback.model_validators is None
 
 
@@ -61,5 +60,5 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
     assert len(called_signatures) == len(error_callbacks)
     for sig in called_signatures:
         assert sig.key in error_callbacks
-        reloaded_callback = await TaskSignature.get_safe(sig.key)
+        reloaded_callback = await TaskSignature.aget(sig.key)
         assert reloaded_callback.model_validators is None

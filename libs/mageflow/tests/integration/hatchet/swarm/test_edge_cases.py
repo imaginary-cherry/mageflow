@@ -1,8 +1,8 @@
 import asyncio
 
 import pytest
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import get_runs, assert_swarm_task_done

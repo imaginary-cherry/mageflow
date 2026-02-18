@@ -1,7 +1,7 @@
 import pytest
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.messages import SwarmMessage
-from thirdmagic.swarm.model import SwarmTaskSignature
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 
 
@@ -21,7 +21,7 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
     # Assert
     assert mock_adapter.acall_signatures.call_count == 1
 
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm_task.key)
+    reloaded_swarm = await SwarmTaskSignature.afind_one(swarm_task.key)
     assert len(reloaded_swarm.tasks_left_to_run) == 0
 
     mock_activate_success.assert_not_awaited()

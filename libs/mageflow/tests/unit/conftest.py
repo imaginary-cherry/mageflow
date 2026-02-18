@@ -9,8 +9,8 @@ from hatchet_sdk import Hatchet, ClientConfig, Context
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow

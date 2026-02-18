@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 from thirdmagic.chain.model import ChainTaskSignature
-
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
+
 from tests.integration.hatchet.assertions import (
     assert_chain_done,
     assert_redis_is_clean,
@@ -68,7 +68,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
         is_swarm_closed=True,
         success_callbacks=[final_swarm_success],
         config=SwarmConfig(max_concurrency=2),
-        **main_swarm_kwargs
+        **main_swarm_kwargs,
     )
     tasks = await TaskSignature.afind()
     tasks_map = {task.key: task for task in tasks}
@@ -128,5 +128,3 @@ async def test__swarm_with_swarms_and_chains__sanity(
     await assert_redis_is_clean(redis_client)
 
 
-# TODO - test swarm also as callback for task (error and success), and as part of a chain
-# TODO - test chain also as callback for task (error and success), and as part of a chain

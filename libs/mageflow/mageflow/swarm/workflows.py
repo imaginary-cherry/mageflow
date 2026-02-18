@@ -12,7 +12,7 @@ async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
     try:
         ctx.log(f"Swarm task started {msg}")
         swarm_task_id = msg.swarm_task_id
-        swarm_task = await SwarmTaskSignature.get_safe(swarm_task_id)
+        swarm_task = await SwarmTaskSignature.afind_one(swarm_task_id)
         if swarm_task.has_swarm_started:
             ctx.log(f"Swarm task started but already running {msg}")
             return

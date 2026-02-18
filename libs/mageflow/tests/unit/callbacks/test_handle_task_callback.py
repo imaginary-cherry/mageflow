@@ -78,7 +78,7 @@ async def test__pending_signature__error_with_retry__raises_without_failing(
     with pytest.raises(ValueError, match="test error"):
         await raising_handler(message, ctx)
 
-    reloaded = await TaskSignature.get_safe(signature.key)
+    reloaded = await TaskSignature.aget(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
     mock_adapter.acall_signatures.assert_not_awaited()
 
@@ -224,7 +224,7 @@ async def test__suspended_signature__kwargs_updated():
         await default_handler(message, ctx)
 
     # Assert
-    reloaded = await TaskSignature.get_safe(signature.key)
+    reloaded = await TaskSignature.aget(signature.key)
     assert "base_data" in reloaded.kwargs
     assert reloaded.kwargs["base_data"] == {"key": "value"}
 
@@ -411,7 +411,7 @@ async def test__retries_3_attempt_1__error__not_failed(
     with pytest.raises(RuntimeError, match="retry"):
         await raising_handler(message, ctx)
 
-    reloaded = await TaskSignature.get_safe(signature.key)
+    reloaded = await TaskSignature.aget(signature.key)
     assert reloaded.task_status.status != SignatureStatus.FAILED
     mock_adapter.acall_signatures.assert_not_awaited()
 
