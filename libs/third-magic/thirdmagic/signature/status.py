@@ -23,7 +23,6 @@ class PauseActionTypes(str, Enum):
 class TaskStatus(AtomicRedisModel):
     status: SignatureStatus = SignatureStatus.PENDING
     last_status: SignatureStatus = SignatureStatus.PENDING
-    worker_task_id: str = ""
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 
     def is_canceled(self):

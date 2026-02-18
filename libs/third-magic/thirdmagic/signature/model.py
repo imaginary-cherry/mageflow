@@ -1,4 +1,6 @@
+import abc
 import asyncio
+from abc import ABC
 from datetime import datetime
 from typing import Optional, Self, Any, TypeAlias, ClassVar, cast
 
@@ -12,7 +14,6 @@ from rapyer.types import RedisDict, RedisList, RedisDatetime
 
 from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.utils import HAS_HATCHET
 
@@ -20,11 +21,10 @@ if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 
-class Signature(AtomicRedisModel):
+class Signature(AtomicRedisModel, ABC):
     task_name: str
     kwargs: RedisDict[Any] = Field(default_factory=dict)
     creation_time: RedisDatetime = Field(default_factory=datetime.now)
-    return_field_name: str = DEFAULT_RESULT_NAME
     success_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     error_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
@@ -35,11 +35,11 @@ class Signature(AtomicRedisModel):
 
     @field_validator("success_callbacks", "error_callbacks", mode="before")
     @classmethod
-    def validate_tasks_id(cls, v: list) -> list[RapyerKey]:
+    def validate_tasks_id(cls, v: list) -> list[str]:
         return [cls.validate_task_key(item) for item in v]
 
     @classmethod
-    def validate_task_key(cls, v) -> RapyerKey:
+    def validate_task_key(cls, v) -> str:
         if isinstance(v, bytes):
             return RapyerKey(v.decode())
         if isinstance(v, str):
@@ -56,18 +56,17 @@ class Signature(AtomicRedisModel):
         except KeyNotFound:
             return None
 
+    @abc.abstractmethod
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        return await self.ClientAdapter.acall_signature(
-            self, msg, set_return_field, **kwargs
-        )
+        pass
 
     if HAS_HATCHET:
 
+        @abc.abstractmethod
         async def aio_run_no_wait(
             self, msg: BaseModel, options: TriggerWorkflowOptions = None
         ):
-            params = dict(options=options) if options else {}
-            return await self.acall(msg, set_return_field=False, **params)
+            pass
 
     async def activate_success(self, msg):
         success_signatures = await rapyer.afind(*self.success_callbacks)
@@ -113,12 +112,6 @@ class Signature(AtomicRedisModel):
             task = cast(Signature, task)
             return await task.remove()
 
-    async def handle_inactive_task(self, msg: BaseModel):
-        if self.task_status.status == SignatureStatus.SUSPENDED:
-            await self.on_pause_signature(msg)
-        elif self.task_status.status == SignatureStatus.CANCELED:
-            await self.on_cancel_signature(msg)
-
     async def should_run(self):
         return self.task_status.should_run()
 
@@ -137,25 +130,15 @@ class Signature(AtomicRedisModel):
         except Exception as e:
             return False
 
-    async def on_pause_signature(self, msg: BaseModel):
-        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
-
-    async def on_cancel_signature(self, msg: BaseModel):
-        await self.remove()
-
     @classmethod
     async def resume_from_key(cls, task_key: RapyerKey):
         async with rapyer.alock_from_key(task_key) as task:
             task = cast(Signature, task)
             await task.resume()
 
+    @abc.abstractmethod
     async def resume(self):
-        last_status = self.task_status.last_status
-        if last_status == SignatureStatus.ACTIVE:
-            await self.change_status(SignatureStatus.PENDING)
-            await self.ClientAdapter.acall_signature(self, None, set_return_field=False)
-        else:
-            await self.change_status(last_status)
+        pass
 
     @classmethod
     async def suspend_from_key(cls, task_key: RapyerKey):
