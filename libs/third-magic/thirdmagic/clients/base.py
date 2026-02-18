@@ -64,7 +64,7 @@ class BaseClientAdapter(ABC):
     ):
         return asyncio.gather(
             *[
-                self.acall_signature(signature, msg, set_return_field, **kwargs)
+                signature.acall(msg, set_return_field, **kwargs)
                 for signature, msg in zip(signatures, msgs)
             ]
         )
