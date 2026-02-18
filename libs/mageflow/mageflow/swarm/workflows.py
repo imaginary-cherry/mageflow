@@ -2,7 +2,6 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.consts import SWARM_ACTION_FILL
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
 
@@ -44,7 +43,9 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
     async with SwarmTaskSignature.alock_from_key(
         msg.swarm_task_id, action=SWARM_ACTION_FILL
     ) as swarm_task:
-        invoker = HatchetInvoker.from_no_task(msg, msg.swarm_task_id)
+        lifecycle = await SwarmTaskSignature.ClientAdapter.lifecycle_from_signature(
+            msg, ctx, msg.swarm_task_id
+        )
         if swarm_task.has_swarm_failed():
             ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
 
@@ -54,7 +55,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
                 )
                 return
             await swarm_task.interrupt()
-            await invoker.task_failed(
+            await lifecycle.task_failed(
                 EmptyModel(), RuntimeError("Swarm failed too much")
             )
             return
@@ -70,5 +71,5 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
         is_swarm_finished_running = await swarm_task.is_swarm_done()
         if is_swarm_finished_running and not_yet_published:
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
-            await invoker.task_success(EmptyModel())
+            await lifecycle.task_success(EmptyModel())
             ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")

@@ -1,10 +1,13 @@
-from typing import Any
+from typing import Any, cast
 
-from hatchet_sdk import Hatchet, NonRetryableException
+import rapyer
+from hatchet_sdk import Hatchet, NonRetryableException, Context
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
+from rapyer.fields import RapyerKey
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.clients.base import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
@@ -22,6 +25,8 @@ from mageflow.clients.inner_task_names import (
     ON_SWARM_ITEM_ERROR,
 )
 from mageflow.clients.inner_task_names import SWARM_FILL_TASK
+from mageflow.lifecycle.signature import SignatureLifecycle
+from mageflow.lifecycle.task import TaskLifecycle
 from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
 
 
@@ -143,3 +148,31 @@ class HatchetClientAdapter(BaseClientAdapter):
 
     def task_name(self, task: BaseWorkflow) -> str:
         return task.name
+
+    async def create_lifecycle(self, message: BaseModel, ctx: Context):
+        task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME, None)
+        hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
+        hatchet_ctx_metadata.pop(TASK_ID_PARAM_NAME, None)
+        ctx_additional_metadata.set(hatchet_ctx_metadata)
+        signature = await rapyer.aget(task_key)
+        signature = cast(Signature, signature)
+        container = None
+        if signature.signature_container_id:
+            container = await rapyer.aget(signature.signature_container_id)
+
+        if task_key:
+            return SignatureLifecycle(message, ctx.workflow_id, signature, container)
+        else:
+            return TaskLifecycle()
+
+    async def lifecycle_from_signature(
+        self, message: BaseModel, ctx: Context, signature_key: RapyerKey
+    ):
+        signature = await rapyer.afind_one(signature_key)
+        if not signature:
+            return None
+        signature = cast(Signature, signature)
+        container = None
+        if signature.signature_container_id:
+            container = await rapyer.aget(signature.signature_container_id)
+        return SignatureLifecycle(message, ctx.workflow_id, signature, container)
