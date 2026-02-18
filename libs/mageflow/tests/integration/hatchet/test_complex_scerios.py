@@ -56,7 +56,10 @@ async def test__swarm_with_swarms_and_chains__sanity(
         [task3, cancel_retry], error=triggered_error, success=not_triggered_success
     )
 
-    base_swarm = await hatchet.aswarm(tasks=[task2, task3], is_swarm_closed=True)
+    base_kwargs = {"test_ctx": {"base_swarm_ctx": 1}}
+    base_swarm = await hatchet.aswarm(
+        tasks=[task2, task3], is_swarm_closed=True, **base_kwargs
+    )
     final_swarm_success = await hatchet.asign(task2_with_result)
 
     main_swarm = await hatchet.aswarm(
@@ -101,7 +104,9 @@ async def test__swarm_with_swarms_and_chains__sanity(
     assert_signature_not_called(runs, not_triggered_success)
 
     # Check the inner swarm is done
-    assert_swarm_task_done(runs, base_swarm, tasks, check_callbacks=False)
+    assert_swarm_task_done(
+        runs, base_swarm, tasks, swarm_msg=msg, check_callbacks=False, **base_kwargs
+    )
     # Assert swarms were called with params
     first_task = tasks_map[base_swarm.tasks[0]]
     assert_signature_done(runs, first_task, base_data=test_ctx)
