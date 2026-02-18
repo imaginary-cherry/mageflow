@@ -40,9 +40,7 @@ async def test_aio_run_no_wait_calls_workflow_with_correct_params(
     await signature.aio_run_no_wait(msg)
 
     # Assert
-    mock_adapter.acall_signature.assert_awaited_once_with(
-        signature, msg, set_return_field=False
-    )
+    mock_adapter.acall_signature.assert_awaited_once_with(signature, msg, False)
 
 
 @pytest.mark.asyncio
