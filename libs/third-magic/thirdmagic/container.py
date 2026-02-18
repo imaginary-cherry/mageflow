@@ -5,17 +5,17 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from thirdmagic.task.model import TaskSignature
+from thirdmagic.signature import Signature
 
 
-class ContainerTaskSignature(TaskSignature, ABC):
+class ContainerTaskSignature(Signature, ABC):
     @property
     @abc.abstractmethod
     def task_ids(self):
         pass
 
     @abc.abstractmethod
-    async def sub_tasks(self) -> list[TaskSignature]:
+    async def sub_tasks(self) -> list[Signature]:
         pass
 
     async def remove_references(self):
@@ -26,10 +26,10 @@ class ContainerTaskSignature(TaskSignature, ABC):
 
     @abc.abstractmethod
     async def on_sub_task_error(
-        self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
+        self, sub_task: Signature, error: Exception, original_msg: BaseModel
     ):
         pass
 
     @abc.abstractmethod
-    async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
+    async def on_sub_task_done(self, sub_task: Signature, results: Any):
         pass

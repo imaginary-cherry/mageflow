@@ -4,7 +4,7 @@ from thirdmagic.task.creator import (
     resolve_signature,
     TaskSignatureConvertible,
 )
-from thirdmagic.task.model import TaskSignature
+from thirdmagic.task.model import TaskSignature, TaskInputType
 from thirdmagic.task.status import SignatureStatus, TaskStatus, PauseActionTypes
 
 __all__ = [
@@ -16,4 +16,5 @@ __all__ = [
     "SignatureStatus",
     "TaskStatus",
     "PauseActionTypes",
+    "TaskInputType",
 ]

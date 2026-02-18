@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
-    from thirdmagic.task.model import TaskSignature
+    from thirdmagic.signature import Signature
     from thirdmagic.chain.model import ChainTaskSignature
     from thirdmagic.swarm.model import SwarmTaskSignature
     from thirdmagic.utils import HatchetTaskType
@@ -29,7 +29,7 @@ class BaseClientAdapter(ABC):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: "TaskSignature",
+        failed_task: "Signature",
     ):
         pass
 
@@ -39,25 +39,25 @@ class BaseClientAdapter(ABC):
 
     @abc.abstractmethod
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         pass
 
     @abc.abstractmethod
     async def acall_swarm_item_done(
-        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         pass
 
     @abc.abstractmethod
     async def acall_signature(
-        self, signature: "TaskSignature", msg: Any, set_return_field: bool, **kwargs
+        self, signature: "Signature", msg: Any, set_return_field: bool, **kwargs
     ):
         pass
 
     async def acall_signatures(
         self,
-        signatures: list["TaskSignature"],
+        signatures: list["Signature"],
         msgs: list,
         set_return_field: bool,
         **kwargs,
@@ -89,7 +89,7 @@ class DefaultClientAdapter(BaseClientAdapter):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: "TaskSignature",
+        failed_task: "Signature",
     ):
         raise NotImplementedError("Set a client before we start")
 
@@ -97,12 +97,12 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_swarm_item_done(
-        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         raise NotImplementedError("Set a client before we start")
 
@@ -110,7 +110,7 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_signature(
-        self, signature: "TaskSignature", set_return_field: bool, **kwargs
+        self, signature: "Signature", set_return_field: bool, **kwargs
     ):
         raise NotImplementedError("Set a client before we start")
 
