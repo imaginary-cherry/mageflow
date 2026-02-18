@@ -1,10 +1,10 @@
 import asyncio
 
 import pytest
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.signature.model import TaskSignature
-from mageflow.swarm.model import SwarmConfig
 from tests.integration.hatchet.assertions import get_runs, assert_swarm_task_done
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -21,7 +21,7 @@ async def test__sub_task_is_cancelled__swarm_still_finish(
         hatchet_client_init.hatchet,
     )
     swarm_tasks = [timeout_task]
-    swarm = await mageflow.swarm(
+    swarm = await mageflow.aswarm(
         tasks=swarm_tasks, config=SwarmConfig(max_concurrency=1)
     )
 

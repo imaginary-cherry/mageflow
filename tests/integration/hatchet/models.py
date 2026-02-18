@@ -1,8 +1,7 @@
 from typing import Any
 
 from pydantic import BaseModel, Field
-
-from mageflow.models.message import ReturnValue
+from thirdmagic.message import ReturnValue
 
 
 class BaseWorkerMessage(BaseModel):
@@ -11,6 +10,7 @@ class BaseWorkerMessage(BaseModel):
 
 class ContextMessage(BaseWorkerMessage):
     base_data: dict = Field(default_factory=dict)
+    more_context: dict = Field(default_factory=dict)
 
 
 class MessageWithData(ContextMessage):

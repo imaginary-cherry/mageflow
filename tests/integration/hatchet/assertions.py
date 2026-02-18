@@ -4,17 +4,17 @@ from datetime import datetime
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
 from pydantic import BaseModel
-
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.consts import (
-    TASK_ID_PARAM_NAME,
+from rapyer.fields import RapyerKey
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.consts import (
     MAGEFLOW_TASK_INITIALS,
+    TASK_ID_PARAM_NAME,
     REMOVED_TASK_TTL,
 )
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.types import TaskIdentifierType
-from mageflow.swarm.model import SwarmTaskSignature
-from mageflow.utils.models import return_value_field
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from thirdmagic.utils import return_value_field
+
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -95,32 +95,35 @@ def get_task_param(wf: V1TaskSummary, param_name: str):
 
 def assert_signature_done(
     runs: HatchetRuns,
-    task_sign: TaskSignature | TaskIdentifierType,
+    task_sign: TaskSignature | RapyerKey,
     hatchet_task_results=None,
     check_called_once=True,
     check_finished_once=True,
     allow_fails=False,
     **input_params,
 ) -> V1TaskSummary:
+    task_sign_key = task_sign
+    task_name = ""
     if isinstance(task_sign, TaskSignature):
-        task_sign = task_sign.key
+        task_sign_key = task_sign.key
+        task_name = task_sign.task_name
 
     if check_called_once or check_finished_once:
         task_id_calls = [
             wf
             for wf in runs
-            if get_task_param(wf, TASK_ID_PARAM_NAME) == task_sign
+            if get_task_param(wf, TASK_ID_PARAM_NAME) == task_sign_key
             # If we just want to check that the task was finished once,
             # In this case it is ok if the task was called more than once (For suspended tasks cases)
             if check_called_once or is_wf_done(wf)
         ]
         assert (
             len(task_id_calls) == 1
-        ), f"Task {task_sign} was called more than once or not at all: {task_id_calls}"
+        ), f"Task {task_name} - {task_sign_key} was called more than once or not at all: {task_id_calls}"
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True, ignore_cancel=True)
     return _assert_task_done(
-        task_sign, wf_by_task_id, input_params, hatchet_task_results, allow_fails
+        task_sign_key, wf_by_task_id, input_params, hatchet_task_results, allow_fails
     )
 
 
@@ -243,16 +246,18 @@ def assert_swarm_task_done(
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
-    msg_data = swarm_msg.model_dump() if swarm_msg else {}
+    msg_data = (
+        swarm_msg.model_dump(mode="json", exclude_unset=True) if swarm_msg else {}
+    )
     for sub_task_id in swarm_task.tasks:
         task = task_map[sub_task_id]
         wf = assert_signature_done(
             runs,
-            sub_task_id,
+            task,
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **(swarm_task.kwargs | task.kwargs | msg_data | swarm_kwargs),
+            **(task.kwargs | msg_data | swarm_kwargs),
         )
         swarm_runs.append(wf)
 

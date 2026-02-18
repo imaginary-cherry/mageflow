@@ -1,9 +1,9 @@
 import asyncio
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_chain_done,
@@ -39,14 +39,14 @@ async def test_chain_integration(
     additional_text_ctx = {"more_data": True}
     message = ContextMessage(base_data=test_ctx)
 
-    signature2 = await mageflow.sign(task2, success_callbacks=[sign_callback1])
-    chain_success_error_callback = await mageflow.sign(error_callback)
-    success_chain_signature = await mageflow.sign(
+    signature2 = await mageflow.asign(task2, success_callbacks=[sign_callback1])
+    chain_success_error_callback = await mageflow.asign(error_callback)
+    success_chain_signature = await mageflow.asign(
         chain_callback, error_callbacks=[chain_success_error_callback]
     )
 
     # Act
-    chain_signature = await mageflow.chain(
+    chain_signature = await mageflow.achain(
         [sign_task1, signature2.key, task3],
         success=success_chain_signature,
         test_ctx=additional_text_ctx,
@@ -86,14 +86,14 @@ async def test_chain_fail(
     message = ContextMessage(base_data=test_ctx)
     base_data = {"fail": True}
 
-    chain_success_error_callback = await mageflow.sign(
+    chain_success_error_callback = await mageflow.asign(
         error_callback, base_data=base_data
     )
-    success_chain_signature = await mageflow.sign(chain_callback)
-    fail_sign = await mageflow.sign(fail_task, base_data=base_data)
+    success_chain_signature = await mageflow.asign(chain_callback)
+    fail_sign = await mageflow.asign(fail_task, base_data=base_data)
 
     # Act
-    chain_signature = await mageflow.chain(
+    chain_signature = await mageflow.achain(
         [sign_task1, fail_sign, task3],
         success=success_chain_signature,
         error=chain_success_error_callback,
