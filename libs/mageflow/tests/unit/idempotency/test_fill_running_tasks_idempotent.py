@@ -25,7 +25,6 @@ async def original_tasks():
 async def swarm_signature(publish_state):
     swarm_signature = SwarmTaskSignature(
         task_name="test_swarm",
-        model_validators=ContextMessage,
         current_running_tasks=0,
         config=SwarmConfig(max_concurrency=3),
         publishing_state_id=publish_state.key,

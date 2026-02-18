@@ -3,7 +3,7 @@ from unittest.mock import patch, AsyncMock
 import pytest
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.task import TaskSignature
+from thirdmagic.signature import Signature
 
 from mageflow.chain.workflows import chain_end_task, chain_error_task
 from tests.unit.workflows.conftest import create_chain_test_setup
@@ -14,7 +14,7 @@ def mock_remove_task_with_delete():
     async def delete_instead_of_ttl(self):
         await self.adelete()
 
-    with patch.object(TaskSignature, "remove_task", delete_instead_of_ttl):
+    with patch.object(Signature, "remove_task", delete_instead_of_ttl):
         yield
 
 

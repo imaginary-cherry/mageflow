@@ -9,6 +9,7 @@ from hatchet_sdk import Hatchet, ClientConfig, Context
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -225,7 +226,7 @@ async def swarm_task(empty_swarm: SwarmTaskSignature, mock_task_def):
 @pytest.fixture
 def mock_adapter():
     adapter = AsyncMock(spec=BaseClientAdapter)
-    TaskSignature.ClientAdapter = adapter
+    Signature.ClientAdapter = adapter
     yield adapter
 
 
