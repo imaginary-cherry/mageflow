@@ -2,27 +2,9 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.consts import SWARM_ACTION_FILL
 from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
-
-
-async def swarm_start_tasks(msg: SwarmMessage, ctx: Context):
-    try:
-        ctx.log(f"Swarm task started {msg}")
-        swarm_task_id = msg.swarm_task_id
-        swarm_task = await SwarmTaskSignature.afind_one(swarm_task_id)
-        if swarm_task.has_swarm_started:
-            ctx.log(f"Swarm task started but already running {msg}")
-            return
-
-        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
-        ctx.log(f"Swarm task started running {swarm_task.config.max_concurrency} tasks")
-    except Exception as e:
-        ctx.log(f"MAJOR - Error in swarm start tasks")
-        raise
 
 
 async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
@@ -38,8 +20,7 @@ async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
         await swarm_task.finish_task(swarm_item_id, msg.mageflow_results)
 
         # Publish next tasks
-        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_id)
-        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await SwarmTaskSignature.ClientAdapter.afill_swarm(swarm_task)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm start item done")
         raise
@@ -53,8 +34,7 @@ async def swarm_item_failed(msg: SwarmErrorMessage, ctx: Context):
         # Check if the swarm should end
         swarm_task = await SwarmTaskSignature.aget(swarm_task_key)
         await swarm_task.task_failed(swarm_item_key)
-        fill_swarm_msg = SwarmMessage(swarm_task_id=swarm_task_key)
-        await HatchetInvoker.run_task(SWARM_FILL_TASK, fill_swarm_msg)
+        await SwarmTaskSignature.ClientAdapter.afill_swarm(swarm_task)
     except Exception as e:
         ctx.log(f"MAJOR - Error in swarm item failed")
         raise

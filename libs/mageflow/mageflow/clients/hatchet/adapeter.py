@@ -7,20 +7,21 @@ from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.clients.base import BaseClientAdapter
-from thirdmagic.clients.inner_task_names import (
-    ON_CHAIN_END,
-    ON_CHAIN_ERROR,
-    ON_SWARM_ITEM_DONE,
-    ON_SWARM_ITEM_ERROR,
-    ON_SWARM_START,
-)
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.signature import Signature
 from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
+from mageflow.clients.inner_task_names import (
+    ON_CHAIN_END,
+    ON_CHAIN_ERROR,
+    ON_SWARM_ITEM_DONE,
+    ON_SWARM_ITEM_ERROR,
+)
+from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
 
 
@@ -28,11 +29,11 @@ class HatchetClientAdapter(BaseClientAdapter):
     def __init__(self, hatchet: Hatchet):
         self.hatchet = hatchet
 
-    def task_ctx(self, signature: "Signature") -> dict:
+    def task_ctx(self, signature: "TaskSignature") -> dict:
         return {TASK_ID_PARAM_NAME: signature.key}
 
     def _update_options(
-        self, signature: "Signature", options: TriggerWorkflowOptions = None
+        self, signature: "TaskSignature", options: TriggerWorkflowOptions = None
     ):
         options = options or TriggerWorkflowOptions()
         task_ctx = self.task_ctx(signature)
@@ -66,7 +67,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         )
         return await stub.aio_run_no_wait(chain_err_msg)
 
-    async def astart_swarm(
+    async def afill_swarm(
         self,
         swarm: "SwarmTaskSignature",
         options: TriggerWorkflowOptions = None,
@@ -75,7 +76,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         start_swarm_msg = SwarmMessage(swarm_task_id=swarm.key)
         params = dict(options=options) if options else {}
         stub = self.hatchet.stubs.task(
-            name=ON_SWARM_START, input_validator=SwarmMessage
+            name=SWARM_FILL_TASK, input_validator=SwarmMessage
         )
         return await stub.aio_run_no_wait(start_swarm_msg, **params)
 
@@ -111,7 +112,7 @@ class HatchetClientAdapter(BaseClientAdapter):
 
     async def acall_signature(
         self,
-        signature: "Signature",
+        signature: TaskSignature,
         msg: Any,
         set_return_field: bool,
         options: TriggerWorkflowOptions = None,
