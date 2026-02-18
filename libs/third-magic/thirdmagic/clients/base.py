@@ -80,6 +80,14 @@ class BaseClientAdapter(ABC):
     def task_name(self, task: "HatchetTaskType") -> str:
         pass
 
+    @abc.abstractmethod
+    async def create_lifecycle(self, *args):
+        pass
+
+    @abc.abstractmethod
+    async def lifecycle_from_signature(self, *args):
+        pass
+
 
 class DefaultClientAdapter(BaseClientAdapter):
     async def acall_chain_done(self, results: Any, chain: "ChainTaskSignature"):
@@ -122,3 +130,9 @@ class DefaultClientAdapter(BaseClientAdapter):
 
     def task_name(self, task: "HatchetTaskType") -> str:
         raise NotImplementedError("Set a client before we start")
+
+    def create_lifecycle(self, *args):
+        raise NotImplementedError("Set a client before we start")
+
+    async def lifecycle_from_signature(self, *args):
+        pass
