@@ -151,19 +151,23 @@ class HatchetClientAdapter(BaseClientAdapter):
 
     async def create_lifecycle(self, message: BaseModel, ctx: Context):
         task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME, None)
+        if task_key is None:
+            return TaskLifecycle()
+
         hatchet_ctx_metadata = ctx_additional_metadata.get() or {}
         hatchet_ctx_metadata.pop(TASK_ID_PARAM_NAME, None)
         ctx_additional_metadata.set(hatchet_ctx_metadata)
-        signature = await rapyer.aget(task_key)
+
+        signature = await rapyer.afind_one(task_key)
+        if not signature:
+            raise NonRetryableException("Signature was deleted, we can't run the task")
+
         signature = cast(Signature, signature)
         container = None
         if signature.signature_container_id:
             container = await rapyer.aget(signature.signature_container_id)
 
-        if task_key:
-            return SignatureLifecycle(message, ctx.workflow_id, signature, container)
-        else:
-            return TaskLifecycle()
+        return SignatureLifecycle(message, ctx.workflow_id, signature, container)
 
     async def lifecycle_from_signature(
         self, message: BaseModel, ctx: Context, signature_key: RapyerKey
