@@ -7,8 +7,8 @@ from rapyer.fields import RapyerKey
 
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.errors import MissingSignatureError
+from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task.model import TaskSignature
-from thirdmagic.task.status import SignatureStatus
 from thirdmagic.utils import HAS_HATCHET
 
 if HAS_HATCHET:

@@ -8,13 +8,13 @@ from rapyer.fields import RapyerKey
 from rapyer.types import RedisList, RedisInt
 
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
-from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
-from thirdmagic.task.model import TaskSignature
 from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
+from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
-from thirdmagic.task.status import SignatureStatus
+from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
+from thirdmagic.task.model import TaskSignature
 from thirdmagic.utils import HAS_HATCHET
 
 if HAS_HATCHET:
