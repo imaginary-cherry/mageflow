@@ -6,10 +6,9 @@ import pytest_asyncio
 import thirdmagic
 from tests.unit.messages import ContextMessage
 from tests.unit.utils import extract_hatchet_validator
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.task import TaskSignature, SignatureStatus
+from thirdmagic.swarm import SwarmTaskSignature
 
 
 @dataclass

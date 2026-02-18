@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
-    from thirdmagic.signature.model import TaskSignature
+    from thirdmagic.task.model import TaskSignature
     from thirdmagic.chain.model import ChainTaskSignature
     from thirdmagic.swarm.model import SwarmTaskSignature
     from thirdmagic.utils import HatchetTaskType

@@ -3,7 +3,7 @@ from typing import overload, Any
 
 import rapyer
 
-from thirdmagic.signature.creator import TaskSignatureOptions, TaskSignatureConvertible
+from thirdmagic.task.creator import TaskSignatureOptions, TaskSignatureConvertible
 from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.typing_support import Unpack

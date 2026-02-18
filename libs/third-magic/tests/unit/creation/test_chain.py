@@ -4,8 +4,8 @@ import pytest
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.task import TaskSignature
 
 
 @dataclass

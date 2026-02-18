@@ -7,8 +7,8 @@ import rapyer
 from hatchet_sdk import ClientConfig, Hatchet
 
 from thirdmagic.clients import BaseClientAdapter
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
 

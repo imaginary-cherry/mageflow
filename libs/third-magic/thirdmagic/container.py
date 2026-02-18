@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task.model import TaskSignature
 
 
 class ContainerTaskSignature(TaskSignature, ABC):

@@ -4,8 +4,8 @@ from typing import TypedDict, Any, overload, TypeAlias, Optional
 import rapyer
 from rapyer.fields import RapyerKey
 
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import TaskStatus
+from thirdmagic.task.model import TaskSignature
+from thirdmagic.task.status import TaskStatus
 from thirdmagic.typing_support import Unpack
 from thirdmagic.utils import HatchetTaskType
 

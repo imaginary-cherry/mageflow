@@ -6,7 +6,7 @@ from pydantic import field_validator, Field, BaseModel
 from rapyer.fields import RapyerKey
 
 from thirdmagic.errors import MissingSignatureError
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task.model import TaskSignature
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.utils import HAS_HATCHET

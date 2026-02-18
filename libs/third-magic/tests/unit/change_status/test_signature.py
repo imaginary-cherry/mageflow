@@ -3,8 +3,7 @@ import pytest
 
 from tests.unit.assertions import assert_tasks_changed_status
 from tests.unit.change_status.assertions import assert_resume_signature
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import TaskSignature, SignatureStatus
 
 
 @pytest.mark.asyncio

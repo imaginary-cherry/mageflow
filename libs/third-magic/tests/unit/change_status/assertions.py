@@ -1,7 +1,7 @@
 from typing import cast
 from unittest.mock import Mock, call
 
-from thirdmagic.signature import TaskSignature
+from thirdmagic.task import TaskSignature
 
 
 def assert_resume_signature(signature: TaskSignature, mock_adapter: Mock):

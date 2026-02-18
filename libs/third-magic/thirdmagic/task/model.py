@@ -14,7 +14,7 @@ from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.errors import UnrecognizedTaskError
 from thirdmagic.message import DEFAULT_RESULT_NAME
-from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
+from thirdmagic.task.status import TaskStatus, PauseActionTypes, SignatureStatus
 from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
 
@@ -174,7 +174,7 @@ class TaskSignature(AtomicRedisModel):
             last_status=self.task_status.status, status=status
         )
 
-    # When pausing signature from outside the task
+    # When pausing task from outside the task
     @classmethod
     async def safe_change_status(cls, task_id: RapyerKey, status: SignatureStatus):
         try:

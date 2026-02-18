@@ -3,8 +3,7 @@ from rapyer.fields import RapyerKey
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
-from thirdmagic.signature.creator import resolve_signatures
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import resolve_signatures, TaskSignature
 
 
 @pytest.fixture

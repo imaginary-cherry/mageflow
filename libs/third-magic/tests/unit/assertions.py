@@ -4,7 +4,7 @@ from rapyer.fields import RapyerKey
 from redis.asyncio import Redis
 
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.task import TaskSignature
 
 T = TypeVar("T", bound=TaskSignature)
 SwarmListName = Literal["finished_tasks", "failed_tasks", "tasks_results", "tasks"]
