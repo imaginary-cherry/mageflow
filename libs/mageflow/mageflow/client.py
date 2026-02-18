@@ -9,7 +9,6 @@ from thirdmagic.signature import Signature
 from mageflow.callbacks import AcceptParams
 from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
-from mageflow.invokers.hatchet import HatchetInvoker
 
 T = TypeVar("T")
 
@@ -28,7 +27,6 @@ def Mageflow(
     if hatchet_client is None:
         hatchet_client = Hatchet()
 
-    HatchetInvoker.client = hatchet_client
     mageflow_adapter = HatchetClientAdapter(hatchet_client)
     Signature.ClientAdapter = mageflow_adapter
 

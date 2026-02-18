@@ -82,25 +82,3 @@ class BaseInvoker(ABC):
         if self.is_vanilla_run():
             return True
         return False
-
-    @classmethod
-    @abc.abstractmethod
-    async def wait_task(
-        cls,
-        task_name: str,
-        msg: BaseModel,
-        validator: type[BaseModel] = None,
-        **request_kwargs,
-    ):
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    async def run_task(
-        cls,
-        task_name: str,
-        msg: BaseModel,
-        validator: type[BaseModel] = None,
-        **request_kwargs,
-    ):
-        pass

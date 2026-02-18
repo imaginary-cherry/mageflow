@@ -12,9 +12,6 @@ from mageflow.invokers.base import BaseInvoker
 
 
 class HatchetInvoker(BaseInvoker):
-    # TODO - This should be in init, and the entire class created via factory in mageflow_config
-    client: Hatchet = None
-
     def __init__(
         self, message: BaseModel, task_key: RapyerKey, workflow_id: Optional[str]
     ):
@@ -55,27 +52,3 @@ class HatchetInvoker(BaseInvoker):
                 signature.worker_task_id = self.workflow_id
                 return signature
         return None
-
-    @classmethod
-    async def wait_task(
-        cls,
-        task_name: str,
-        msg: BaseModel,
-        validator: type[BaseModel] = None,
-        **request_kwargs,
-    ):
-        validator = validator or type(msg)
-        wf = cls.client.workflow(name=task_name, input_validator=validator)
-        return await wf.aio_run(msg, **request_kwargs)
-
-    @classmethod
-    async def run_task(
-        cls,
-        task_name: str,
-        msg: BaseModel,
-        validator: type[BaseModel] = None,
-        **request_kwargs,
-    ):
-        validator = validator or type(msg)
-        wf = cls.client.workflow(name=task_name, input_validator=validator)
-        return await wf.aio_run_no_wait(msg, **request_kwargs)
