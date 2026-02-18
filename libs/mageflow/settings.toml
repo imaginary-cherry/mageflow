@@ -1,5 +1,0 @@
-[hatchet]
-tls_config = {strategy = "none"}
-
-[redis]
-url = "redis://localhost:6379/"
