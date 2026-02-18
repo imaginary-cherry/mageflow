@@ -43,7 +43,7 @@ async def test__chain_signature_create_save_load__input_output_same__sanity(
         tasks=tasks,
     )
     await original_chain_signature.asave()
-    loaded_chain_signature = await TaskSignature.get_safe(original_chain_signature.key)
+    loaded_chain_signature = await TaskSignature.aget(original_chain_signature.key)
 
     # Assert
     assert original_chain_signature == loaded_chain_signature
@@ -93,12 +93,12 @@ async def test_chain_creation_with_various_task_types_loads_correctly_from_redis
     chain_signature = await thirdmagic.chain([task.key for task in tasks])
 
     # Assert
-    loaded_chain = await TaskSignature.get_safe(chain_signature.key)
+    loaded_chain = await TaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
     assert loaded_chain.tasks == [task.key for task in tasks]
 
     for task in tasks:
-        loaded_task = await TaskSignature.get_safe(task.key)
+        loaded_task = await TaskSignature.aget(task.key)
         assert loaded_task.key == task.key
         assert loaded_task.task_name == task.task_name
         assert loaded_task.signature_container_id == chain_signature.key
@@ -137,15 +137,15 @@ async def test_chain_success_callbacks_tasks_linked_via_container_sanity():
     chain_signature = await thirdmagic.chain([task1.key, task2.key, task3.key])
 
     # Assert
-    reloaded_task1 = await TaskSignature.get_safe(task1.key)
-    reloaded_task2 = await TaskSignature.get_safe(task2.key)
-    reloaded_task3 = await TaskSignature.get_safe(task3.key)
+    reloaded_task1 = await TaskSignature.aget(task1.key)
+    reloaded_task2 = await TaskSignature.aget(task2.key)
+    reloaded_task3 = await TaskSignature.aget(task3.key)
 
     assert reloaded_task1.signature_container_id == chain_signature.key
     assert reloaded_task2.signature_container_id == chain_signature.key
     assert reloaded_task3.signature_container_id == chain_signature.key
 
-    loaded_chain = await TaskSignature.get_safe(chain_signature.key)
+    loaded_chain = await TaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
     assert loaded_chain.tasks == [task1.key, task2.key, task3.key]
 
@@ -169,8 +169,8 @@ async def test_chain_error_handling_via_container_sanity():
     chain_signature = await thirdmagic.chain([task1.key, task2.key])
 
     # Assert
-    reloaded_task1 = await TaskSignature.get_safe(task1.key)
-    reloaded_task2 = await TaskSignature.get_safe(task2.key)
+    reloaded_task1 = await TaskSignature.aget(task1.key)
+    reloaded_task2 = await TaskSignature.aget(task2.key)
 
     assert reloaded_task1.signature_container_id == chain_signature.key
     assert reloaded_task2.signature_container_id == chain_signature.key
@@ -209,7 +209,7 @@ async def test_chain_with_existing_callbacks_preserves_them_edge_case():
     chain_signature = await thirdmagic.chain([task_with_callbacks.key, simple_task.key])
 
     # Assert
-    reloaded_task = await TaskSignature.get_safe(task_with_callbacks.key)
+    reloaded_task = await TaskSignature.aget(task_with_callbacks.key)
 
     assert len(reloaded_task.success_callbacks) == 1
     assert existing_success.key in reloaded_task.success_callbacks

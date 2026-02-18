@@ -59,7 +59,7 @@ async def test_aio_run_no_wait_updates_kwargs_from_message(
 
     # Assert
     mock_adapter.astart_swarm.assert_awaited_once_with(swarm, options=options)
-    reloaded_swarm = await SwarmTaskSignature.get_safe(swarm.key)
+    reloaded_swarm = await SwarmTaskSignature.aget(swarm.key)
     msg_dump = msg.model_dump(mode="json", exclude_unset=True)
     assert reloaded_swarm.kwargs[SWARM_MESSAGE_PARAM_NAME] == msg_dump
     assert reloaded_swarm.kwargs["existing"] == swarm_kwargs["existing"]

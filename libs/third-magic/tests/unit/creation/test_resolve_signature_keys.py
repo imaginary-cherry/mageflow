@@ -62,7 +62,7 @@ async def test__resolve_signature_keys__all_hatchet_tasks__batch_creates(hatchet
     for i, sig in enumerate(result):
         assert isinstance(sig, TaskSignature)
         assert sig.task_name == f"test_task_{i}"
-        assert await TaskSignature.get_safe(sig.key) is not None
+        assert await TaskSignature.aget(sig.key) is not None
 
 
 @pytest.mark.asyncio

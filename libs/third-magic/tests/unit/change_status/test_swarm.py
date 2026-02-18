@@ -56,7 +56,7 @@ async def test_swarm_pause_signature_changes_all_swarm_and_chain_tasks_status_to
     # Assert
     # Verify swarm signature status changed to paused
     for task in expected_paused_tasks:
-        updated_signature = await TaskSignature.get_safe(task.key)
+        updated_signature = await TaskSignature.aget(task.key)
         assert (
             updated_signature.task_status.status == SignatureStatus.SUSPENDED
         ), f"{task.key} not paused - {task.task_name}"
@@ -104,7 +104,7 @@ async def test_swarm_change_status_with_optional_deleted_sub_tasks_edge_case(
     await swarm_signature.safe_change_status(swarm_signature.key, new_status)
 
     # Assert
-    reloaded_swarm = await TaskSignature.get_safe(swarm_signature.key)
+    reloaded_swarm = await TaskSignature.aget(swarm_signature.key)
     assert reloaded_swarm.task_status.status == new_status
     assert reloaded_swarm.task_status.last_status == SignatureStatus.PENDING
 
@@ -163,7 +163,7 @@ async def test_swarm_safe_change_status_on_deleted_signature_does_not_create_red
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.get_safe(swarm_key)
+    reloaded_signature = await TaskSignature.aget(swarm_key)
     assert reloaded_signature is None
 
 

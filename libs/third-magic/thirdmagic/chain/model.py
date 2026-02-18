@@ -50,7 +50,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         return cast(list[TaskSignature], sub_tasks)
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        first_task = await TaskSignature.get_safe(self.tasks[0])
+        first_task = await rapyer.afind_one(task_key)
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
 

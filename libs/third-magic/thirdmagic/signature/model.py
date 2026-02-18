@@ -49,13 +49,6 @@ class Signature(AtomicRedisModel, ABC):
         else:
             raise ValueError(f"Expected task ID or Signature, got {type(v).__name__}")
 
-    @classmethod
-    async def get_safe(cls, task_key: RapyerKey) -> Optional[Self]:
-        try:
-            return await rapyer.aget(task_key)
-        except KeyNotFound:
-            return None
-
     @abc.abstractmethod
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
         pass

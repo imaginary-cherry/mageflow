@@ -37,7 +37,7 @@ async def test_chain_safe_change_status_on_deleted_signature_does_not_create_red
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.get_safe(chain_key)
+    reloaded_signature = await TaskSignature.aget(chain_key)
     assert reloaded_signature is None
 
 
@@ -80,7 +80,7 @@ async def test_chain_change_status_with_optional_deleted_sub_tasks_edge_case(
     await chain_signature.safe_change_status(chain_signature.key, new_status)
 
     # Assert
-    reloaded_chain = await TaskSignature.get_safe(chain_signature.key)
+    reloaded_chain = await TaskSignature.aget(chain_signature.key)
     assert reloaded_chain.task_status.status == new_status
     assert reloaded_chain.task_status.last_status == SignatureStatus.PENDING
 
