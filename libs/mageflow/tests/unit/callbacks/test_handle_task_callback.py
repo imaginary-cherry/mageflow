@@ -2,7 +2,8 @@ import asyncio
 
 import pytest
 from hatchet_sdk import NonRetryableException
-from thirdmagic.signature import TaskSignature, SignatureStatus
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 from mageflow.callbacks import AcceptParams, HatchetResult
 from tests.integration.hatchet.models import ContextMessage
