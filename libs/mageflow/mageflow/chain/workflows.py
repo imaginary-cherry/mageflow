@@ -42,8 +42,6 @@ async def chain_error_task(msg: ChainErrorMessage, ctx: Context):
         ctx.log(f"Chain task failed {lifecycle_manager}")
 
         # Calling error callback from chain task
-        await invoker.task_failed(EmptyModel(**msg.original_msg), Exception(msg.error))
-        ctx.log(f"Clean redis from chain tasks {chain_signature.task_name}")
         await lifecycle_manager.task_failed(
             EmptyModel(**msg.original_msg), Exception(msg.error)
         )
