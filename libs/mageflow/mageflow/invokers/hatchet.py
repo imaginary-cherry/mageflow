@@ -1,5 +1,6 @@
 from typing import Optional
 
+import rapyer
 from hatchet_sdk import Context, Hatchet
 from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
@@ -36,7 +37,7 @@ class HatchetInvoker(BaseInvoker):
 
     async def task_signature(self) -> Optional[TaskSignature]:
         if self.task_id:
-            return await TaskSignature.afind_one(self.task_id)
+            return await rapyer.afind_one(self.task_id)
         return None
 
     @property
