@@ -3,7 +3,6 @@ from unittest.mock import patch
 import pytest
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.workflows import swarm_item_done
 from tests.unit.conftest import SwarmItemDoneSetup
 
@@ -52,7 +51,9 @@ async def test_retry_with_prepopulated_done_state_skips_update_idempotent(
     setup = swarm_item_done_setup
 
     # Act
-    with patch.object(HatchetInvoker, "run_task", side_effect=Exception):
+    with patch.object(
+        SwarmTaskSignature.ClientAdapter, "afill_swarm", side_effect=Exception
+    ):
         with pytest.raises(Exception):
             await swarm_item_done(setup.msg, setup.ctx)
     await swarm_item_done(setup.msg, setup.ctx)
@@ -99,8 +100,8 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
 
     # Act
     with patch.object(
-        HatchetInvoker,
-        "run_task",
+        SwarmTaskSignature.ClientAdapter,
+        "afill_swarm",
         side_effect=RuntimeError("Simulated wait_task failure"),
     ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):
