@@ -30,9 +30,9 @@ async def test__chain__task_timeout__chain_call_error_callback(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    success_callback_sign = await mageflow.sign(chain_callback)
-    error_callback_sign = await mageflow.sign(error_callback)
-    chain_signature = await mageflow.chain(
+    success_callback_sign = await mageflow.asign(chain_callback)
+    error_callback_sign = await mageflow.asign(error_callback)
+    chain_signature = await mageflow.achain(
         [sign_task1, timeout_task],
         success=success_callback_sign,
         error=error_callback_sign,

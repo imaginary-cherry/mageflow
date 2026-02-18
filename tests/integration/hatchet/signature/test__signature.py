@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.task import TaskSignature
+from thirdmagic.utils import return_value_field
 
 import mageflow
-from mageflow.signature.model import TaskSignature
-from mageflow.utils.models import return_value_field
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_signature_done,
@@ -39,7 +39,7 @@ async def test_signature_creation_and_execution_with_redis_cleanup_sanity(
     message = ContextMessage(base_data=test_ctx)
 
     # Act
-    signature = await mageflow.sign(task1)
+    signature = await mageflow.asign(task1)
     await signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
@@ -60,13 +60,13 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
     )
     message = ContextMessage(base_data=test_ctx)
 
-    error_callback_signature = await mageflow.sign(error_callback)
-    callback_signature1 = await mageflow.sign(
+    error_callback_signature = await mageflow.asign(error_callback)
+    callback_signature1 = await mageflow.asign(
         task1_callback, base_data={"callback_data": 1}
     )
-    callback_signature2 = await mageflow.sign(task1_callback)
+    callback_signature2 = await mageflow.asign(task1_callback)
     success_callbacks: list[TaskSignature] = [callback_signature1, callback_signature2]
-    main_signature = await mageflow.sign(
+    main_signature = await mageflow.asign(
         task2,
         success_callbacks=success_callbacks,
         error_callbacks=[error_callback_signature],
@@ -104,11 +104,11 @@ async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity
     message = ContextMessage(base_data=test_ctx)
 
     error_msg = "This is error"
-    error_callback_signature1 = await mageflow.sign(error_callback, error=error_msg)
-    error_callback_signature2 = await mageflow.sign(error_callback)
+    error_callback_signature1 = await mageflow.asign(error_callback, error=error_msg)
+    error_callback_signature2 = await mageflow.asign(error_callback)
     error_callbacks = [error_callback_signature1, error_callback_signature2]
-    callback_signature = await mageflow.sign(task1_callback)
-    error_sign = await mageflow.sign(
+    callback_signature = await mageflow.asign(task1_callback)
+    error_sign = await mageflow.asign(
         fail_task,
         error_callbacks=error_callbacks,
         success_callbacks=[callback_signature],
@@ -141,7 +141,7 @@ async def test_signature_from_registered_task_name_execution_and_redis_cleanup_s
     message = ContextMessage(base_data=test_ctx)
 
     # Act
-    signature = await mageflow.sign(
+    signature = await mageflow.asign(
         task1_test_reg_name, model_validators=ContextMessage
     )
     await signature.aio_run_no_wait(message, options=trigger_options)
@@ -163,9 +163,11 @@ async def test_task_with_success_callback_execution_and_redis_cleanup_sanity(
         hatchet_client_init.hatchet,
     )
 
-    success_callback_signature = await mageflow.sign(task1_callback, base_data=test_ctx)
+    success_callback_signature = await mageflow.asign(
+        task1_callback, base_data=test_ctx
+    )
     message = ContextMessage(base_data=test_ctx)
-    task = await mageflow.sign(
+    task = await mageflow.asign(
         task2, success_callbacks=[success_callback_signature.key], base_data=test_ctx
     )
 
@@ -192,9 +194,9 @@ async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
         hatchet_client_init.hatchet,
     )
 
-    error_callback_signature = await mageflow.sign(error_callback)
+    error_callback_signature = await mageflow.asign(error_callback)
     message = ContextMessage(base_data=test_ctx)
-    task = await mageflow.sign(
+    task = await mageflow.asign(
         fail_task, error_callbacks=[error_callback_signature], base_data=test_ctx
     )
 
@@ -205,6 +207,7 @@ async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
     await asyncio.sleep(5)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, task, base_data=test_ctx, allow_fails=True)
+    # Ensure we send the original msg back as callback
     assert_signature_done(runs, error_callback_signature, base_data=test_ctx)
     await assert_redis_is_clean(redis_client)
 
@@ -240,8 +243,8 @@ async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
         mageflow_results=CommandMessageWithResult(task_result=test_ctx)
     )
 
-    callback_sign = await mageflow.sign(task1_callback)
-    return_multiple_values_sign = await mageflow.sign(
+    callback_sign = await mageflow.asign(task1_callback)
+    return_multiple_values_sign = await mageflow.asign(
         return_multiple_values, success_callbacks=[callback_sign.key]
     )
 

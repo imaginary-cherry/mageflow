@@ -52,6 +52,7 @@ try:
     HatchetTaskType = BaseWorkflow | Callable
 except ImportError:
     HAS_HATCHET = False
+    HatchetTaskType = Callable
 
 # try:
 #     HAS_TEMPORAL = True

@@ -1,11 +1,12 @@
 import asyncio
 from datetime import datetime
-from hatchet_sdk import NonRetryableException
+
 import pytest
+from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     get_runs,
     assert_signature_done,
@@ -37,8 +38,8 @@ async def test__timeout_task__call_error_callback(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    error_sign = await mageflow.sign(error_callback)
-    timeout_sign = await mageflow.sign(timeout_task, error_callbacks=[error_sign])
+    error_sign = await mageflow.asign(error_callback)
+    timeout_sign = await mageflow.asign(timeout_task, error_callbacks=[error_sign])
     message = ContextMessage(base_data=test_ctx)
     expected_task_input = message.model_dump(mode="json", exclude_unset=True)
 
@@ -61,9 +62,9 @@ async def test__retry_once_with_callbacks__success_callback_called_error_callbac
         hatchet_client_init.hatchet,
     )
 
-    error_callback_sign = await mageflow.sign(error_callback)
-    success_callback_sign = await mageflow.sign(task1_callback)
-    retry_once_sign = await mageflow.sign(
+    error_callback_sign = await mageflow.asign(error_callback)
+    success_callback_sign = await mageflow.asign(task1_callback)
+    retry_once_sign = await mageflow.asign(
         retry_once,
         error_callbacks=[error_callback_sign],
         success_callbacks=[success_callback_sign],
@@ -92,8 +93,8 @@ async def test__retry_to_failure_with_error_callback__error_callback_called_once
     )
 
     message = ContextMessage(base_data=test_ctx)
-    error_callback_sign = await mageflow.sign(error_callback)
-    retry_to_failure_sign = await mageflow.sign(
+    error_callback_sign = await mageflow.asign(error_callback)
+    retry_to_failure_sign = await mageflow.asign(
         retry_to_failure, error_callbacks=[error_callback_sign]
     )
 
@@ -129,9 +130,9 @@ async def test__retry_but_override_with_exception__check_error_callback_is_calle
         hatchet_client_init.hatchet,
     )
 
-    error_callback_sign = await mageflow.sign(error_callback)
+    error_callback_sign = await mageflow.asign(error_callback)
     message = ContextMessage(base_data=test_ctx)
-    cancel_retry_sign = await mageflow.sign(
+    cancel_retry_sign = await mageflow.asign(
         cancel_retry, error_callbacks=[error_callback_sign]
     )
 
@@ -246,7 +247,7 @@ async def test__suspended_task_with_retries__does_not_retry(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    retry_task_sign = await mageflow.sign(retry_once)
+    retry_task_sign = await mageflow.asign(retry_once)
     message = ContextMessage(base_data=test_ctx)
 
     # Act
@@ -257,7 +258,7 @@ async def test__suspended_task_with_retries__does_not_retry(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    loaded_signature = await TaskSignature.get_safe(retry_task_sign.key)
+    loaded_signature = await TaskSignature.aget(retry_task_sign.key)
     assert_task_was_paused(runs, loaded_signature)
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)

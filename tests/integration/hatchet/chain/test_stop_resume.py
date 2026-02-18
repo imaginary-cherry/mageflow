@@ -1,9 +1,9 @@
 import asyncio
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_signature_not_called,
     assert_task_was_paused,
@@ -34,10 +34,10 @@ async def test__chain_soft_paused_data_is_saved_in_redis__then_resume_check_fini
         hatchet_client_init.hatchet,
     )
     sleep_time = 10
-    sleep_task_sign = await mageflow.sign(sleep_task, sleep_time=sleep_time)
+    sleep_task_sign = await mageflow.asign(sleep_task, sleep_time=sleep_time)
 
-    task_res_sign = await mageflow.sign(task2_with_result)
-    chain_signature = await mageflow.chain(
+    task_res_sign = await mageflow.asign(task2_with_result)
+    chain_signature = await mageflow.achain(
         tasks=[sign_task1, sleep_task_sign, task_res_sign, sign_task3],
         success=sign_callback1,
         error=sign_chain_callback,
@@ -57,7 +57,7 @@ async def test__chain_soft_paused_data_is_saved_in_redis__then_resume_check_fini
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_not_called(runs, sign_chain_callback)
     assert_signature_not_called(runs, sign_callback1)
-    updated_task_res = await TaskSignature.get_safe(task_res_sign.key)
+    updated_task_res = await TaskSignature.aget(task_res_sign.key)
     assert_task_was_paused(runs, updated_task_res)
 
     # Act - stage 2

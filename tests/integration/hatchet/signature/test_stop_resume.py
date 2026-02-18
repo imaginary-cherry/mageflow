@@ -1,9 +1,9 @@
 import asyncio
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.signature.model import TaskSignature
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_task_was_paused,
@@ -32,10 +32,10 @@ async def test__paused_signature_dont_trigger_callbacks(
         hatchet_client_init.hatchet,
     )
 
-    callback_signature = await mageflow.sign(callback_with_redis)
-    second_callback_signature = await mageflow.sign(callback_with_redis)
-    error_callback = await mageflow.sign(task1_callback)
-    main_signature = await mageflow.sign(
+    callback_signature = await mageflow.asign(callback_with_redis)
+    second_callback_signature = await mageflow.asign(callback_with_redis)
+    error_callback = await mageflow.asign(task1_callback)
+    main_signature = await mageflow.asign(
         sleep_task,
         success_callbacks=[callback_signature, second_callback_signature],
         error_callbacks=[error_callback],
@@ -65,8 +65,8 @@ async def test_signature_pause_with_continue_with_params(
     )
     message = ContextMessage(base_data=test_ctx)
 
-    callback_signature = await mageflow.sign(task2_with_result)
-    main_signature = await mageflow.sign(task1, success_callbacks=[callback_signature])
+    callback_signature = await mageflow.asign(task2_with_result)
+    main_signature = await mageflow.asign(task1, success_callbacks=[callback_signature])
 
     # Act - 1
     await callback_signature.pause_task()
@@ -76,7 +76,7 @@ async def test_signature_pause_with_continue_with_params(
     await asyncio.sleep(10)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
-    loaded_callback_signature = await TaskSignature.get_safe(callback_signature.key)
+    loaded_callback_signature = await TaskSignature.aget(callback_signature.key)
     assert_task_was_paused(runs, loaded_callback_signature)
 
     # Act - 2

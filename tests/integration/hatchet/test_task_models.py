@@ -1,8 +1,8 @@
 import asyncio
 
 import pytest
+from thirdmagic.task_def import MageflowTaskDefinition
 
-from mageflow.task.model import HatchetTaskModel
 from tests.integration.hatchet.conftest import HatchetInitData
 
 
@@ -14,7 +14,7 @@ async def test_hatchet_task_model_no_ttl_sanity(hatchet_client_init: HatchetInit
     await asyncio.sleep(2)
 
     # Act
-    task_model_keys = await HatchetTaskModel.afind_keys()
+    task_model_keys = await MageflowTaskDefinition.afind_keys()
 
     # Assert
     assert (
