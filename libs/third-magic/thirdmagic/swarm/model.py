@@ -75,16 +75,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
     ):
         await self.ClientAdapter.acall_swarm_item_error(error, self, sub_task)
 
-    @property
-    def has_swarm_started(self):
-        return self.current_running_tasks or self.failed_tasks or self.finished_tasks
-
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
         # We update the kwargs that everyone are using, we also tell weather we should put this in the Return value or just in the message
         async with self.apipeline():
             self.kwargs.update(**{SWARM_MESSAGE_PARAM_NAME: msg})
             self.config.send_swarm_message_to_return_field = set_return_field
-        return await self.ClientAdapter.astart_swarm(self, **kwargs)
+        return await self.ClientAdapter.afill_swarm(self, **kwargs)
 
     if HAS_HATCHET:
 

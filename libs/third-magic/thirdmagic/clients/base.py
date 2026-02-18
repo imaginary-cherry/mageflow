@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
+    from thirdmagic.task import TaskSignature
     from thirdmagic.signature import Signature
     from thirdmagic.chain.model import ChainTaskSignature
     from thirdmagic.swarm.model import SwarmTaskSignature
@@ -34,7 +35,7 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def astart_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
+    async def afill_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
         pass
 
     @abc.abstractmethod
@@ -51,7 +52,7 @@ class BaseClientAdapter(ABC):
 
     @abc.abstractmethod
     async def acall_signature(
-        self, signature: "Signature", msg: Any, set_return_field: bool, **kwargs
+        self, signature: "TaskSignature", msg: Any, set_return_field: bool, **kwargs
     ):
         pass
 
@@ -93,7 +94,7 @@ class DefaultClientAdapter(BaseClientAdapter):
     ):
         raise NotImplementedError("Set a client before we start")
 
-    async def astart_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
+    async def afill_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_swarm_item_error(
