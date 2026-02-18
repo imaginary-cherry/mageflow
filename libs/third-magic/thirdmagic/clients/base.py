@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
     from thirdmagic.signature.model import TaskSignature

@@ -9,7 +9,7 @@ from hatchet_sdk import ClientConfig, Hatchet
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")

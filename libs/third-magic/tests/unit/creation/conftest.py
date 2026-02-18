@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 
 from tests.unit.utils import extract_hatchet_validator
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.fixture(autouse=True)

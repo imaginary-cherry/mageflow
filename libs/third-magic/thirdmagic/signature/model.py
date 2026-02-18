@@ -15,7 +15,7 @@ from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.errors import UnrecognizedTaskError
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
 
 if HAS_HATCHET:

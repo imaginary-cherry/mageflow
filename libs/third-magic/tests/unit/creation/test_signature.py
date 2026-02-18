@@ -14,7 +14,7 @@ from tests.unit.messages import (
 )
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature.model import TaskSignature
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 class SignParamOptions(BaseModel):
