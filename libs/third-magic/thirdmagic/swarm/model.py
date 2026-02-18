@@ -10,6 +10,7 @@ from rapyer.types import RedisList, RedisInt
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
@@ -119,7 +120,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def add_tasks(
         self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
-    ) -> list[TaskSignature]:
+    ) -> list[Signature]:
         """
         tasks - tasks signature to add to swarm
         close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capacity
@@ -149,7 +150,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def add_task(
         self, task: TaskSignatureConvertible, close_on_max_task: bool = True
-    ) -> TaskSignature:
+    ) -> Signature:
         """
         task - task signature to add to swarm
         close_on_max_task - if true, and you set max task allowed on swarm, this swarm will close if the task reached maximum capcity
@@ -159,7 +160,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def fill_running_tasks(
         self, max_tasks: Optional[int] = None, **pub_kwargs
-    ) -> list[TaskSignature]:
+    ) -> list[Signature]:
         async with self.alock() as swarm_task:
             publish_state = await PublishState.aget(swarm_task.publishing_state_id)
             task_ids_to_run = list(publish_state.task_ids)
