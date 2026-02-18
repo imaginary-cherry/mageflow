@@ -255,7 +255,7 @@ def assert_swarm_task_done(
             check_called_once=False,
             check_finished_once=True,
             allow_fails=allow_fails,
-            **(swarm_task.kwargs | task.kwargs | msg_data | swarm_kwargs),
+            **(task.kwargs | msg_data | swarm_kwargs),
         )
         swarm_runs.append(wf)
 
