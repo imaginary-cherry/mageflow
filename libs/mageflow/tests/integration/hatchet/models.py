@@ -10,6 +10,7 @@ class BaseWorkerMessage(BaseModel):
 
 class ContextMessage(BaseWorkerMessage):
     base_data: dict = Field(default_factory=dict)
+    more_context: dict = Field(default_factory=dict)
 
 
 class MessageWithData(ContextMessage):

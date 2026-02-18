@@ -62,11 +62,13 @@ async def test__swarm_with_swarms_and_chains__sanity(
     )
     final_swarm_success = await hatchet.asign(task2_with_result)
 
+    main_swarm_kwargs = {"more_context": {"main_swarm_data": 2}}
     main_swarm = await hatchet.aswarm(
         tasks=chain_tasks + [failed_chain, base_swarm],
         is_swarm_closed=True,
         success_callbacks=[final_swarm_success],
         config=SwarmConfig(max_concurrency=2),
+        **main_swarm_kwargs
     )
     tasks = await TaskSignature.afind()
     tasks_map = {task.key: task for task in tasks}
@@ -93,7 +95,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
 
         # Check the first task is called with msg params
         first_task = tasks_map[chain.tasks[0]]
-        assert_signature_done(runs, first_task, **msg_dump)
+        assert_signature_done(runs, first_task, **msg_dump, **main_swarm_kwargs)
 
         # Check error was not called
         for error in chain.error_callbacks:
@@ -105,7 +107,13 @@ async def test__swarm_with_swarms_and_chains__sanity(
 
     # Check the inner swarm is done
     assert_swarm_task_done(
-        runs, base_swarm, tasks, swarm_msg=msg, check_callbacks=False, **base_kwargs
+        runs,
+        base_swarm,
+        tasks,
+        swarm_msg=msg,
+        check_callbacks=False,
+        **base_kwargs,
+        **main_swarm_kwargs
     )
     # Assert swarms were called with params
     first_task = tasks_map[base_swarm.tasks[0]]
@@ -118,3 +126,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
 
     # Check that Redis is clean except for persistent keys
     await assert_redis_is_clean(redis_client)
+
+
+# TODO - test swarm also as callback for task (error and success), and as part of a chain
+# TODO - test chain also as callback for task (error and success), and as part of a chain
