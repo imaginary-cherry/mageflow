@@ -36,9 +36,7 @@ class ChainTaskSignature(ContainerTaskSignature):
             next_task_key = self.tasks[sub_task_idx + 1]
             next_task = await rapyer.aget(next_task_key)
             next_task = cast(TaskSignature, next_task)
-            await next_task.ClientAdapter.acall_signature(
-                next_task, results, **self.kwargs, set_return_field=True
-            )
+            await next_task.acall(results, set_return_field=True, **self.kwargs)
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
@@ -62,11 +60,9 @@ class ChainTaskSignature(ContainerTaskSignature):
     if HAS_HATCHET:
 
         async def aio_run_no_wait(
-            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None
         ):
-            return await self.acall(
-                msg, options=options, set_return_field=False, **kwargs
-            )
+            return await self.acall(msg, options=options, set_return_field=False)
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
