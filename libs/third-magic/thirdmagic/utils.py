@@ -45,11 +45,12 @@ class ModelToDump(BaseModel):
 
 
 # Which client is installed
+HatchetTaskType = Callable
 try:
     HAS_HATCHET = True
     from hatchet_sdk.runnables.workflow import BaseWorkflow
 
-    HatchetTaskType = BaseWorkflow | Callable
+    HatchetTaskType = HatchetTaskType | Callable
 except ImportError:
     HAS_HATCHET = False
 
