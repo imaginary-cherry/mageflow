@@ -17,8 +17,7 @@ from hatchet_sdk.runnables.workflow import BaseWorkflow
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
 from thirdmagic import sign, chain
-from thirdmagic.signature.creator import TaskSignatureConvertible
-from thirdmagic.signature.model import TaskSignature, TaskInputType
+from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override

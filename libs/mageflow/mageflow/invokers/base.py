@@ -6,8 +6,7 @@ from typing import Any, cast, Optional
 import rapyer
 from pydantic import BaseModel
 from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import TaskSignature, SignatureStatus
 
 
 class BaseInvoker(ABC):

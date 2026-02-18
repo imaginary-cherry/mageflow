@@ -1,10 +1,11 @@
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from hatchet_sdk import Hatchet, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
+from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.clients.base import BaseClientAdapter
 from thirdmagic.clients.inner_task_names import (
     ON_CHAIN_END,
@@ -14,27 +15,24 @@ from thirdmagic.clients.inner_task_names import (
     ON_SWARM_START,
 )
 from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
-
-if TYPE_CHECKING:
-    from thirdmagic.signature.model import TaskSignature
-    from thirdmagic.chain.model import ChainTaskSignature
-    from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 class HatchetClientAdapter(BaseClientAdapter):
     def __init__(self, hatchet: Hatchet):
         self.hatchet = hatchet
 
-    def task_ctx(self, signature: "TaskSignature") -> dict:
+    def task_ctx(self, signature: "Signature") -> dict:
         return {TASK_ID_PARAM_NAME: signature.key}
 
     def _update_options(
-        self, signature: "TaskSignature", options: TriggerWorkflowOptions = None
+        self, signature: "Signature", options: TriggerWorkflowOptions = None
     ):
         options = options or TriggerWorkflowOptions()
         task_ctx = self.task_ctx(signature)
@@ -55,7 +53,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         original_msg: Any,
         error: Exception,
         chain: "ChainTaskSignature",
-        failed_task: "TaskSignature",
+        failed_task: "Signature",
     ):
         chain_err_msg = ChainErrorMessage(
             chain_task_id=chain.key,
@@ -82,7 +80,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         return await stub.aio_run_no_wait(start_swarm_msg, **params)
 
     async def acall_swarm_item_done(
-        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, results: Any, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         swarm_done_msg = SwarmResultsMessage(
             swarm_task_id=swarm.key,
@@ -95,7 +93,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         return await stub.aio_run_no_wait(swarm_done_msg)
 
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "TaskSignature"
+        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         swarm_error_msg = SwarmErrorMessage(
             swarm_task_id=swarm.key, swarm_item_id=swarm_item.key, error=str(error)
@@ -113,7 +111,7 @@ class HatchetClientAdapter(BaseClientAdapter):
 
     async def acall_signature(
         self,
-        signature: "TaskSignature",
+        signature: "Signature",
         msg: Any,
         set_return_field: bool,
         options: TriggerWorkflowOptions = None,

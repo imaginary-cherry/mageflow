@@ -4,7 +4,7 @@ from typing import TypeVar, overload
 import redis
 from hatchet_sdk import Hatchet
 from redis.asyncio import Redis
-from thirdmagic.signature.model import TaskSignature
+from thirdmagic.signature import Signature
 
 from mageflow.callbacks import AcceptParams
 from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
@@ -30,7 +30,7 @@ def Mageflow(
 
     HatchetInvoker.client = hatchet_client
     mageflow_adapter = HatchetClientAdapter(hatchet_client)
-    TaskSignature.ClientAdapter = mageflow_adapter
+    Signature.ClientAdapter = mageflow_adapter
 
     if redis_client is None:
         redis_url = os.getenv("REDIS_URL")

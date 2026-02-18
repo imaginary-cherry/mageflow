@@ -1,8 +1,8 @@
 import rapyer
 from hatchet_sdk.runnables.workflow import Standalone
 from redis.asyncio import Redis
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 REGISTERED_TASKS: list[tuple[Standalone, str]] = []
 

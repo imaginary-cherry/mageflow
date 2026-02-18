@@ -5,8 +5,7 @@ from hatchet_sdk.runnables.contextvars import ctx_additional_metadata
 from pydantic import BaseModel
 from rapyer.fields import RapyerKey
 from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import TaskSignature, SignatureStatus
 
 from mageflow.invokers.base import BaseInvoker
 
@@ -78,7 +77,4 @@ class HatchetInvoker(BaseInvoker):
     ):
         validator = validator or type(msg)
         wf = cls.client.workflow(name=task_name, input_validator=validator)
-        return await wf.aio_run_no_wait(
-            msg,
-            **request_kwargs,
-        )
+        return await wf.aio_run_no_wait(msg, **request_kwargs)

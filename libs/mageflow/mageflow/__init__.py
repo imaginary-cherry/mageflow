@@ -1,5 +1,5 @@
 from thirdmagic.chain.creator import chain as achain
-from thirdmagic.signature import sign as asign, TaskSignature
+from thirdmagic.task import sign as asign, TaskSignature
 from thirdmagic.swarm.creator import swarm as aswarm
 
 from mageflow.callbacks import register_task, handle_task_callback

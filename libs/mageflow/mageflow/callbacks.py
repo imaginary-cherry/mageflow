@@ -8,8 +8,8 @@ from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.task import MageflowTaskDefinition
+from thirdmagic.task.model import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.utils.pythonic import flexible_call
