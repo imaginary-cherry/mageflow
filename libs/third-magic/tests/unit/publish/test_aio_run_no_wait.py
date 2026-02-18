@@ -3,6 +3,7 @@ from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
+from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.model import SwarmTaskSignature
 
 
@@ -59,5 +60,6 @@ async def test_aio_run_no_wait_updates_kwargs_from_message(
     # Assert
     mock_adapter.astart_swarm.assert_awaited_once_with(swarm, options=options)
     reloaded_swarm = await SwarmTaskSignature.get_safe(swarm.key)
-    assert reloaded_swarm.kwargs["base_data"] == base_data
+    msg_dump = msg.model_dump(mode="json", exclude_unset=True)
+    assert reloaded_swarm.kwargs[SWARM_MESSAGE_PARAM_NAME] == msg_dump
     assert reloaded_swarm.kwargs["existing"] == swarm_kwargs["existing"]
