@@ -46,7 +46,6 @@ async def test_fill_running_tasks_sanity(
     # Create swarm with config
     swarm_signature = await thirdmagic.swarm(
         task_name="test_swarm",
-        model_validators=ContextMessage,
         config=SwarmConfig(max_concurrency=max_concurrency),
         new_value=1,
     )

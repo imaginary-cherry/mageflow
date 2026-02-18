@@ -13,9 +13,7 @@ async def test_chain_with_swarm_task_creates_container_correctly_edge_case():
     # Arrange
     # Create a swarm task
     swarm_task = await thirdmagic.swarm(
-        task_name="test_swarm_task",
-        model_validators=ContextMessage,
-        swarm_arg="swarm_value",
+        task_name="test_swarm_task", swarm_arg="swarm_value"
     )
 
     simple_task = await thirdmagic.sign(
@@ -42,10 +40,7 @@ async def test_chain_with_swarm_added_task_creates_container_correctly_edge_case
     hatchet_mock,
 ):
     # Arrange
-    parent_swarm = await thirdmagic.swarm(
-        task_name="parent_swarm",
-        model_validators=ContextMessage,
-    )
+    parent_swarm = await thirdmagic.swarm(task_name="parent_swarm")
 
     original_task = await thirdmagic.sign(
         "original_task",
@@ -83,11 +78,7 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
         simple_arg="simple_value",
     )
 
-    swarm_task = await thirdmagic.swarm(
-        task_name="swarm_task",
-        model_validators=ContextMessage,
-        swarm_arg="swarm_value",
-    )
+    swarm_task = await thirdmagic.swarm(task_name="swarm_task", swarm_arg="swarm_value")
 
     # Create another simple task
     final_task = await thirdmagic.sign(
@@ -153,7 +144,7 @@ async def test_chain_creation_with_custom_name_and_callbacks_sanity(hatchet_mock
 
     # Assert
     loaded_chain = await assert_task_reloaded_as_type(
-        chain_signature.key, TaskSignature
+        chain_signature.key, ChainTaskSignature
     )
     assert loaded_chain.task_name == "chain-task:custom_chain_name"
     assert_callback_contains(loaded_chain, [custom_success.key], [custom_error.key])

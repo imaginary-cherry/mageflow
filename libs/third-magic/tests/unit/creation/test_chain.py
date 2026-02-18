@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
 import pytest
+import rapyer
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
@@ -43,7 +44,7 @@ async def test__chain_signature_create_save_load__input_output_same__sanity(
         tasks=tasks,
     )
     await original_chain_signature.asave()
-    loaded_chain_signature = await TaskSignature.aget(original_chain_signature.key)
+    loaded_chain_signature = await rapyer.aget(original_chain_signature.key)
 
     # Assert
     assert original_chain_signature == loaded_chain_signature
@@ -93,7 +94,7 @@ async def test_chain_creation_with_various_task_types_loads_correctly_from_redis
     chain_signature = await thirdmagic.chain([task.key for task in tasks])
 
     # Assert
-    loaded_chain = await TaskSignature.aget(chain_signature.key)
+    loaded_chain = await ChainTaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
     assert loaded_chain.tasks == [task.key for task in tasks]
 
@@ -145,7 +146,7 @@ async def test_chain_success_callbacks_tasks_linked_via_container_sanity():
     assert reloaded_task2.signature_container_id == chain_signature.key
     assert reloaded_task3.signature_container_id == chain_signature.key
 
-    loaded_chain = await TaskSignature.aget(chain_signature.key)
+    loaded_chain = await ChainTaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
     assert loaded_chain.tasks == [task1.key, task2.key, task3.key]
 

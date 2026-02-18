@@ -37,7 +37,7 @@ async def test_chain_safe_change_status_on_deleted_signature_does_not_create_red
 
     # Assert
     assert result is False
-    reloaded_signature = await TaskSignature.aget(chain_key)
+    reloaded_signature = await TaskSignature.afind_one(chain_key)
     assert reloaded_signature is None
 
 
