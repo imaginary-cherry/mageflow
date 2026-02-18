@@ -4,24 +4,25 @@ from typing import TypedDict, Any, overload, TypeAlias, Optional
 import rapyer
 from rapyer.fields import RapyerKey
 
+from thirdmagic.signature import Signature
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task.status import TaskStatus
 from thirdmagic.typing_support import Unpack
 from thirdmagic.utils import HatchetTaskType
 
-TaskSignatureConvertible: TypeAlias = RapyerKey | TaskSignature | HatchetTaskType | str
+TaskSignatureConvertible: TypeAlias = RapyerKey | Signature | HatchetTaskType | str
 
 
 async def resolve_signatures(
     tasks: list[TaskSignatureConvertible],
-) -> list[TaskSignature]:
-    result: list[Optional[TaskSignature]] = [None] * len(tasks)
+) -> list[Signature]:
+    result: list[Optional[Signature]] = [None] * len(tasks)
     identifier_entries: list[tuple[int, RapyerKey]] = []
     hatchet_entries: list[tuple[int, HatchetTaskType]] = []
     task_names: list[tuple[int, str]] = []
 
     for i, task in enumerate(tasks):
-        if isinstance(task, TaskSignature):
+        if isinstance(task, Signature):
             result[i] = task
         elif isinstance(task, RapyerKey):
             identifier_entries.append((i, task))
@@ -50,7 +51,7 @@ async def resolve_signatures(
     return result
 
 
-async def resolve_signature(task: TaskSignatureConvertible) -> TaskSignature:
+async def resolve_signature(task: TaskSignatureConvertible) -> Signature:
     signatures = await resolve_signature([task])
     return signatures[0]
 
