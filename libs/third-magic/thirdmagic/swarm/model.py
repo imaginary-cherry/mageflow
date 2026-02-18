@@ -12,6 +12,7 @@ from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
 from thirdmagic.signature.creator import TaskSignatureConvertible, resolve_signatures
 from thirdmagic.signature.model import TaskSignature
 from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.utils import HAS_HATCHET
@@ -78,20 +79,22 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        dump = msg.model_dump(mode="json", exclude_unset=True)
-        dump |= kwargs
         # We update the kwargs that everyone are using, we also tell weather we should put this in the Return value or just in the message
         async with self.apipeline():
-            self.kwargs.update(**dump)
+            self.kwargs.update(**{SWARM_MESSAGE_PARAM_NAME: msg})
             self.config.send_swarm_message_to_return_field = set_return_field
         return await self.ClientAdapter.astart_swarm(self, **kwargs)
 
     if HAS_HATCHET:
 
         async def aio_run_no_wait(
-            self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
+            self, msg: BaseModel, options: TriggerWorkflowOptions = None
         ):
-            return await self.acall(msg, set_return_field=False, **kwargs)
+            return await self.acall(
+                msg.model_dump(mode="json", exclude_unset=True),
+                set_return_field=False,
+                options=options,
+            )
 
         async def aio_run_in_swarm(
             self,
@@ -180,9 +183,16 @@ class SwarmTaskSignature(ContainerTaskSignature):
             if task_ids_to_run:
                 tasks = await rapyer.afind(*task_ids_to_run)
                 tasks = cast(list[TaskSignature], tasks)
+
+                # Update the kwargs locally, so swarm kwargs wont be duplicated on redis but still sent to task
+                swarm_kwargs = swarm_task.kwargs.copy()
+                swarm_msg = swarm_kwargs.pop(SWARM_MESSAGE_PARAM_NAME, None)
+                for task in tasks:
+                    task.kwargs.update(**swarm_kwargs)
+
                 await self.ClientAdapter.acall_signatures(
                     tasks,
-                    [swarm_task.kwargs] * len(tasks),
+                    [swarm_msg] * len(tasks),
                     set_return_field=swarm_task.config.send_swarm_message_to_return_field,
                     **pub_kwargs,
                 )
