@@ -16,7 +16,6 @@ from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
-from mageflow.invokers.hatchet import HatchetInvoker
 from mageflow.swarm.messages import SwarmResultsMessage
 from tests.integration.hatchet.models import ContextMessage
 
@@ -108,25 +107,11 @@ def mock_close_swarm():
 
 
 @pytest.fixture
-def mock_invoker_wait_task():
-    with patch.object(HatchetInvoker, "run_task", new_callable=AsyncMock) as mock_fill:
-        yield mock_fill
-
-
-@pytest.fixture
 def mock_fill_running_tasks():
     with patch.object(
         SwarmTaskSignature, "fill_running_tasks", new_callable=AsyncMock
     ) as mock_fill:
         yield mock_fill
-
-
-@pytest.fixture
-def mock_handle_finish_tasks_error():
-    with patch.object(
-        HatchetInvoker, "run_task", side_effect=RuntimeError("Finish tasks error")
-    ) as mock_finish:
-        yield mock_finish
 
 
 @pytest.fixture

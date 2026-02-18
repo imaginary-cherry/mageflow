@@ -30,7 +30,7 @@ async def assert_swarm_item_done_state(
 
 @pytest.mark.asyncio
 async def test_two_consecutive_calls_same_item_no_duplicate_idempotent(
-    swarm_item_done_setup, mock_invoker_wait_task
+    swarm_item_done_setup, mock_adapter
 ):
     # Arrange
     setup = swarm_item_done_setup
@@ -45,7 +45,7 @@ async def test_two_consecutive_calls_same_item_no_duplicate_idempotent(
 
 @pytest.mark.asyncio
 async def test_retry_with_prepopulated_done_state_skips_update_idempotent(
-    swarm_item_done_setup, mock_invoker_wait_task
+    swarm_item_done_setup, mock_adapter
 ):
     # Arrange
     setup = swarm_item_done_setup
@@ -60,12 +60,12 @@ async def test_retry_with_prepopulated_done_state_skips_update_idempotent(
 
     # Assert
     await assert_swarm_item_done_state(setup)
-    mock_invoker_wait_task.assert_called_once()
+    mock_adapter.afill_swarm.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_crash_before_pipeline_retry_executes_normally_idempotent(
-    swarm_item_done_setup, mock_invoker_wait_task
+    swarm_item_done_setup, mock_adapter
 ):
     # Arrange
     setup = swarm_item_done_setup
@@ -93,7 +93,7 @@ async def test_crash_before_pipeline_retry_executes_normally_idempotent(
 
 @pytest.mark.asyncio
 async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
-    swarm_item_done_setup, mock_invoker_wait_task
+    swarm_item_done_setup, mock_adapter
 ):
     # Arrange
     setup = swarm_item_done_setup

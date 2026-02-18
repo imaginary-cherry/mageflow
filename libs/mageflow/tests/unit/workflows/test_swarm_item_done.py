@@ -11,7 +11,7 @@ from tests.unit.workflows.conftest import create_swarm_item_test_setup
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
+async def test_swarm_item_done_sanity_basic_flow(mock_adapter):
     # Arrange
     setup = await create_swarm_item_test_setup(
         num_tasks=3,
@@ -37,11 +37,11 @@ async def test_swarm_item_done_sanity_basic_flow(mock_invoker_wait_task):
     assert len(reloaded_swarm.tasks_results) == 1
     assert reloaded_swarm.tasks_results[0] == msg.mageflow_results
 
-    mock_invoker_wait_task.assert_called_once()
+    mock_adapter.afill_swarm.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task):
+async def test_swarm_item_done_sanity_last_item_completes(mock_adapter):
     # Arrange
     setup = await create_swarm_item_test_setup(
         num_tasks=2,
@@ -49,8 +49,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
         stop_after_n_failures=None,
         finished_indices=[0],
     )
-    async with setup.swarm_task.alock() as locked_swarm:
-        await locked_swarm.aupdate(is_swarm_closed=True)
+    await setup.swarm_task.aupdate(is_swarm_closed=True)
 
     msg = SwarmResultsMessage(
         mageflow_results={"status": "complete"},
@@ -65,7 +64,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_invoker_wait_task
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert setup.tasks[1].key in reloaded_swarm.finished_tasks
     assert len(reloaded_swarm.finished_tasks) == 2
-    mock_invoker_wait_task.assert_called_once()
+    mock_adapter.afill_swarm.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -107,9 +106,11 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_exception_during_handle_finish_edge_case(
-    mock_handle_finish_tasks_error,
+    mock_adapter,
 ):
     # Arrange
+    mock_adapter.afill_swarm.side_effect = RuntimeError("Finish tasks error")
+
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
@@ -135,4 +136,4 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     with pytest.raises(RuntimeError, match="Finish tasks error"):
         await swarm_item_done(msg, ctx)
 
-    mock_handle_finish_tasks_error.assert_called_once()
+    mock_adapter.afill_swarm.assert_awaited_once()
