@@ -246,7 +246,9 @@ def assert_swarm_task_done(
 
     # Assert for a batch task done as well as extract the wf
     swarm_runs = []
-    msg_data = swarm_msg.model_dump() if swarm_msg else {}
+    msg_data = (
+        swarm_msg.model_dump(mode="json", exclude_unset=True) if swarm_msg else {}
+    )
     for sub_task_id in swarm_task.tasks:
         task = task_map[sub_task_id]
         wf = assert_signature_done(
