@@ -25,6 +25,7 @@ class SwarmConfig(AtomicRedisModel):
     max_concurrency: int = 30
     stop_after_n_failures: Optional[int] = None
     max_task_allowed: Optional[int] = None
+    send_swarm_message_to_return_field: bool = False
 
     def can_add_task(self, swarm: "SwarmTaskSignature") -> bool:
         return self.can_add_n_tasks(swarm, 1)
@@ -76,15 +77,21 @@ class SwarmTaskSignature(ContainerTaskSignature):
     def has_swarm_started(self):
         return self.current_running_tasks or self.failed_tasks or self.finished_tasks
 
+    async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
+        dump = msg.model_dump(mode="json", exclude_unset=True)
+        dump |= kwargs
+        # We update the kwargs that everyone are using, we also tell weather we should put this in the Return value or just in the message
+        async with self.apipeline():
+            self.kwargs.update(**dump)
+            self.config.send_swarm_message_to_return_field = set_return_field
+        return await self.ClientAdapter.astart_swarm(self, **kwargs)
+
     if HAS_HATCHET:
 
         async def aio_run_no_wait(
             self, msg: BaseModel, options: TriggerWorkflowOptions = None, **kwargs
         ):
-            dump = msg.model_dump(mode="json", exclude_unset=True)
-            dump |= kwargs
-            await self.kwargs.aupdate(**dump)
-            await self.ClientAdapter.astart_swarm(self, options=options)
+            return await self.acall(msg, set_return_field=False, **kwargs)
 
         async def aio_run_in_swarm(
             self,
@@ -173,10 +180,13 @@ class SwarmTaskSignature(ContainerTaskSignature):
             if task_ids_to_run:
                 tasks = await rapyer.afind(*task_ids_to_run)
                 tasks = cast(list[TaskSignature], tasks)
-                full_kwargs = swarm_task.kwargs | pub_kwargs
                 await self.ClientAdapter.acall_signatures(
-                    tasks, [None] * len(tasks), set_return_field=False, **full_kwargs
+                    tasks,
+                    [swarm_task.kwargs] * len(tasks),
+                    set_return_field=swarm_task.config.send_swarm_message_to_return_field,
+                    **pub_kwargs,
                 )
+
                 async with publish_state.apipeline():
                     publish_state.task_ids.clear()
                     swarm_task.current_running_tasks += num_of_task_to_run
