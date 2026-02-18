@@ -102,25 +102,28 @@ def assert_signature_done(
     allow_fails=False,
     **input_params,
 ) -> V1TaskSummary:
+    task_sign_key = task_sign
+    task_name = ""
     if isinstance(task_sign, TaskSignature):
-        task_sign = task_sign.key
+        task_sign_key = task_sign.key
+        task_name = task_sign.task_name
 
     if check_called_once or check_finished_once:
         task_id_calls = [
             wf
             for wf in runs
-            if get_task_param(wf, TASK_ID_PARAM_NAME) == task_sign
+            if get_task_param(wf, TASK_ID_PARAM_NAME) == task_sign_key
             # If we just want to check that the task was finished once,
             # In this case it is ok if the task was called more than once (For suspended tasks cases)
             if check_called_once or is_wf_done(wf)
         ]
         assert (
             len(task_id_calls) == 1
-        ), f"Task {task_sign} was called more than once or not at all: {task_id_calls}"
+        ), f"Task {task_name} - {task_sign_key} was called more than once or not at all: {task_id_calls}"
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True, ignore_cancel=True)
     return _assert_task_done(
-        task_sign, wf_by_task_id, input_params, hatchet_task_results, allow_fails
+        task_sign_key, wf_by_task_id, input_params, hatchet_task_results, allow_fails
     )
 
 
