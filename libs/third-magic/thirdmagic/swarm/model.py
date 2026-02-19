@@ -188,13 +188,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
         await super().change_status(self.task_status.last_status)
 
     async def close_swarm(self) -> Self:
-        async with self.alock() as swarm_task:
-            await swarm_task.aupdate(is_swarm_closed=True)
-            should_finish_swarm = await swarm_task.is_swarm_done()
-            not_yet_published = not swarm_task.has_published_callback()
-            if should_finish_swarm and not_yet_published:
-                await swarm_task.activate_success(EmptyModel())
-                await swarm_task.done()
+        await self.aupdate(is_swarm_closed=True)
+        should_finish_swarm = await self.is_swarm_done()
+        if should_finish_swarm:
+            await self.ClientAdapter.afill_swarm(self, max_tasks=0, **kwargs)
         return self
 
     def has_swarm_failed(self):
