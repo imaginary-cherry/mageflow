@@ -4,7 +4,7 @@ import pytest
 from thirdmagic.task_def import MageflowTaskDefinition
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage
+from tests.integration.hatchet.models import ContextMessage, CommandMessageWithResult
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -34,12 +34,30 @@ async def test_hatchet_task_model_no_ttl_sanity(hatchet_client_init: HatchetInit
     ["task_name", "task_def"],
     [
         [
-            "timeout_task",
+            "mageflow_test_timeout_task",
             MageflowTaskDefinition(
-                mageflow_task_name="timeout_task",
+                mageflow_task_name="mageflow_test_timeout_task",
                 task_name="mageflow_test_timeout_task",
                 retries=1,
                 input_validator=ContextMessage,
+            ),
+        ],
+        [
+            "mageflow_test_retry_to_failure",
+            MageflowTaskDefinition(
+                mageflow_task_name="mageflow_test_retry_to_failure",
+                task_name="mageflow_test_retry_to_failure",
+                retries=3,
+                input_validator=ContextMessage,
+            ),
+        ],
+        [
+            "mageflow_test_callback_with_redis",
+            MageflowTaskDefinition(
+                mageflow_task_name="mageflow_test_callback_with_redis",
+                task_name="mageflow_test_callback_with_redis",
+                retries=1,
+                input_validator=CommandMessageWithResult,
             ),
         ],
     ],
