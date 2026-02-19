@@ -187,5 +187,5 @@ class HatchetClientAdapter(BaseClientAdapter):
         signature = cast(Signature, signature)
         container = None
         if signature.signature_container_id:
-            container = await rapyer.aget(signature.signature_container_id)
+            container = await rapyer.afind_one(signature.signature_container_id)
         return SignatureLifecycle(ctx.workflow_id, signature, container)
