@@ -63,7 +63,6 @@ class WorkerOptions(TypedDict, total=False):
     labels: dict[str, str | int] | None
 
 
-
 async def merge_lifespan(
     redis: Redis, tasks: list[MageflowTaskDefinition], original_lifespan: LifespanFn
 ):
@@ -86,11 +85,10 @@ class HatchetMageflow(Hatchet):
         self.param_config = param_config
         self._task_defs: list[MageflowTaskDefinition] = []
 
-    def _add_task_def(self, name: str, task: Standalone):
-        task_name = name or task.name
+    def _add_task_def(self, task: Standalone):
         self._task_defs.append(
             MageflowTaskDefinition(
-                mageflow_task_name=task_name,
+                mageflow_task_name=task.name,
                 task_name=task.name,
                 retries=Signature.ClientAdapter.extract_retries(task),
                 input_validator=Signature.ClientAdapter.extract_validator(task),
@@ -105,7 +103,7 @@ class HatchetMageflow(Hatchet):
         handler_dec = handle_task_callback(param_config, send_signature=send_signature)
         func = handler_dec(func)
         wf = hatchet_task(func)
-        self._add_task_def(name, wf)
+        self._add_task_def(wf)
 
         return wf
 
@@ -153,9 +151,7 @@ class HatchetMageflow(Hatchet):
                 merge_lifespan, self.redis, self._task_defs, lifespan
             )
 
-        return super().worker(
-            name, workflows=workflows, lifespan=lifespan, **kwargs
-        )
+        return super().worker(name, workflows=workflows, lifespan=lifespan, **kwargs)
 
     async def asign(self, task: str | HatchetTaskType, **options: Any) -> TaskSignature:
         return await sign(task, **options)

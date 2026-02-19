@@ -49,9 +49,8 @@ class HatchetInitData:
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def hatchet() -> AsyncGenerator[Hatchet, None]:
-    empty_namespace_config_obj = config_obj.model_copy(deep=True)
-    empty_namespace_config_obj.namespace = ""
-    hatchet = Hatchet(debug=True, config=empty_namespace_config_obj)
+    copy_config = config_obj.model_copy(deep=True)
+    hatchet = Hatchet(debug=True, config=copy_config)
     yield hatchet
 
 

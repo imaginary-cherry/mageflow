@@ -32,7 +32,7 @@ def handle_task_callback(
         @functools.wraps(func)
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(message, ctx)
-            task_model = await MageflowTaskDefinition.aget(ctx.action.job_name)
+            task_model = await MageflowTaskDefinition.aget(ctx.workflow_name)
             if not await lifecycle.should_run_task(message):
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)
