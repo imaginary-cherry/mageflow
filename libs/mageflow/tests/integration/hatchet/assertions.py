@@ -23,8 +23,9 @@ WF_MAPPING_BY_WF_ID_TYPE = dict[str, V1TaskSummary]
 HatchetRuns = list[V1TaskSummary]
 
 
-def is_wf_internal_mageflow(wf: V1TaskSummary) -> bool:
-    return wf.workflow_name.startswith(MAGEFLOW_TASK_INITIALS)
+def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
+    task_name = wf.workflow_name.removeprefix(hatchet.namespace)
+    return task_name.startswith(MAGEFLOW_TASK_INITIALS)
 
 
 async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
@@ -56,15 +57,15 @@ def map_wf_by_id(
 
 
 def find_sub_calls_from_wf(
-    origin_wf: V1TaskSummary, runs: HatchetRuns
+    hatchet: Hatchet, origin_wf: V1TaskSummary, runs: HatchetRuns
 ) -> list[V1TaskSummary]:
     called_tasks = [
         wf for wf in runs if wf.parent_task_external_id == origin_wf.task_external_id
     ]
     for wf in called_tasks[:]:
-        if is_wf_internal_mageflow(wf):
+        if is_wf_internal_mageflow(hatchet, wf):
             called_tasks.remove(wf)
-            called_tasks.extend(find_sub_calls_from_wf(wf, runs))
+            called_tasks.extend(find_sub_calls_from_wf(hatchet, wf, runs))
 
     return called_tasks
 
