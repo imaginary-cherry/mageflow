@@ -7,7 +7,7 @@ from tests.unit.workflows.conftest import create_chain_test_setup
 
 
 @pytest.mark.asyncio
-async def test_chain_error_task_sanity(redis_client, mock_adapter):
+async def test_chain_error_task_sanity(redis_client, adapter_with_lifecycle):
     # Arrange
     setup = await create_chain_test_setup(num_chain_tasks=3)
 
@@ -15,7 +15,7 @@ async def test_chain_error_task_sanity(redis_client, mock_adapter):
     await chain_error_task(setup.error_msg, setup.ctx)
 
     # Assert
-    mock_adapter.acall_signatures.assert_awaited_once_with(
+    adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [setup.error_callback], [EmptyModel(**setup.error_msg.original_msg)], False
     )
 

@@ -15,7 +15,7 @@ async def corrupt_model_validators_in_redis(signature_key: str, redis_client):
 @pytest.mark.asyncio
 async def test_activate_success_with_corrupted_callback_model_validators_succeeds(
     completed_swarm_with_success_callback: CompletedSwarmWithSuccessCallback,
-    mock_adapter,
+    adapter_with_lifecycle,
     redis_client,
 ):
     # Arrange
@@ -29,8 +29,8 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
 
     # Assert
     # The signature was corrupted, so we only check the key was in the params
-    mock_adapter.acall_signatures.assert_awaited_once()
-    called_signatures = mock_adapter.acall_signatures.call_args[0][0]
+    adapter_with_lifecycle.acall_signatures.assert_awaited_once()
+    called_signatures = adapter_with_lifecycle.acall_signatures.call_args[0][0]
     assert len(called_signatures) == len(success_callbacks)
     for sig in called_signatures:
         assert sig.key in success_callbacks
@@ -41,7 +41,7 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
 @pytest.mark.asyncio
 async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
     completed_swarm_with_success_callback: CompletedSwarmWithSuccessCallback,
-    mock_adapter,
+    adapter_with_lifecycle,
     redis_client,
 ):
     # Arrange
@@ -55,8 +55,8 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
 
     # Assert
     # The signature was corrupted, so we only check the key was in the params
-    mock_adapter.acall_signatures.assert_awaited_once()
-    called_signatures = mock_adapter.acall_signatures.call_args[0][0]
+    adapter_with_lifecycle.acall_signatures.assert_awaited_once()
+    called_signatures = adapter_with_lifecycle.acall_signatures.call_args[0][0]
     assert len(called_signatures) == len(error_callbacks)
     for sig in called_signatures:
         assert sig.key in error_callbacks
