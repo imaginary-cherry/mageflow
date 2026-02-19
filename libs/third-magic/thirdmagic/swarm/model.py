@@ -102,10 +102,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
         ) -> Optional[TaskSignature]:
             sub_task = await self.add_task(task, close_on_max_task)
             await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
-            published_tasks = await self.fill_running_tasks(
-                max_tasks=1, options=options
+            return await self.ClientAdapter.afill_swarm(
+                self, max_tasks=1, options=options
             )
-            return published_tasks[0] if published_tasks else None
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
