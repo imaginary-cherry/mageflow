@@ -73,7 +73,7 @@ async def test_fill_running_tasks_sanity(
 
     mock_adapter.acall_signatures.assert_awaited_once_with(
         tasked_published,
-        [msg] * expected_started,
+        msg,
         set_return_field=set_return_field,
         options=options,
     )

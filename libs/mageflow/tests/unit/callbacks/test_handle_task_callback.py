@@ -109,7 +109,7 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -136,7 +136,7 @@ async def test__active_signature__success__marks_done(
     # Assert
     await assert_tasks_changed_status([signature.key], SignatureStatus.DONE)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
-        [callback_signature], [task_return_value], True
+        [callback_signature], task_return_value, True
     )
 
 
@@ -165,7 +165,7 @@ async def test__active_signature__error__marks_failed(
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -397,7 +397,7 @@ async def test__no_retries__error__marks_failed(
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -446,7 +446,7 @@ async def test__retries_3_attempt_3__error__marks_failed(
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -476,7 +476,7 @@ async def test__non_retryable_exception__always_fails(
     await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -491,7 +491,8 @@ async def test__with_success_callbacks__on_success__triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    returning_handler, _ = handler_factory(return_value="success")
+    return_value = "success"
+    returning_handler, _ = handler_factory(return_value=return_value)
     message = ContextMessage()
 
     # Act
@@ -499,7 +500,7 @@ async def test__with_success_callbacks__on_success__triggered(
 
     # Assert
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
-        [callback_signature], ["success"], True
+        [callback_signature], return_value, True
     )
 
 
@@ -547,7 +548,7 @@ async def test__with_error_callbacks__on_error_no_retry__triggered(
 
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 
@@ -588,7 +589,8 @@ async def test__with_both_callbacks__on_success__only_success_triggered(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    returning_handler, _ = handler_factory(return_value="ok")
+    return_value = "ok"
+    returning_handler, _ = handler_factory(return_value=return_value)
     message = ContextMessage()
 
     # Act
@@ -596,7 +598,7 @@ async def test__with_both_callbacks__on_success__only_success_triggered(
 
     # Assert
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
-        [callback_signature], ["ok"], True
+        [callback_signature], return_value, True
     )
 
 
@@ -625,7 +627,7 @@ async def test__with_both_callbacks__on_error__only_error_triggered(
 
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
         [error_callback_signature],
-        [message.model_dump(mode="json", exclude_unset=True)],
+        message.model_dump(mode="json", exclude_unset=True),
         False,
     )
 

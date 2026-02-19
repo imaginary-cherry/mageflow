@@ -16,7 +16,7 @@ async def test_chain_end_task_sanity(redis_client, adapter_with_lifecycle):
 
     # Assert
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
-        [setup.success_callback], [results], True
+        [setup.success_callback], results, True
     )
     await assert_task_has_short_ttl(redis_client, setup.chain_signature.key)
 

@@ -56,7 +56,7 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
     # Assert
     # Check the tasks were executed
     mock_adapter.acall_signatures.assert_awaited_once_with(
-        tasks[:3], [None] * 3, set_return_field=False
+        tasks[:3], None, set_return_field=False
     )
 
     # Check the tasks were deleted from the swarm left to run
@@ -86,7 +86,7 @@ async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource
     assert len(result1) == 3
     assert len(result2) == 0
     mock_adapter.acall_signatures.assert_awaited_once_with(
-        tasks[:3], [None] * 3, set_return_field=False
+        tasks[:3], None, set_return_field=False
     )
 
     reloaded_swarm = await SwarmTaskSignature.aget(swarm_signature.key)
@@ -119,7 +119,7 @@ async def test_concurrent_calls_single_execution_idempotent(
     assert total_tasks_started == 3
 
     mock_adapter.acall_signatures.assert_awaited_once_with(
-        tasks[:3], [None] * 3, set_return_field=False
+        tasks[:3], None, set_return_field=False
     )
 
     reloaded_swarm = await SwarmTaskSignature.aget(swarm_signature.key)
@@ -149,7 +149,7 @@ async def test__retry_when_swarm_task_was_changed_between_retry__publish_state_i
     # Assert
     mock_adapter.acall_signatures.assert_called_once_with(
         expected_published_tasks,
-        [None] * len(expected_published_tasks),
+        None,
         set_return_field=False,
     )
     reloaded_swarm = await SwarmTaskSignature.aget(swarm_signature.key)
