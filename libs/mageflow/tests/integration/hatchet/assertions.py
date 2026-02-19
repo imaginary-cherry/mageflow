@@ -283,7 +283,7 @@ def assert_swarm_task_done(
         for callback_sign in swarm_task.success_callbacks:
             task = task_map[callback_sign]
             callback_wf = assert_signature_done(
-                runs, callback_sign, check_called_once=True, **task.kwargs
+                runs, task, check_called_once=True, **task.kwargs
             )
             for result in callback_wf.input["input"]["task_result"]:
                 assert (
