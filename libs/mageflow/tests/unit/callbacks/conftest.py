@@ -118,7 +118,7 @@ async def error_callback_signature():
 
 
 @pytest.fixture
-def mock_adapter():
+def adapter_with_lifecycle():
     adapter = AsyncMock(spec=BaseClientAdapter)
     adapter.create_lifecycle = (
         lambda *args, **kwargs: HatchetClientAdapter.create_lifecycle(
