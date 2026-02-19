@@ -70,7 +70,8 @@ async def fill_swarm_running_tasks(
         await lifecycle.task_failed({}, RuntimeError("Swarm failed too much"))
         return
 
-    num_task_started = await fill_running_tasks(swarm_task, max_tasks=max_tasks)
+    tasks_started = await fill_running_tasks(swarm_task, max_tasks=max_tasks)
+    num_task_started = len(tasks_started)
     if num_task_started:
         logger.info(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
     else:
