@@ -66,7 +66,7 @@ async def fill_swarm_running_tasks(msg: FillSwarmMessage, ctx: Context):
             ctx.log(f"Swarm {msg.swarm_task_id} was deleted already deleted or failed")
             return
         await swarm_task.interrupt()
-        await lifecycle.task_failed(EmptyModel(), RuntimeError("Swarm failed too much"))
+        await lifecycle.task_failed({}, RuntimeError("Swarm failed too much"))
         return
 
     num_task_started = await fill_running_tasks(swarm_task, max_tasks=msg.max_tasks)

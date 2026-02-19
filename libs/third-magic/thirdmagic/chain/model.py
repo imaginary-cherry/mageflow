@@ -39,11 +39,9 @@ class ChainTaskSignature(ContainerTaskSignature):
             await next_task.acall(results, set_return_field=True, **self.kwargs)
 
     async def on_sub_task_error(
-        self, sub_task: TaskSignature, error: Exception, original_msg: BaseModel
+        self, sub_task: TaskSignature, error: Exception, original_msg: dict
     ):
-        await self.ClientAdapter.acall_chain_error(
-            original_msg.model_dump(mode="json"), error, self, sub_task
-        )
+        await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)

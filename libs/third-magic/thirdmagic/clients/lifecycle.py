@@ -15,11 +15,11 @@ class BaseLifecycle(ABC):
         pass
 
     @abc.abstractmethod
-    async def task_failed(self, message: BaseModel, error: Exception):
+    async def task_failed(self, message: dict, error: Exception):
         pass
 
     @abc.abstractmethod
-    async def should_run_task(self, message: BaseModel) -> bool:
+    async def should_run_task(self, message: dict) -> bool:
         pass
 
     def is_vanilla_run(self):

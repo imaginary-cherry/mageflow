@@ -61,7 +61,7 @@ class HatchetClientAdapter(BaseClientAdapter):
 
     async def acall_chain_error(
         self,
-        original_msg: Any,
+        original_msg: dict,
         error: Exception,
         chain: "ChainTaskSignature",
         failed_task: "Signature",
@@ -176,7 +176,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         if signature.signature_container_id:
             container = await rapyer.aget(signature.signature_container_id)
 
-        return SignatureLifecycle(message, ctx.workflow_id, signature, container)
+        return SignatureLifecycle(ctx.workflow_id, signature, container)
 
     async def lifecycle_from_signature(
         self, message: BaseModel, ctx: Context, signature_key: RapyerKey
@@ -188,4 +188,4 @@ class HatchetClientAdapter(BaseClientAdapter):
         container = None
         if signature.signature_container_id:
             container = await rapyer.aget(signature.signature_container_id)
-        return SignatureLifecycle(message, ctx.workflow_id, signature, container)
+        return SignatureLifecycle(ctx.workflow_id, signature, container)

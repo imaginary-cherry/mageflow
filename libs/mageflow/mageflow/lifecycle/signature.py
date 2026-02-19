@@ -2,7 +2,6 @@ import asyncio
 from typing import Optional, Any, cast
 
 import rapyer
-from pydantic import BaseModel
 from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.signature import Signature
@@ -12,12 +11,10 @@ from thirdmagic.task import SignatureStatus
 class SignatureLifecycle(BaseLifecycle):
     def __init__(
         self,
-        message: BaseModel,
         workflow_id: Optional[str],
         signature: Signature,
         container: Optional[ContainerTaskSignature],
     ):
-        self.message = message
         self.signature = signature
         self.container = container
         self.workflow_id = workflow_id
@@ -51,7 +48,7 @@ class SignatureLifecycle(BaseLifecycle):
         await current_task.done()
         await current_task.remove(with_success=False)
 
-    async def task_failed(self, message: BaseModel, error: Exception):
+    async def task_failed(self, message: dict, error: Exception):
         current_task = self.signature
         error_publish_tasks = []
 
@@ -72,7 +69,7 @@ class SignatureLifecycle(BaseLifecycle):
         await current_task.failed()
         await current_task.remove(with_error=False)
 
-    async def should_run_task(self, message: BaseModel) -> bool:
+    async def should_run_task(self, message: dict) -> bool:
         signature = self.signature
         should_task_run = await signature.should_run()
         if should_task_run:

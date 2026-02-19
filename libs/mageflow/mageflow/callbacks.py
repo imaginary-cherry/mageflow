@@ -33,7 +33,8 @@ def handle_task_callback(
         async def wrapper(message: EmptyModel, ctx: Context, *args, **kwargs):
             lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(message, ctx)
             task_model = await MageflowTaskDefinition.aget(ctx.workflow_name)
-            if not await lifecycle.should_run_task(message):
+            msg_data = message.model_dump(mode="json", exclude_unset=True)
+            if not await lifecycle.should_run_task(msg_data):
                 await ctx.aio_cancel()
                 await asyncio.sleep(10)
                 # NOTE: This should not run, the task should cancel, but just in case
@@ -58,7 +59,7 @@ def handle_task_callback(
                 if not TaskSignature.ClientAdapter.should_task_retry(
                     task_model, ctx.attempt_number, e
                 ):
-                    await lifecycle.task_failed(message, e)
+                    await lifecycle.task_failed(msg_data, e)
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation

@@ -26,7 +26,7 @@ class ContainerTaskSignature(Signature, ABC):
 
     @abc.abstractmethod
     async def on_sub_task_error(
-        self, sub_task: Signature, error: Exception, original_msg: BaseModel
+        self, sub_task: Signature, error: Exception, original_msg: dict
     ):
         pass
 

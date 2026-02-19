@@ -61,10 +61,10 @@ class Signature(AtomicRedisModel, ABC):
         ):
             pass
 
-    async def on_pause_signature(self, msg: BaseModel):
-        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
+    async def on_pause_signature(self, msg: dict):
+        await self.kwargs.aupdate(**msg)
 
-    async def on_cancel_signature(self, msg: BaseModel):
+    async def on_cancel_signature(self, msg: dict):
         await self.remove()
 
     async def activate_success(self, msg):

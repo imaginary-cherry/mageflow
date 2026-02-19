@@ -32,7 +32,7 @@ class BaseClientAdapter(ABC):
     @abc.abstractmethod
     async def acall_chain_error(
         self,
-        original_msg: Any,
+        original_msg: dict,
         error: Exception,
         chain: "ChainTaskSignature",
         failed_task: "Signature",
@@ -102,7 +102,7 @@ class DefaultClientAdapter(BaseClientAdapter):
 
     async def acall_chain_error(
         self,
-        original_msg: Any,
+        original_msg: dict,
         error: Exception,
         chain: "ChainTaskSignature",
         failed_task: "Signature",
