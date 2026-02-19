@@ -1,10 +1,11 @@
 import pytest
-from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-
 import thirdmagic
-from tests.unit.messages import ContextMessage
+from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.model import SwarmConfig
+
+from mageflow.swarm.workflows import fill_running_tasks
+from tests.integration.hatchet.models import ContextMessage
 
 
 @pytest.mark.asyncio
@@ -63,7 +64,7 @@ async def test_fill_running_tasks_sanity(
     options = TriggerWorkflowOptions(additional_metadata={"swarm_custom": "metadata"})
 
     # Act
-    await swarm_signature.fill_running_tasks(options=options)
+    await fill_running_tasks(swarm_signature, options=options)
 
     # Assert
     tasked_published = tasks_to_queue[:expected_started]
