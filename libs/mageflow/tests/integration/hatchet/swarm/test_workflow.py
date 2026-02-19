@@ -1,8 +1,13 @@
 import asyncio
 
 import pytest
+from hatchet_sdk.clients.rest import V1TaskStatus
 
-from tests.integration.hatchet.assertions import assert_logs_dont_overlap, get_runs
+from tests.integration.hatchet.assertions import (
+    assert_logs_dont_overlap,
+    get_runs,
+    get_specific_refs,
+)
 from tests.integration.hatchet.conftest import HatchetInitData
 
 
@@ -22,16 +27,19 @@ async def test__fill_swarm_workflow_is_locked(
 
     # Act
     # Call many afill swarm
-    await asyncio.gather(
+    task_refs = await asyncio.gather(
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
     )
-    await asyncio.sleep(13)
+    await asyncio.sleep(8)
 
     # Assert
-    runs = await get_runs(hatchet, ctx_metadata)
+    runs = await get_specific_refs(hatchet, task_refs)
+    # Check only 2 where running
+    done_runs = [run for run in runs if run.status == V1TaskStatus.COMPLETED]
+    assert len(done_runs) == 2
     logs = await asyncio.gather(
-        *[hatchet.logs.aio_list(task_run_id=wf.task_external_id) for wf in runs]
+        *[hatchet.logs.aio_list(task_run_id=wf.task_external_id) for wf in done_runs]
     )
     assert_logs_dont_overlap(logs)

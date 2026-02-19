@@ -29,6 +29,15 @@ def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
     return task_name.startswith(MAGEFLOW_TASK_INITIALS)
 
 
+async def get_specific_refs(
+    hatchet: Hatchet, refs: list[TaskRunRef]
+) -> list[V1TaskSummary]:
+    wf_tasks = await asyncio.gather(
+        *[hatchet.runs.aio_get_task_run(ref.workflow_run_id) for ref in refs]
+    )
+    return wf_tasks
+
+
 async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     runs = await hatchet.runs.aio_list(additional_metadata=ctx_metadata)
     runs_by_id = {wf.task_external_id: wf for wf in runs.rows}
