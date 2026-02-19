@@ -95,7 +95,7 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def task_decorator(self, func: Callable, name: str, hatchet_task):
+    def task_decorator(self, func: Callable, hatchet_task):
         param_config = (
             AcceptParams.ALL if does_task_wants_ctx(func) else self.param_config
         )
@@ -114,9 +114,7 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().task(name=name, **kwargs)
 
-        decorator = functools.partial(
-            self.task_decorator, name=name, hatchet_task=hatchet_task
-        )
+        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
         return decorator
 
     @override
@@ -126,9 +124,7 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().durable_task(name=name, **kwargs)
 
-        decorator = functools.partial(
-            self.task_decorator, name=name, hatchet_task=hatchet_task
-        )
+        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
 
         return decorator
 
