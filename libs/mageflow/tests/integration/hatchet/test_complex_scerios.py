@@ -113,7 +113,7 @@ async def test__swarm_with_swarms_and_chains__sanity(
         swarm_msg=msg,
         check_callbacks=False,
         **base_kwargs,
-        **main_swarm_kwargs
+        # **main_swarm_kwargs
     )
     # Assert swarms were called with params
     first_task = tasks_map[base_swarm.tasks[0]]
