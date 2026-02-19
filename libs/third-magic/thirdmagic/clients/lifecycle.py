@@ -21,3 +21,6 @@ class BaseLifecycle(ABC):
     @abc.abstractmethod
     async def should_run_task(self, message: BaseModel) -> bool:
         pass
+
+    def is_vanilla_run(self):
+        return False

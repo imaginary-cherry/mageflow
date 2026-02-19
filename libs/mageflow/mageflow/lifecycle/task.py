@@ -15,4 +15,7 @@ class TaskLifecycle(BaseLifecycle):
         raise
 
     async def should_run_task(self, message: BaseModel) -> bool:
-        pass
+        return True
+
+    def is_vanilla_run(self):
+        return True
