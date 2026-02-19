@@ -28,6 +28,27 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
 
 
 @pytest.mark.asyncio
+async def test_fill_swarm_with_max_tasks_zero_does_not_publish(
+    swarm_task: SwarmTaskSignature,
+    mock_context,
+    mock_adapter,
+):
+    # Arrange
+    msg = FillSwarmMessage(swarm_task_id=swarm_task.key, max_tasks=0)
+    original_tasks = list(swarm_task.tasks_left_to_run)
+
+    # Act
+    await fill_swarm_running_tasks(msg, mock_context)
+
+    # Assert
+    mock_adapter.acall_signatures.assert_not_called()
+    reloaded_swarm = await SwarmTaskSignature.afind_one(swarm_task.key)
+    assert list(reloaded_swarm.tasks_left_to_run) == original_tasks
+    # Check there are tasks left to run (that it is not empty)
+    assert len(original_tasks)
+
+
+@pytest.mark.asyncio
 async def test_handle_finish_tasks_no_tasks_left_edge_case(
     empty_swarm: SwarmTaskSignature, mock_context
 ):
