@@ -74,18 +74,6 @@ class TaskSignature(Signature):
             params = dict(options=options) if options else {}
             return await self.acall(msg, set_return_field=False, **params)
 
-    async def handle_inactive_task(self, msg: BaseModel):
-        if self.task_status.status == SignatureStatus.SUSPENDED:
-            await self.on_pause_signature(msg)
-        elif self.task_status.status == SignatureStatus.CANCELED:
-            await self.on_cancel_signature(msg)
-
-    async def on_pause_signature(self, msg: BaseModel):
-        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
-
-    async def on_cancel_signature(self, msg: BaseModel):
-        await self.remove()
-
     async def resume(self):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:

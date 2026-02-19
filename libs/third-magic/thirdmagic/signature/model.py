@@ -61,6 +61,12 @@ class Signature(AtomicRedisModel, ABC):
         ):
             pass
 
+    async def on_pause_signature(self, msg: BaseModel):
+        await self.kwargs.aupdate(**msg.model_dump(mode="json"))
+
+    async def on_cancel_signature(self, msg: BaseModel):
+        await self.remove()
+
     async def activate_success(self, msg):
         success_signatures = await rapyer.afind(*self.success_callbacks)
         success_signatures = cast(list[Signature], success_signatures)

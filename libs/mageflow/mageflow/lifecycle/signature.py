@@ -78,5 +78,11 @@ class SignatureLifecycle(BaseLifecycle):
         if should_task_run:
             return True
         await signature.task_status.aupdate(last_status=SignatureStatus.ACTIVE)
-        await signature.handle_inactive_task(message)
+
+        # Update for resume
+        if signature.task_status.status == SignatureStatus.SUSPENDED:
+            await signature.on_pause_signature(message)
+        elif signature.task_status.status == SignatureStatus.CANCELED:
+            await signature.on_cancel_signature(message)
+
         return False
