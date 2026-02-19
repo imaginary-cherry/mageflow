@@ -115,20 +115,3 @@ async def callback_signature():
 @pytest_asyncio.fixture
 async def error_callback_signature():
     return await mageflow.asign("error_callback_task", model_validators=ContextMessage)
-
-
-@pytest.fixture
-def adapter_with_lifecycle():
-    adapter = AsyncMock(spec=BaseClientAdapter)
-    adapter.create_lifecycle = (
-        lambda *args, **kwargs: HatchetClientAdapter.create_lifecycle(
-            adapter, *args, **kwargs
-        )
-    )
-    adapter.lifecycle_from_signature = (
-        lambda *args, **kwargs: HatchetClientAdapter.lifecycle_from_signature(
-            adapter, *args, **kwargs
-        )
-    )
-    Signature.ClientAdapter = adapter
-    yield adapter

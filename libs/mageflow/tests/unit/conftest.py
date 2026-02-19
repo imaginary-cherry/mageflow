@@ -15,6 +15,7 @@ from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
+from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.swarm.messages import SwarmResultsMessage
 from tests.integration.hatchet.models import ContextMessage
@@ -222,3 +223,19 @@ def mock_task_def():
             mageflow_task_name=task_name, task_name=task_name
         )
         yield mock_get
+
+
+@pytest.fixture
+def adapter_with_lifecycle(mock_adapter):
+    mock_adapter.create_lifecycle = (
+        lambda *args, **kwargs: HatchetClientAdapter.create_lifecycle(
+            mock_adapter, *args, **kwargs
+        )
+    )
+    mock_adapter.lifecycle_from_signature = (
+        lambda *args, **kwargs: HatchetClientAdapter.lifecycle_from_signature(
+            mock_adapter, *args, **kwargs
+        )
+    )
+    Signature.ClientAdapter = mock_adapter
+    yield mock_adapter

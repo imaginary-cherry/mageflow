@@ -12,7 +12,11 @@ from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetu
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
-    failed_swarm_setup, mock_activate_error, redis_client, mock_task_def
+    failed_swarm_setup,
+    mock_activate_error,
+    redis_client,
+    mock_task_def,
+    adapter_with_lifecycle,
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -42,7 +46,7 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
 
 @pytest.mark.asyncio
 async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
-    failed_swarm_setup, mock_activate_error, redis_client
+    failed_swarm_setup, mock_activate_error, redis_client, adapter_with_lifecycle
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -68,7 +72,11 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
 
 @pytest.mark.asyncio
 async def test__failure_swarm_retry_twice__not_removing_or_republish(
-    failed_swarm_setup, mock_activate_error, mock_swarm_remove, mock_interrupt
+    failed_swarm_setup,
+    mock_activate_error,
+    mock_swarm_remove,
+    mock_interrupt,
+    adapter_with_lifecycle,
 ):
     # Arrange
     setup: FailedSwarmSetup = failed_swarm_setup
@@ -85,7 +93,7 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
 
 @pytest.mark.asyncio
 async def test_on_remove_task__finish_removing_all(
-    completed_swarm_setup, mock_adapter, redis_client
+    completed_swarm_setup, redis_client, adapter_with_lifecycle
 ):
     # Arrange
     setup: CompletedSwarmSetup = completed_swarm_setup
