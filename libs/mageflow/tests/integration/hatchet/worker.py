@@ -36,7 +36,7 @@ settings = Dynaconf(
     envvar_prefix="DYNACONF",
     settings_files=["settings.toml", ".secrets.toml"],
 )
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 config_obj = ClientConfig(
     token=settings.hatchet.api_key,
