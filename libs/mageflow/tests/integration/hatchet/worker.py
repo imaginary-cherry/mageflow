@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 
@@ -35,10 +36,13 @@ settings = Dynaconf(
     envvar_prefix="DYNACONF",
     settings_files=["settings.toml", ".secrets.toml"],
 )
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 config_obj = ClientConfig(
     token=settings.hatchet.api_key,
     **settings.hatchet.to_dict(),
     healthcheck=HealthcheckConfig(enabled=True),
+    logger=logger,
 )
 
 redis = redis.asyncio.from_url(settings.redis.url, decode_responses=True)
