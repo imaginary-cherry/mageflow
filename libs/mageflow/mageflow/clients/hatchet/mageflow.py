@@ -13,16 +13,18 @@ from hatchet_sdk.runnables.types import (
     ConcurrencyExpression,
     DefaultFilter,
 )
-from hatchet_sdk.runnables.workflow import BaseWorkflow
+from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
 from thirdmagic import sign, chain
-from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
+from thirdmagic.signature import Signature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
+from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
+from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
 
-from mageflow.callbacks import AcceptParams, register_task, handle_task_callback
+from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.init import init_mageflow_hatchet_tasks
 from mageflow.startup import (
     lifespan_initialize,
@@ -62,8 +64,10 @@ class WorkerOptions(TypedDict, total=False):
     lifespan: LifespanFn | None
 
 
-async def merge_lifespan(redis: Redis, original_lifespan: LifespanFn):
-    await init_mageflow(redis)
+async def merge_lifespan(
+    redis: Redis, tasks: list[MageflowTaskDefinition], original_lifespan: LifespanFn
+):
+    await init_mageflow(redis, tasks)
     async for res in original_lifespan():
         yield res
     await teardown_mageflow()
@@ -80,19 +84,40 @@ class HatchetMageflow(Hatchet):
         self.hatchet = hatchet
         self.redis = redis_client
         self.param_config = param_config
+        self._task_defs: list[MageflowTaskDefinition] = []
+
+    def _add_task_def(self, name: str, task: Standalone):
+        task_name = name or task.name
+        self._task_defs.append(
+            MageflowTaskDefinition(
+                mageflow_task_name=task_name,
+                task_name=task.name,
+                retries=Signature.ClientAdapter.extract_retries(task),
+                input_validator=Signature.ClientAdapter.extract_validator(task),
+            )
+        )
+
+    def task_decorator(self, func: Callable, name: str, hatchet_task):
+        param_config = (
+            AcceptParams.ALL if does_task_wants_ctx(func) else self.param_config
+        )
+        send_signature = getattr(func, "__send_signature__", False)
+        handler_dec = handle_task_callback(param_config, send_signature=send_signature)
+        func = handler_dec(func)
+        wf = hatchet_task(func)
+        self._add_task_def(name, wf)
+
+        return wf
 
     @override
     def task(self, name: str | None = None, **kwargs: Unpack[TaskOptions]):
         """
         This is a wrapper for task, if you want to see hatchet task go to parent class
         """
-
         hatchet_task = super().task(name=name, **kwargs)
+
         decorator = functools.partial(
-            task_decorator,
-            hatchet_task=hatchet_task,
-            mage_client=self,
-            hatchet_task_name=name,
+            self.task_decorator, name=name, hatchet_task=hatchet_task
         )
         return decorator
 
@@ -102,11 +127,9 @@ class HatchetMageflow(Hatchet):
         This is a wrapper for durable task, if you want to see hatchet durable task go to parent class
         """
         hatchet_task = super().durable_task(name=name, **kwargs)
+
         decorator = functools.partial(
-            task_decorator,
-            hatchet_task=hatchet_task,
-            mage_client=self,
-            hatchet_task_name=name,
+            self.task_decorator, name=name, hatchet_task=hatchet_task
         )
 
         return decorator
@@ -123,9 +146,13 @@ class HatchetMageflow(Hatchet):
         mageflow_flows = init_mageflow_hatchet_tasks(self.hatchet)
         workflows += mageflow_flows
         if lifespan is None:
-            lifespan = functools.partial(lifespan_initialize, self.redis)
+            lifespan = functools.partial(
+                lifespan_initialize, self.redis, self._task_defs
+            )
         else:
-            lifespan = functools.partial(merge_lifespan, self.redis, lifespan)
+            lifespan = functools.partial(
+                merge_lifespan, self.redis, self._task_defs, lifespan
+            )
 
         return super().worker(
             name, *args, workflows=workflows, lifespan=lifespan, **kwargs
@@ -178,22 +205,3 @@ class HatchetMageflow(Hatchet):
             return stagger_wrapper
 
         return decorator
-
-
-def task_decorator(
-    func: Callable,
-    hatchet_task,
-    mage_client: HatchetMageflow,
-    hatchet_task_name: str | None = None,
-):
-    param_config = (
-        AcceptParams.ALL if does_task_wants_ctx(func) else mage_client.param_config
-    )
-    send_signature = getattr(func, "__send_signature__", False)
-    handler_dec = handle_task_callback(param_config, send_signature=send_signature)
-    func = handler_dec(func)
-    wf = hatchet_task(func)
-
-    task_name = hatchet_task_name or func.__name__
-    register = register_task(task_name)
-    return register(wf)

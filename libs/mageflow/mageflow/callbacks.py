@@ -6,12 +6,10 @@ from typing import Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
-from hatchet_sdk.runnables.workflow import Standalone
 from pydantic import BaseModel
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
-from mageflow.lifecycle.task import TaskLifecycle
 from mageflow.utils.pythonic import flexible_call
 
 
@@ -78,13 +76,3 @@ def handle_task_callback(
         return wrapper
 
     return task_decorator
-
-
-def register_task(register_name: str):
-    from mageflow.startup import REGISTERED_TASKS
-
-    def decorator(func: Standalone):
-        REGISTERED_TASKS.append((func, register_name))
-        return func
-
-    return decorator

@@ -75,7 +75,7 @@ async def init_settings(hatchet_client_init: HatchetInitData):
         hatchet_client_init.hatchet,
     )
     # Load the subclasses of the task signature
-    await init_mageflow(redis_client)
+    await init_mageflow(redis_client, [])
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)

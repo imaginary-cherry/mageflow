@@ -5,7 +5,7 @@ from thirdmagic.signature import Signature
 from thirdmagic.task import sign as asign, TaskSignature
 from thirdmagic.swarm.creator import swarm as aswarm
 
-from mageflow.callbacks import register_task, handle_task_callback
+from mageflow.callbacks import handle_task_callback
 from mageflow.client import Mageflow
 
 resume_task = TaskSignature.resume_from_key
@@ -30,7 +30,6 @@ __all__ = [
     "remove",
     "pause",
     "asign",
-    "register_task",
     "handle_task_callback",
     "Mageflow",
     "achain",
