@@ -12,6 +12,7 @@ from hatchet_sdk.runnables.types import (
     StickyStrategy,
     ConcurrencyExpression,
     DefaultFilter,
+    ConcurrencyLimitStrategy,
 )
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
@@ -19,6 +20,7 @@ from redis.asyncio import Redis
 from thirdmagic import sign, chain
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -28,12 +30,29 @@ from typing_extensions import override
 from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
-from mageflow.clients.inner_task_names import ON_CHAIN_ERROR, ON_CHAIN_END
+from mageflow.clients.inner_task_names import (
+    ON_CHAIN_ERROR,
+    ON_CHAIN_END,
+    SWARM_FILL_TASK,
+    ON_SWARM_ITEM_ERROR,
+    ON_SWARM_ITEM_DONE,
+)
 from mageflow.init import init_mageflow_hatchet_tasks
 from mageflow.startup import (
     lifespan_initialize,
     init_mageflow,
     teardown_mageflow,
+)
+from mageflow.swarm.consts import SWARM_TASK_ID_PARAM_NAME
+from mageflow.swarm.messages import (
+    FillSwarmMessage,
+    SwarmErrorMessage,
+    SwarmResultsMessage,
+)
+from mageflow.swarm.workflows import (
+    fill_swarm_running_tasks,
+    swarm_item_failed,
+    swarm_item_done,
 )
 from mageflow.utils.mageflow import does_task_wants_ctx
 
@@ -152,9 +171,49 @@ class HatchetMageflow(Hatchet):
         )
         chain_done_task = hatchet_chain_done(self.chain_end_task)
         on_chain_error_task = hatchet_chain_error(self.chain_error_task)
+
+        # Swarm tasks
+        swarm_done = self.hatchet.durable_task(
+            name=ON_SWARM_ITEM_DONE,
+            input_validator=SwarmResultsMessage,
+            retries=5,
+            execution_timeout=timedelta(minutes=1),
+        )
+        swarm_error = self.hatchet.durable_task(
+            name=ON_SWARM_ITEM_ERROR,
+            input_validator=SwarmErrorMessage,
+            retries=5,
+            execution_timeout=timedelta(minutes=5),
+        )
+        swarm_done = swarm_done(swarm_item_done)
+        swarm_error = swarm_error(swarm_item_failed)
+
+        swarm_fill_task = self.hatchet.durable_task(
+            name=SWARM_FILL_TASK,
+            input_validator=FillSwarmMessage,
+            execution_timeout=timedelta(minutes=5),
+            retries=4,
+            concurrency=[
+                ConcurrencyExpression(
+                    expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
+                    max_runs=2,
+                    limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
+                ),
+                ConcurrencyExpression(
+                    expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
+                    max_runs=1,
+                    limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+                ),
+            ],
+        )
+        swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
+
         return init_mageflow_hatchet_tasks(self.hatchet) + [
             chain_done_task,
             on_chain_error_task,
+            swarm_done,
+            swarm_error,
+            swarm_fill_task,
         ]
 
     @override
@@ -248,4 +307,25 @@ class HatchetMageflow(Hatchet):
             msg.error,
             lifecycle_manager,
             self.mageflow_logger,
+        )
+
+    async def swarm_item_done(self, msg: SwarmResultsMessage, ctx: Context):
+        return await swarm_item_done(
+            msg.swarm_task_id,
+            msg.swarm_item_id,
+            msg.mageflow_results,
+            self.mageflow_logger,
+        )
+
+    async def swarm_item_failed(self, msg: SwarmErrorMessage, ctx: Context):
+        return await swarm_item_failed(
+            msg.swarm_task_id, msg.swarm_item_id, msg.error, self.mageflow_logger
+        )
+
+    async def fill_swarm_running_tasks(self, msg: FillSwarmMessage, ctx: Context):
+        lifecycle = await SwarmTaskSignature.ClientAdapter.lifecycle_from_signature(
+            msg, ctx, msg.swarm_task_id
+        )
+        return await fill_swarm_running_tasks(
+            msg.swarm_task_id, msg.max_tasks, lifecycle, self.mageflow_logger
         )

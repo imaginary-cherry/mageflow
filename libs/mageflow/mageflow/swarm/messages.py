@@ -17,7 +17,7 @@ class SwarmResultsMessage(SwarmCallbackMessage):
 
 
 class SwarmErrorMessage(SwarmCallbackMessage):
-    error: Optional[str] = None
+    error: str
 
 
 class FillSwarmMessage(SwarmMessage):

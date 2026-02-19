@@ -1,87 +1,87 @@
-from typing import Optional, cast
+from logging import Logger
+from typing import Optional, cast, Any
 
 import rapyer
-from hatchet_sdk import Context
-from hatchet_sdk.runnables.types import EmptyModel
+from rapyer.fields import RapyerKey
+from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.signature import Signature
 from thirdmagic.swarm import PublishState
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.swarm.messages import (
-    SwarmResultsMessage,
-    SwarmErrorMessage,
-    FillSwarmMessage,
-)
 
-
-async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
+async def swarm_item_done(
+    swarm_task_id: RapyerKey,
+    swarm_item_id: RapyerKey,
+    mageflow_results: Any,
+    logger: Logger,
+):
     try:
-        swarm_task_id = msg.swarm_task_id
-        swarm_item_id = msg.swarm_item_id
-        ctx.log(f"Swarm item done {swarm_item_id}")
+        logger.info(f"Swarm item done {swarm_item_id}")
 
         # Update swarm tasks
         swarm_task = await SwarmTaskSignature.aget(swarm_task_id)
 
-        ctx.log(f"Swarm item done {swarm_item_id} - saving results")
-        await swarm_task.finish_task(swarm_item_id, msg.mageflow_results)
+        logger.info(f"Swarm item done {swarm_item_id} - saving results")
+        await swarm_task.finish_task(swarm_item_id, mageflow_results)
 
         # Publish next tasks
         await SwarmTaskSignature.ClientAdapter.afill_swarm(swarm_task)
     except Exception as e:
-        ctx.log(f"MAJOR - Error in swarm start item done")
+        logger.exception(f"MAJOR - Error in swarm start item done")
         raise
 
 
-async def swarm_item_failed(msg: SwarmErrorMessage, ctx: Context):
+async def swarm_item_failed(
+    swarm_task_id: RapyerKey, swarm_item_id: RapyerKey, error: str, logger: Logger
+):
     try:
-        swarm_task_key = msg.swarm_task_id
-        swarm_item_key = msg.swarm_item_id
-        ctx.log(f"Swarm item failed {swarm_item_key} - {msg.error}")
+        logger.info(f"Swarm item failed {swarm_item_id} - {error}")
         # Check if the swarm should end
-        swarm_task = await SwarmTaskSignature.aget(swarm_task_key)
-        await swarm_task.task_failed(swarm_item_key)
+        swarm_task = await SwarmTaskSignature.aget(swarm_task_id)
+        await swarm_task.task_failed(swarm_item_id)
         await SwarmTaskSignature.ClientAdapter.afill_swarm(swarm_task)
     except Exception as e:
-        ctx.log(f"MAJOR - Error in swarm item failed")
+        logger.exception(f"MAJOR - Error in swarm item failed")
         raise
 
 
-async def fill_swarm_running_tasks(msg: FillSwarmMessage, ctx: Context):
-    swarm_task = await SwarmTaskSignature.afind_one(msg.swarm_task_id)
+async def fill_swarm_running_tasks(
+    swarm_task_id: RapyerKey,
+    max_tasks: Optional[int],
+    lifecycle: BaseLifecycle,
+    logger: Logger,
+):
+    swarm_task = await SwarmTaskSignature.afind_one(swarm_task_id)
     if swarm_task is None:
-        ctx.log(
-            f"Swarm {msg.swarm_task_id} not found, it was probably already finished and deleted."
+        logger.info(
+            f"Swarm {swarm_task_id} not found, it was probably already finished and deleted."
         )
         return
 
-    lifecycle = await SwarmTaskSignature.ClientAdapter.lifecycle_from_signature(
-        msg, ctx, msg.swarm_task_id
-    )
     if swarm_task.has_swarm_failed():
-        ctx.log(f"Swarm failed too much {msg.swarm_task_id}")
+        logger.info(f"Swarm failed too much {swarm_task_id}")
 
         if swarm_task is None or swarm_task.has_published_errors():
-            ctx.log(f"Swarm {msg.swarm_task_id} was deleted already deleted or failed")
+            logger.info(f"Swarm {swarm_task_id} was deleted already deleted or failed")
             return
         await swarm_task.interrupt()
         await lifecycle.task_failed({}, RuntimeError("Swarm failed too much"))
         return
 
-    num_task_started = await fill_running_tasks(swarm_task, max_tasks=msg.max_tasks)
+    num_task_started = await fill_running_tasks(swarm_task, max_tasks=max_tasks)
     if num_task_started:
-        ctx.log(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
+        logger.info(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
     else:
-        ctx.log(f"Swarm item no new task to run in {swarm_task.key}")
+        logger.info(f"Swarm item no new task to run in {swarm_task.key}")
 
     # Check if the swarm should end
     not_yet_published = not swarm_task.has_published_callback()
     is_swarm_finished_running = await swarm_task.is_swarm_done()
     if is_swarm_finished_running and not_yet_published:
-        ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
+        logger.info(f"Swarm item done - closing swarm {swarm_task.key}")
         await lifecycle.task_success(None)
-        ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")
+        logger.info(f"Swarm item done - closed swarm {swarm_task.key}")
 
 
 async def fill_running_tasks(
