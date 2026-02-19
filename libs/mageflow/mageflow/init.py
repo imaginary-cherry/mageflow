@@ -63,11 +63,18 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
         input_validator=FillSwarmMessage,
         execution_timeout=timedelta(minutes=5),
         retries=4,
-        concurrency=ConcurrencyExpression(
-            expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
-            max_runs=2,
-            limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
-        ),
+        concurrency=[
+            ConcurrencyExpression(
+                expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
+                max_runs=2,
+                limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
+            ),
+            ConcurrencyExpression(
+                expression=f"input.{SWARM_TASK_ID_PARAM_NAME}",
+                max_runs=1,
+                limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+            ),
+        ],
     )
     swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
 
