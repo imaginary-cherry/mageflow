@@ -38,7 +38,7 @@ def create_mock_hatchet_context(config: MockContextConfig = None):
     config = config or MockContextConfig()
     ctx = MagicMock(spec=Context)
     ctx.action = MagicMock()
-    ctx.action.job_name = config.job_name
+    ctx.workflow_name = config.job_name
     ctx.attempt_number = config.attempt_number
     ctx.workflow_id = config.workflow_id
     ctx.log = MagicMock()
