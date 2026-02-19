@@ -184,8 +184,8 @@ class HatchetMageflow(Hatchet):
             retries=5,
             execution_timeout=timedelta(minutes=5),
         )
-        swarm_done = swarm_done(swarm_item_done)
-        swarm_error = swarm_error(swarm_item_failed)
+        swarm_done = swarm_done(self.swarm_item_done)
+        swarm_error = swarm_error(self.swarm_item_failed)
 
         swarm_fill_task = self.hatchet.durable_task(
             name=SWARM_FILL_TASK,
@@ -205,7 +205,7 @@ class HatchetMageflow(Hatchet):
                 ),
             ],
         )
-        swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
+        swarm_fill_task = swarm_fill_task(self.fill_swarm_running_tasks)
 
         return [
             chain_done_task,
