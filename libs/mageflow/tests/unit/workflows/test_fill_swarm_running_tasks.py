@@ -1,7 +1,7 @@
 import pytest
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.swarm.messages import SwarmMessage
+from mageflow.swarm.messages import FillSwarmMessage
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 
 
@@ -13,7 +13,7 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
     mock_activate_success,
 ):
     # Arrange
-    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+    msg = FillSwarmMessage(swarm_task_id=swarm_task.key)
 
     # Act
     await fill_swarm_running_tasks(msg, mock_context)
@@ -32,7 +32,7 @@ async def test_handle_finish_tasks_no_tasks_left_edge_case(
     empty_swarm: SwarmTaskSignature, mock_context
 ):
     # Arrange
-    msg = SwarmMessage(swarm_task_id=empty_swarm.key)
+    msg = FillSwarmMessage(swarm_task_id=empty_swarm.key)
 
     # Act
     await fill_swarm_running_tasks(msg, mock_context)
