@@ -52,6 +52,7 @@ async def fill_swarm_running_tasks(
     lifecycle: BaseLifecycle,
     logger: Logger,
 ):
+    logger.info(f"Filling swarm {swarm_task_id} with {max_tasks}")
     swarm_task = await SwarmTaskSignature.afind_one(swarm_task_id)
     if swarm_task is None:
         logger.info(
@@ -82,6 +83,7 @@ async def fill_swarm_running_tasks(
         logger.info(f"Swarm item done - closing swarm {swarm_task.key}")
         await lifecycle.task_success(None)
         logger.info(f"Swarm item done - closed swarm {swarm_task.key}")
+    logger.info(f"Swarm item done - done filling swarm {swarm_task.key}")
 
 
 async def fill_running_tasks(
