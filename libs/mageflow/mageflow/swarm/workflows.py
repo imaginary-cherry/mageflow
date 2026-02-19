@@ -8,7 +8,6 @@ from thirdmagic.swarm import PublishState
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.model import SwarmTaskSignature
 
-from mageflow.swarm.consts import SWARM_ACTION_FILL
 from mageflow.swarm.messages import (
     SwarmResultsMessage,
     SwarmErrorMessage,
