@@ -42,7 +42,6 @@ async def chain_error_task(msg: ChainErrorMessage, ctx: Context):
         ctx.log(f"Chain task failed {lifecycle_manager}")
 
         # Calling error callback from chain task
-        # TODO - we need to think on a different way - this way no params are passed, maybe inject via kwargs?
         await lifecycle_manager.task_failed(
             EmptyModel(**msg.original_msg), Exception(msg.error)
         )
