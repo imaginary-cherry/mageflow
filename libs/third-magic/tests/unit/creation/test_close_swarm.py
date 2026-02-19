@@ -21,7 +21,7 @@ async def test_close_swarm_sets_is_swarm_closed_to_true_sanity(
     # Assert
     reloaded = await SwarmTaskSignature.aget(swarm_signature.key)
     assert reloaded.is_swarm_closed is True
-    mock_adapter.afill_swarm.assert_not_awaited(swarm_signature, max_tasks=0)
+    mock_adapter.afill_swarm.assert_awaited_once_with(swarm_signature, max_tasks=0)
 
 
 @pytest.mark.asyncio
@@ -108,7 +108,7 @@ async def test_close_swarm_does_not_call_afill_swarm_when_tasks_still_pending(
     await swarm_signature.close_swarm()
 
     # Assert
-    mock_adapter.afill_swarm.assert_not_awaited(swarm_signature, max_tasks=0)
+    mock_adapter.afill_swarm.assert_awaited_once_with(swarm_signature, max_tasks=0)
 
 
 @pytest.mark.asyncio
@@ -126,4 +126,4 @@ async def test_close_swarm_does_not_call_afill_swarm_when_no_tasks_done(mock_ada
     await swarm_signature.close_swarm()
 
     # Assert
-    mock_adapter.afill_swarm.assert_not_awaited(swarm_signature, max_tasks=0)
+    mock_adapter.afill_swarm.assert_awaited_once_with(swarm_signature, max_tasks=0)
