@@ -12,6 +12,7 @@ from thirdmagic.consts import (
     TASK_ID_PARAM_NAME,
     REMOVED_TASK_TTL,
 )
+from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
@@ -133,7 +134,7 @@ def assert_signature_done(
 
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True, ignore_cancel=True)
     return _assert_task_done(
-        task_sign_key, wf_by_task_id, input_params, hatchet_task_results, allow_fails
+        task_sign, wf_by_task_id, input_params, hatchet_task_results, allow_fails
     )
 
 
@@ -151,12 +152,13 @@ def assert_signature_failed(
 
 
 def _assert_task_done(
-    task_id: str,
+    task: Signature,
     wf_map: WF_MAPPING_TYPE,
     input_params: dict = None,
     results=None,
     allow_fails=False,
 ) -> V1TaskSummary:
+    task_id = task.key
     assert task_id in wf_map
     task_workflow = wf_map[task_id]
     if not allow_fails:
@@ -164,10 +166,10 @@ def _assert_task_done(
             task_workflow.status == V1TaskStatus.COMPLETED
         ), f"{task_workflow.workflow_name} didn't finish"
     if input_params is not None:
-        task_input = task_workflow.input["input"]
+        task_input = task_workflow.input.get("input", {})
         assert (
             input_params.keys() <= task_input.keys()
-        ), f"missing params {input_params.keys() - task_workflow.input['input'].keys()} for {task_workflow.workflow_name}"
+        ), f"missing params {input_params.keys() - task_input.keys()} for {task_workflow.workflow_name}"
         assert (
             input_params.items() <= task_input.items()
         ), f"{task_workflow.workflow_name} has some missing parameters - {[f'{k}:{input_params[k]}!={task_input[k]}' for k in input_params if input_params[k] != task_input[k]]}"
@@ -212,11 +214,11 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
     assert hatchet_call.status == V1TaskStatus.CANCELLED
     expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
     for key, value in expected_dump.model_dump().items():
-        assert task.kwargs[key] == value, f"{key} != {value}"
+        assert task.kwargs[key] == value, f"{key} != {value}, from {task.task_name}"
 
     if with_resume:
         wf_by_task_id = map_wf_by_id(runs)
-        _assert_task_done(task_id, wf_by_task_id, None)
+        _assert_task_done(task, wf_by_task_id, None)
 
 
 def assert_tasks_in_order(wf_by_signature: WF_MAPPING_TYPE, tasks: list[TaskSignature]):
@@ -311,14 +313,14 @@ def assert_chain_done(
         task = task_map[chain_task_id]
         if output_value:
             input_params |= {return_value_field(task.model_validators): output_value}
-        task_wf = _assert_task_done(chain_task_id, wf_by_signature, input_params)
+        task_wf = _assert_task_done(task, wf_by_signature, input_params)
         output_value = task_wf.output["hatchet_results"]
 
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
             task = task_map[chain_success]
             input_params = {return_value_field(task.model_validators): output_value}
-            _assert_task_done(chain_success, wf_by_signature, input_params)
+            _assert_task_done(task, wf_by_signature, input_params)
 
 
 def assert_paused(
