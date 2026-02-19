@@ -31,6 +31,7 @@ async def test__fill_swarm_workflow_is_locked(
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
         swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
+        swarm.ClientAdapter.afill_swarm(swarm, max_tasks=1, options=trigger_options),
     )
     await asyncio.sleep(8)
 
