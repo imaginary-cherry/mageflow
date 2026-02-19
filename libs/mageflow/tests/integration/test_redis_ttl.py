@@ -12,7 +12,7 @@ TTL_TOLERANCE = 100  # seconds tolerance for test execution time
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def mageflow_task_def(real_redis):
-    await init_mageflow(real_redis)
+    await init_mageflow(real_redis, [])
     task_def = MageflowTaskDefinition(mageflow_task_name=TASK_NAME, task_name=TASK_NAME)
     await task_def.asave()
     yield task_def
