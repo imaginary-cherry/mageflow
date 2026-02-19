@@ -364,7 +364,7 @@ async def test__invalid_task_id__should_not_run():
     message = ContextMessage()
 
     # Act & Assert
-    with pytest.raises(asyncio.CancelledError):
+    with pytest.raises(NonRetryableException):
         await handler_bad_signature_key(message, ctx)
 
     assert len(tracked_calls) == 0
