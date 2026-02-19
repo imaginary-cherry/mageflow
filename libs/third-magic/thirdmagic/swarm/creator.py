@@ -17,11 +17,13 @@ class SignatureOptions(TaskSignatureOptions):
 
 @overload
 async def swarm(
-    tasks: list[TaskSignatureConvertible], **options: Unpack[TaskSignatureOptions]
+    tasks: list[TaskSignatureConvertible],
+    task_name: str = None,
+    **options: Unpack[TaskSignatureOptions],
 ) -> SwarmTaskSignature: ...
 @overload
 async def swarm(
-    tasks: list[TaskSignatureConvertible], **options: Any
+    tasks: list[TaskSignatureConvertible], task_name: str = None, **options: Any
 ) -> SwarmTaskSignature: ...
 
 
