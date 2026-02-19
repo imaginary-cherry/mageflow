@@ -3,12 +3,16 @@ from unittest.mock import MagicMock
 
 import pytest_asyncio
 from pydantic import BaseModel
+from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
-from thirdmagic.task import TaskSignature
 
 import mageflow
-from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
+from mageflow.swarm.messages import (
+    SwarmResultsMessage,
+    SwarmErrorMessage,
+    FillSwarmMessage,
+)
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import create_mock_context_with_metadata, SwarmItemDoneSetup
 
@@ -16,23 +20,23 @@ from tests.unit.conftest import create_mock_context_with_metadata, SwarmItemDone
 @dataclass
 class FailedSwarmSetup:
     swarm_task: SwarmTaskSignature
-    task: TaskSignature
+    task: Signature
     ctx: MagicMock
-    msg: SwarmMessage
+    msg: FillSwarmMessage
 
 
 @dataclass
 class CompletedSwarmSetup:
     swarm_task: SwarmTaskSignature
-    task: TaskSignature
+    task: Signature
     ctx: MagicMock
-    msg: SwarmMessage
+    msg: FillSwarmMessage
 
 
 @dataclass
 class SwarmItemFailedSetup:
     swarm_task: SwarmTaskSignature
-    task: TaskSignature
+    task: Signature
     ctx: MagicMock
     msg: BaseModel
 
@@ -60,7 +64,7 @@ async def failed_swarm_setup(mock_task_def):
         swarm_task.current_running_tasks += 1
 
     ctx = create_mock_context_with_metadata()
-    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+    msg = FillSwarmMessage(swarm_task_id=swarm_task.key)
 
     return FailedSwarmSetup(swarm_task=swarm_task, task=task, ctx=ctx, msg=msg)
 
@@ -83,7 +87,7 @@ async def completed_swarm_setup(mock_task_def):
         swarm_task.is_swarm_closed = True
 
     ctx = create_mock_context_with_metadata()
-    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+    msg = FillSwarmMessage(swarm_task_id=swarm_task.key)
 
     return CompletedSwarmSetup(swarm_task=swarm_task, task=task, ctx=ctx, msg=msg)
 

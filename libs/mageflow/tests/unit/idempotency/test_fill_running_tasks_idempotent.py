@@ -8,6 +8,7 @@ from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
 
+from mageflow.swarm.workflows import fill_running_tasks
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -49,8 +50,8 @@ async def test_retry_after_crash_after_moved_tasks_to_publish_state__no_more_tas
     # Act
     with pytest.raises(RuntimeError):
         with patch("rapyer.afind", side_effect=RuntimeError):
-            await swarm_signature.fill_running_tasks()
-    await swarm_signature.fill_running_tasks()
+            await fill_running_tasks(swarm_signature)
+    await fill_running_tasks(swarm_signature)
 
     # Assert
     # Check the tasks were executed
@@ -78,8 +79,8 @@ async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource
     await swarm_signature.tasks_left_to_run.aextend(task_keys)
 
     # Act
-    result1 = await swarm_signature.fill_running_tasks()
-    result2 = await swarm_signature.fill_running_tasks()
+    result1 = await fill_running_tasks(swarm_signature)
+    result2 = await fill_running_tasks(swarm_signature)
 
     # Assert
     assert len(result1) == 3
@@ -108,9 +109,9 @@ async def test_concurrent_calls_single_execution_idempotent(
 
     # Act
     results = await asyncio.gather(
-        swarm_signature.fill_running_tasks(),
-        swarm_signature.fill_running_tasks(),
-        swarm_signature.fill_running_tasks(),
+        fill_running_tasks(swarm_signature),
+        fill_running_tasks(swarm_signature),
+        fill_running_tasks(swarm_signature),
     )
 
     # Assert
@@ -141,9 +142,9 @@ async def test__retry_when_swarm_task_was_changed_between_retry__publish_state_i
     # Act
     with pytest.raises(RuntimeError):
         with patch("rapyer.afind", side_effect=RuntimeError):
-            await swarm_signature.fill_running_tasks()
+            await fill_running_tasks(swarm_signature)
     await swarm_signature.tasks_left_to_run.aappend(task_keys[max_curr])
-    await swarm_signature.fill_running_tasks()
+    await fill_running_tasks(swarm_signature)
 
     # Assert
     mock_adapter.acall_signatures.assert_called_once_with(

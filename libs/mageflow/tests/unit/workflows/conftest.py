@@ -8,7 +8,7 @@ from thirdmagic.task import TaskSignature
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from mageflow.swarm.messages import SwarmMessage
+from mageflow.swarm.messages import SwarmMessage, FillSwarmMessage
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
 from tests.unit.conftest import create_mock_context_with_metadata
 
@@ -62,7 +62,7 @@ async def completed_swarm_with_success_callback(mock_task_def):
         swarm_task.is_swarm_closed = True
 
     ctx = create_mock_context_with_metadata()
-    msg = SwarmMessage(swarm_task_id=swarm_task.key)
+    msg = FillSwarmMessage(swarm_task_id=swarm_task.key)
 
     return CompletedSwarmWithSuccessCallback(
         swarm_task=swarm_task,
