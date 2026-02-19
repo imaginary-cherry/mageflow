@@ -45,7 +45,7 @@ class TaskOptions(TypedDict, total=False):
     version: str | None
     sticky: StickyStrategy | None
     default_priority: int
-    concurrency: ConcurrencyExpression | list[ConcurrencyExpression] | None
+    concurrency: int | ConcurrencyExpression | list[ConcurrencyExpression] | None
     schedule_timeout: Duration
     execution_timeout: Duration
     retries: int
@@ -54,14 +54,14 @@ class TaskOptions(TypedDict, total=False):
     backoff_factor: float | None
     backoff_max_seconds: int | None
     default_filters: list[DefaultFilter] | None
+    default_additional_metadata: dict[str, Any] | None
 
 
 class WorkerOptions(TypedDict, total=False):
     slots: int
     durable_slots: int
     labels: dict[str, str | int] | None
-    workflows: list[BaseWorkflow[Any]] | None
-    lifespan: LifespanFn | None
+
 
 
 async def merge_lifespan(
@@ -110,7 +110,7 @@ class HatchetMageflow(Hatchet):
         return wf
 
     @override
-    def task(self, name: str | None = None, **kwargs: Unpack[TaskOptions]):
+    def task(self, *, name: str | None = None, **kwargs: Unpack[TaskOptions]):
         """
         This is a wrapper for task, if you want to see hatchet task go to parent class
         """
@@ -138,7 +138,6 @@ class HatchetMageflow(Hatchet):
     def worker(
         self,
         name: str,
-        *args,
         workflows: list[BaseWorkflow[Any]] | None = None,
         lifespan: LifespanFn | None = None,
         **kwargs: Unpack[WorkerOptions],
@@ -155,7 +154,7 @@ class HatchetMageflow(Hatchet):
             )
 
         return super().worker(
-            name, *args, workflows=workflows, lifespan=lifespan, **kwargs
+            name, workflows=workflows, lifespan=lifespan, **kwargs
         )
 
     async def asign(self, task: str | HatchetTaskType, **options: Any) -> TaskSignature:
