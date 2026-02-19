@@ -36,7 +36,9 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
-    async def afill_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
+    async def afill_swarm(
+        self, swarm: "SwarmTaskSignature", max_tasks: int = None, **kwargs
+    ):
         pass
 
     @abc.abstractmethod
@@ -103,7 +105,9 @@ class DefaultClientAdapter(BaseClientAdapter):
     ):
         raise NotImplementedError("Set a client before we start")
 
-    async def afill_swarm(self, swarm: "SwarmTaskSignature", **kwargs):
+    async def afill_swarm(
+        self, swarm: "SwarmTaskSignature", max_tasks: int = None, **kwargs
+    ):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_swarm_item_error(
