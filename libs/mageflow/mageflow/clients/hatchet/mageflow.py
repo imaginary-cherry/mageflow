@@ -37,7 +37,6 @@ from mageflow.clients.inner_task_names import (
     ON_SWARM_ITEM_ERROR,
     ON_SWARM_ITEM_DONE,
 )
-from mageflow.init import init_mageflow_hatchet_tasks
 from mageflow.startup import (
     lifespan_initialize,
     init_mageflow,
@@ -208,7 +207,7 @@ class HatchetMageflow(Hatchet):
         )
         swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
 
-        return init_mageflow_hatchet_tasks(self.hatchet) + [
+        return [
             chain_done_task,
             on_chain_error_task,
             swarm_done,
