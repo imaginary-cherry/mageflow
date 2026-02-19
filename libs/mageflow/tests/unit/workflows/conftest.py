@@ -1,23 +1,26 @@
 from dataclasses import dataclass
+from logging import Logger
 from unittest.mock import MagicMock
 
 import pytest_asyncio
 from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 from thirdmagic.task import TaskSignature
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from mageflow.swarm.messages import SwarmMessage, FillSwarmMessage
+from mageflow.swarm.messages import FillSwarmMessage
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
-from tests.unit.conftest import create_mock_context_with_metadata
 
 
 @dataclass
 class CompletedSwarmWithSuccessCallback:
     swarm_task: SwarmTaskSignature
-    ctx: MagicMock
-    msg: SwarmMessage
+    swarm_task_id: str
+    max_tasks: int | None
+    lifecycle: BaseLifecycle
+    logger: MagicMock
     sub_tasks: list[TaskSignature]
     success: list[TaskSignature]
     error: list[TaskSignature]
@@ -28,11 +31,13 @@ class SwarmTestSetup:
     swarm_task: SwarmTaskSignature
     tasks: list[TaskSignature]
     item_task: TaskSignature | None = None
-    ctx: MagicMock | None = None
+    logger: MagicMock | None = None
 
 
 @pytest_asyncio.fixture
-async def completed_swarm_with_success_callback(mock_task_def):
+async def completed_swarm_with_success_callback(
+    mock_task_def, adapter_with_lifecycle, mock_logger
+):
     # Arrange
     success_callback = await mageflow.asign(
         "unittest_success_callback_task", model_validators=MessageWithResult
@@ -61,13 +66,17 @@ async def completed_swarm_with_success_callback(mock_task_def):
         swarm_task.finished_tasks.append(task.key)
         swarm_task.is_swarm_closed = True
 
-    ctx = create_mock_context_with_metadata()
     msg = FillSwarmMessage(swarm_task_id=swarm_task.key)
+    lifecycle = await adapter_with_lifecycle.lifecycle_from_signature(
+        msg, MagicMock(), swarm_task.key
+    )
 
     return CompletedSwarmWithSuccessCallback(
         swarm_task=swarm_task,
-        ctx=ctx,
-        msg=msg,
+        swarm_task_id=swarm_task.key,
+        max_tasks=msg.max_tasks,
+        lifecycle=lifecycle,
+        logger=mock_logger,
         success=success,
         error=error_callback,
         sub_tasks=[original_task],
@@ -82,6 +91,7 @@ async def create_swarm_item_test_setup(
     tasks_left_indices: list[int] | None = None,
     failed_indices: list[int] | None = None,
     finished_indices: list[int] | None = None,
+    logger: MagicMock | None = None,
 ) -> SwarmTestSetup:
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
@@ -111,13 +121,12 @@ async def create_swarm_item_test_setup(
         )
 
     item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
-    ctx = create_mock_context_with_metadata(task_id=item_task.key)
 
     return SwarmTestSetup(
         swarm_task=swarm_task,
         tasks=tasks,
         item_task=item_task,
-        ctx=ctx,
+        logger=logger or MagicMock(spec=Logger),
     )
 
 
@@ -127,7 +136,8 @@ class ChainTestSetup:
     chain_tasks: list[TaskSignature]
     success_callback: TaskSignature
     error_callback: TaskSignature
-    ctx: MagicMock
+    lifecycle_manager: BaseLifecycle
+    logger: MagicMock
     msg: ChainCallbackMessage
     error_msg: ChainErrorMessage
 
@@ -135,6 +145,8 @@ class ChainTestSetup:
 async def create_chain_test_setup(
     num_chain_tasks: int = 3,
     results: dict | None = None,
+    adapter=None,
+    logger: MagicMock | None = None,
 ) -> ChainTestSetup:
     # Arrange
     chain_tasks = [
@@ -158,9 +170,6 @@ async def create_chain_test_setup(
     )
 
     # Arrange
-    ctx = create_mock_context_with_metadata(task_id=chain_tasks[-1].key)
-
-    # Arrange
     msg = ChainCallbackMessage(
         chain_results=results or {"status": "done"},
         chain_task_id=chain_signature.key,
@@ -174,12 +183,21 @@ async def create_chain_test_setup(
         error_task_key=chain_tasks[0].key,
     )
 
+    # Arrange
+    _logger = logger or MagicMock(spec=Logger)
+    lifecycle_manager = (
+        await adapter.lifecycle_from_signature(msg, MagicMock(), chain_signature.key)
+        if adapter
+        else MagicMock(spec=BaseLifecycle)
+    )
+
     return ChainTestSetup(
         chain_signature=chain_signature,
         chain_tasks=chain_tasks,
         success_callback=success_callback,
         error_callback=error_callback,
-        ctx=ctx,
+        lifecycle_manager=lifecycle_manager,
+        logger=_logger,
         msg=msg,
         error_msg=error_msg,
     )

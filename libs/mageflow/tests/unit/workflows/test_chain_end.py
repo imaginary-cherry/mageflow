@@ -6,13 +6,13 @@ from tests.unit.workflows.conftest import create_chain_test_setup
 
 
 @pytest.mark.asyncio
-async def test_chain_end_task_sanity(redis_client, adapter_with_lifecycle):
+async def test_chain_end_task_sanity(redis_client, adapter_with_lifecycle, mock_logger):
     # Arrange
     results = {"status": "success", "value": 42}
-    setup = await create_chain_test_setup(num_chain_tasks=3, results=results)
+    setup = await create_chain_test_setup(num_chain_tasks=3, results=results, adapter=adapter_with_lifecycle, logger=mock_logger)
 
     # Act
-    await chain_end_task(setup.msg, setup.ctx)
+    await chain_end_task(setup.msg.chain_results, setup.lifecycle_manager, setup.logger)
 
     # Assert
     adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(

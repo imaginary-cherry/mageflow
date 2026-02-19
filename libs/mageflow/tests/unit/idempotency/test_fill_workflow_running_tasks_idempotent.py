@@ -24,14 +24,14 @@ async def test_failure_path_crash_at_interrupt_retry_succeeds_idempotent(
     # Act - First call crashes at interrupt
     with patch.object(SwarmTaskSignature, "interrupt", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+            await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert - swarm still exists (interrupt failed before remove)
     swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
     assert swarm is not None
 
     # Act - Retry succeeds
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert - linked tasks status changed (via interrupt -> suspend)
     original_task = await TaskSignature.aget(setup.task.key)
@@ -54,7 +54,7 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
 
     # Act - First call crashes at activate_error
     with pytest.raises(RuntimeError):
-        await fill_swarm_running_tasks(setup.msg, setup.ctx)
+        await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert - swarm still exists (remove wasn't called due to crash)
     swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -62,7 +62,7 @@ async def test_failure_path_crash_at_activate_error_retry_succeeds_idempotent(
 
     # Act - Retry succeeds (activate_error can be called multiple times - it's idempotent)
     mock_activate_error.side_effect = None
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert - both activate_error and remove were called on retry
     await assert_task_has_short_ttl(redis_client, setup.swarm_task.key)
@@ -82,8 +82,8 @@ async def test__failure_swarm_retry_twice__not_removing_or_republish(
     setup: FailedSwarmSetup = failed_swarm_setup
 
     # Act
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert
     assert mock_swarm_remove.call_count == 1
@@ -103,10 +103,10 @@ async def test_on_remove_task__finish_removing_all(
         with patch.object(
             SwarmTaskSignature, "remove_task", side_effect=RuntimeError()
         ):
-            await fill_swarm_running_tasks(setup.msg, setup.ctx)
+            await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Act - Retry succeeds
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert
     await assert_task_has_short_ttl(redis_client, setup.swarm_task.key)

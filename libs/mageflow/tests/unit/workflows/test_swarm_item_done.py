@@ -1,23 +1,25 @@
+from logging import Logger
+from unittest.mock import MagicMock
+
 import pytest
-from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.swarm.model import SwarmTaskSignature
 
 import mageflow
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.conftest import create_mock_context_with_metadata
 from tests.unit.workflows.conftest import create_swarm_item_test_setup
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_basic_flow(mock_adapter):
+async def test_swarm_item_done_sanity_basic_flow(mock_adapter, mock_logger):
     # Arrange
     setup = await create_swarm_item_test_setup(
         num_tasks=3,
         max_concurrency=1,
         stop_after_n_failures=None,
         tasks_left_indices=[1, 2],
+        logger=mock_logger,
     )
     msg = SwarmResultsMessage(
         mageflow_results={"status": "success", "value": 42},
@@ -26,7 +28,7 @@ async def test_swarm_item_done_sanity_basic_flow(mock_adapter):
     )
 
     # Act
-    await swarm_item_done(msg, setup.ctx)
+    await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger)
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -41,13 +43,14 @@ async def test_swarm_item_done_sanity_basic_flow(mock_adapter):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_sanity_last_item_completes(mock_adapter):
+async def test_swarm_item_done_sanity_last_item_completes(mock_adapter, mock_logger):
     # Arrange
     setup = await create_swarm_item_test_setup(
         num_tasks=2,
         max_concurrency=2,
         stop_after_n_failures=None,
         finished_indices=[0],
+        logger=mock_logger,
     )
     await setup.swarm_task.aupdate(is_swarm_closed=True)
 
@@ -58,7 +61,7 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_adapter):
     )
 
     # Act
-    await swarm_item_done(msg, setup.ctx)
+    await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger)
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -68,14 +71,9 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_adapter):
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
+async def test_swarm_item_done_nonexistent_swarm_edge_case():
     # Arrange
-    ctx = mock_context
-    ctx.additional_metadata = {
-        "task_data": {
-            TASK_ID_PARAM_NAME: "some_task",
-        }
-    }
+    logger = MagicMock(spec=Logger)
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id="nonexistent_swarm",
@@ -84,15 +82,13 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case(mock_context):
 
     # Act & Assert
     with pytest.raises(Exception):
-        await swarm_item_done(msg, ctx)
+        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger)
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_swarm_not_found_edge_case():
     # Arrange
-    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(task_id=item_task.key)
+    logger = MagicMock(spec=Logger)
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id="nonexistent_swarm",
@@ -101,12 +97,12 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
 
     # Act & Assert
     with pytest.raises(Exception):
-        await swarm_item_done(msg, ctx)
+        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger)
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_exception_during_handle_finish_edge_case(
-    mock_adapter,
+    mock_adapter, mock_logger,
 ):
     # Arrange
     mock_adapter.afill_swarm.side_effect = RuntimeError("Finish tasks error")
@@ -123,9 +119,6 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
     )
     task = await swarm_task.add_task(original_task)
 
-    item_task = await mageflow.asign("item_task", model_validators=ContextMessage)
-
-    ctx = create_mock_context_with_metadata(task_id=item_task.key)
     msg = SwarmResultsMessage(
         mageflow_results={},
         swarm_task_id=swarm_task.key,
@@ -134,6 +127,6 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="Finish tasks error"):
-        await swarm_item_done(msg, ctx)
+        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, mock_logger)
 
     mock_adapter.afill_swarm.assert_awaited_once()

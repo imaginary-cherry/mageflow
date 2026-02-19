@@ -25,10 +25,9 @@ async def test_activate_success_with_corrupted_callback_model_validators_succeed
         await corrupt_model_validators_in_redis(signature, redis_client)
 
     # Act
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert
-    # The signature was corrupted, so we only check the key was in the params
     adapter_with_lifecycle.acall_signatures.assert_awaited_once()
     called_signatures = adapter_with_lifecycle.acall_signatures.call_args[0][0]
     assert len(called_signatures) == len(success_callbacks)
@@ -51,10 +50,9 @@ async def test_activate_error_with_corrupted_callback_model_validators_succeeds(
         await corrupt_model_validators_in_redis(signature, redis_client)
 
     # Act
-    await fill_swarm_running_tasks(setup.msg, setup.ctx)
+    await fill_swarm_running_tasks(setup.swarm_task_id, setup.max_tasks, setup.lifecycle, setup.logger)
 
     # Assert
-    # The signature was corrupted, so we only check the key was in the params
     adapter_with_lifecycle.acall_signatures.assert_awaited_once()
     called_signatures = adapter_with_lifecycle.acall_signatures.call_args[0][0]
     assert len(called_signatures) == len(error_callbacks)

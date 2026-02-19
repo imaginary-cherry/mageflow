@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from logging import Logger
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import fakeredis
@@ -40,7 +41,7 @@ class WorkflowCallCapture:
 class SwarmItemDoneSetup:
     swarm_task: SwarmTaskSignature
     task: TaskSignature
-    ctx: MagicMock
+    logger: MagicMock
     msg: SwarmResultsMessage
 
 
@@ -165,8 +166,13 @@ def create_mock_context_with_metadata(task_id=None):
     return ctx
 
 
+@pytest.fixture
+def mock_logger():
+    return MagicMock(spec=Logger)
+
+
 @pytest_asyncio.fixture
-async def swarm_setup(mock_task_def):
+async def swarm_setup(mock_task_def, mock_logger):
     swarm_task = await mageflow.aswarm(
         task_name="test_swarm",
         model_validators=ContextMessage,
@@ -178,8 +184,7 @@ async def swarm_setup(mock_task_def):
         swarm_task.current_running_tasks += 1
         swarm_task.tasks_left_to_run.remove_range(0, len(swarm_task.tasks_left_to_run))
 
-    ctx = create_mock_context_with_metadata()
-    return [swarm_task, task, ctx]
+    return [swarm_task, task, mock_logger]
 
 
 @pytest.fixture
