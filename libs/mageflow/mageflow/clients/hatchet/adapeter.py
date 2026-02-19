@@ -121,6 +121,9 @@ class HatchetClientAdapter(BaseClientAdapter):
             validator = validator._type
         return validator
 
+    def extract_retries(self, client_task: BaseWorkflow) -> int:
+        return client_task.tasks[0].retries
+
     async def acall_signature(
         self,
         signature: TaskSignature,

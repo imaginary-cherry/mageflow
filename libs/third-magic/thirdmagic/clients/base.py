@@ -22,6 +22,10 @@ class BaseClientAdapter(ABC):
         pass
 
     @abc.abstractmethod
+    def extract_retries(self, client_task) -> int:
+        pass
+
+    @abc.abstractmethod
     async def acall_chain_done(self, results: Any, chain: "ChainTaskSignature"):
         pass
 
@@ -121,6 +125,9 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     def extract_validator(self, client_task) -> type[BaseModel]:
+        raise NotImplementedError("Set a client before we start")
+
+    def extract_retries(self, client_task) -> int:
         raise NotImplementedError("Set a client before we start")
 
     async def acall_signature(
