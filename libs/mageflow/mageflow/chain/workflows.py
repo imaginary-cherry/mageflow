@@ -1,4 +1,4 @@
-from hatchet_sdk import Context, EmptyModel
+from hatchet_sdk import Context
 from thirdmagic.chain import ChainTaskSignature
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
