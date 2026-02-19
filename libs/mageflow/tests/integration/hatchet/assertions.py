@@ -3,6 +3,7 @@ from datetime import datetime
 
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
+from hatchet_sdk.runnables.workflow import TaskRunRef
 from pydantic import BaseModel
 from rapyer.fields import RapyerKey
 from thirdmagic.chain.model import ChainTaskSignature
@@ -68,13 +69,13 @@ def find_sub_calls_from_wf(
     return called_tasks
 
 
-def find_sub_calls_by_signature(
-    signature: TaskSignature, runs: HatchetRuns
+def find_sub_calls_by_task_ref(
+    task_ref: TaskRunRef, runs: HatchetRuns
 ) -> list[V1TaskSummary]:
-    wf_by_signature = map_wf_by_id(runs)
-    signature_wf = wf_by_signature[signature.key]
+    wf_by_id = map_wf_by_wf_id(runs)
+    ref_wf = wf_by_id[task_ref.workflow_run_id]
 
-    called_tasks = find_sub_calls_from_wf(signature_wf, runs)
+    called_tasks = find_sub_calls_from_wf(ref_wf, runs)
     return called_tasks
 
 

@@ -14,7 +14,7 @@ from tests.integration.hatchet.assertions import (
     assert_signature_done,
     map_wf_by_id,
     assert_overlaps_leq_k_workflows,
-    find_sub_calls_by_signature,
+    find_sub_calls_by_task_ref,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -343,7 +343,7 @@ async def test_swarm_fill_running_tasks_with_success_task(
 
     # Act
     # Run only the first task directly
-    published_task = await swarm.aio_run_in_swarm(
+    task_ref = await swarm.aio_run_in_swarm(
         sign_task1, EmptyModel(), options=trigger_options
     )
     await asyncio.sleep(13)
@@ -351,7 +351,7 @@ async def test_swarm_fill_running_tasks_with_success_task(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(published_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_task_ref(task_ref, runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
@@ -387,7 +387,7 @@ async def test_swarm_fill_running_tasks_with_failed_task(
 
     # Act
     # Run only the first (failing) task directly
-    published_task = await swarm.aio_run_in_swarm(
+    task_ref = await swarm.aio_run_in_swarm(
         sign_fail_task, regular_message, options=trigger_options
     )
     await asyncio.sleep(13)
@@ -395,7 +395,7 @@ async def test_swarm_fill_running_tasks_with_failed_task(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_signature(published_task, runs)
+    tasks_called_by_first_task = find_sub_calls_by_task_ref(task_ref, runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
