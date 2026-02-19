@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from threading import Thread
@@ -19,6 +20,8 @@ import rapyer
 import requests
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from hatchet_sdk.clients.rest import V1TaskStatus
+from hatchet_sdk.features.runs import BulkCancelReplayOpts, RunFilter
 from redis.asyncio.client import Redis
 from thirdmagic.task_def import MageflowTaskDefinition
 
@@ -51,7 +54,16 @@ class HatchetInitData:
 async def hatchet() -> AsyncGenerator[Hatchet, None]:
     copy_config = config_obj.model_copy(deep=True)
     hatchet = Hatchet(debug=True, config=copy_config)
+    start_time = datetime.now()
     yield hatchet
+    bulk_cancel_by_filters = BulkCancelReplayOpts(
+        filters=RunFilter(
+            since=start_time,
+            until=datetime.now(),
+            statuses=[V1TaskStatus.RUNNING],
+        )
+    )
+    await hatchet.runs.aio_bulk_cancel(bulk_cancel_by_filters)
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
