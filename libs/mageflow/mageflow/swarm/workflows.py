@@ -1,11 +1,16 @@
+from typing import Optional, cast
+
+import rapyer
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import PublishState
+from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.consts import SWARM_ACTION_FILL
 from mageflow.swarm.messages import (
     SwarmResultsMessage,
-    SwarmMessage,
     SwarmErrorMessage,
     FillSwarmMessage,
 )
@@ -65,7 +70,7 @@ async def fill_swarm_running_tasks(msg: FillSwarmMessage, ctx: Context):
             )
             return
 
-        num_task_started = await swarm_task.fill_running_tasks(max_tasks=msg.max_tasks)
+        num_task_started = await fill_running_tasks(swarm_task, max_tasks=msg.max_tasks)
         if num_task_started:
             ctx.log(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
         else:
@@ -78,3 +83,45 @@ async def fill_swarm_running_tasks(msg: FillSwarmMessage, ctx: Context):
             ctx.log(f"Swarm item done - closing swarm {swarm_task.key}")
             await lifecycle.task_success(EmptyModel())
             ctx.log(f"Swarm item done - closed swarm {swarm_task.key}")
+
+
+async def fill_running_tasks(
+    swarm, max_tasks: Optional[int] = None, **pub_kwargs
+) -> list[Signature]:
+    publish_state = await PublishState.aget(swarm.publishing_state_id)
+    task_ids_to_run = list(publish_state.task_ids)
+    num_of_task_to_run = len(task_ids_to_run)
+    if not task_ids_to_run:
+        resource_to_run = swarm.config.max_concurrency - swarm.current_running_tasks
+        if max_tasks is not None:
+            resource_to_run = min(max_tasks, resource_to_run)
+        if resource_to_run <= 0:
+            return []
+        num_of_task_to_run = min(resource_to_run, len(swarm.tasks_left_to_run))
+        async with swarm.apipeline():
+            task_ids_to_run = swarm.tasks_left_to_run[:num_of_task_to_run]
+            publish_state.task_ids.extend(task_ids_to_run)
+            swarm.tasks_left_to_run.remove_range(0, num_of_task_to_run)
+
+    if task_ids_to_run:
+        tasks = await rapyer.afind(*task_ids_to_run)
+        tasks = cast(list[Signature], tasks)
+
+        # Update the kwargs locally, so swarm kwargs wont be duplicated on redis but still sent to task
+        swarm_kwargs = swarm.kwargs.copy()
+        swarm_msg = swarm_kwargs.pop(SWARM_MESSAGE_PARAM_NAME, None)
+        for task in tasks:
+            task.kwargs.update(**swarm_kwargs)
+
+        await swarm.ClientAdapter.acall_signatures(
+            tasks,
+            [swarm_msg] * len(tasks),
+            set_return_field=swarm.config.send_swarm_message_to_return_field,
+            **pub_kwargs,
+        )
+
+        async with publish_state.apipeline():
+            publish_state.task_ids.clear()
+            swarm.current_running_tasks += num_of_task_to_run
+        return tasks
+    return []

@@ -154,47 +154,6 @@ class SwarmTaskSignature(ContainerTaskSignature):
         added_tasks = await self.add_tasks([task], close_on_max_task)
         return added_tasks[0]
 
-    async def fill_running_tasks(
-        self, max_tasks: Optional[int] = None, **pub_kwargs
-    ) -> list[Signature]:
-        publish_state = await PublishState.aget(self.publishing_state_id)
-        task_ids_to_run = list(publish_state.task_ids)
-        num_of_task_to_run = len(task_ids_to_run)
-        if not task_ids_to_run:
-            resource_to_run = self.config.max_concurrency - self.current_running_tasks
-            if max_tasks is not None:
-                resource_to_run = min(max_tasks, resource_to_run)
-            if resource_to_run <= 0:
-                return []
-            num_of_task_to_run = min(resource_to_run, len(self.tasks_left_to_run))
-            async with self.apipeline():
-                task_ids_to_run = self.tasks_left_to_run[:num_of_task_to_run]
-                publish_state.task_ids.extend(task_ids_to_run)
-                self.tasks_left_to_run.remove_range(0, num_of_task_to_run)
-
-        if task_ids_to_run:
-            tasks = await rapyer.afind(*task_ids_to_run)
-            tasks = cast(list[TaskSignature], tasks)
-
-            # Update the kwargs locally, so swarm kwargs wont be duplicated on redis but still sent to task
-            swarm_kwargs = self.kwargs.copy()
-            swarm_msg = swarm_kwargs.pop(SWARM_MESSAGE_PARAM_NAME, None)
-            for task in tasks:
-                task.kwargs.update(**swarm_kwargs)
-
-            await self.ClientAdapter.acall_signatures(
-                tasks,
-                [swarm_msg] * len(tasks),
-                set_return_field=self.config.send_swarm_message_to_return_field,
-                **pub_kwargs,
-            )
-
-            async with publish_state.apipeline():
-                publish_state.task_ids.clear()
-                self.current_running_tasks += num_of_task_to_run
-            return tasks
-        return []
-
     async def is_swarm_done(self):
         done_tasks = self.finished_tasks + self.failed_tasks
         finished_all_tasks = set(done_tasks) == set(self.tasks)
