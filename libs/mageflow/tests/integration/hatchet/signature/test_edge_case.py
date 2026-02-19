@@ -73,7 +73,7 @@ async def test__retry_once_with_callbacks__success_callback_called_error_callbac
 
     # Act
     await retry_once_sign.aio_run_no_wait(message, options=trigger_options)
-    await asyncio.sleep(10)
+    await asyncio.sleep(6)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
@@ -100,7 +100,7 @@ async def test__retry_to_failure_with_error_callback__error_callback_called_once
 
     # Act
     await retry_to_failure_sign.aio_run_no_wait(message, options=trigger_options)
-    await asyncio.sleep(15)
+    await asyncio.sleep(6)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
@@ -138,7 +138,7 @@ async def test__retry_but_override_with_exception__check_error_callback_is_calle
 
     # Act
     await cancel_retry_sign.aio_run_no_wait(message, options=trigger_options)
-    await asyncio.sleep(7)
+    await asyncio.sleep(4)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
