@@ -214,7 +214,7 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
     assert hatchet_call.status == V1TaskStatus.CANCELLED
     expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
     for key, value in expected_dump.model_dump().items():
-        assert task.kwargs[key] == value, f"{key} != {value}, from {task.task_name}"
+        assert task.kwargs.get(key) == value, f"{key} != {value}, from {task.task_name}"
 
     if with_resume:
         wf_by_task_id = map_wf_by_id(runs)
