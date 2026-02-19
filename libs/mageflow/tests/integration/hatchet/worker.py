@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.task import TaskSignature
@@ -119,12 +119,14 @@ def return_multiple_values(msg):
     return [msg, msg, msg]
 
 
-@hatchet.task(execution_timeout=1, input_validator=ContextMessage)
+@hatchet.task(execution_timeout=timedelta(1), input_validator=ContextMessage)
 async def timeout_task(msg: ContextMessage):
     await asyncio.sleep(10)
 
 
-@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
+@hatchet.task(
+    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+)
 @hatchet.with_ctx
 async def retry_once(msg, ctx: Context):
     if ctx.attempt_number == 1:
@@ -132,7 +134,9 @@ async def retry_once(msg, ctx: Context):
     return "Nice"
 
 
-@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
+@hatchet.task(
+    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+)
 @hatchet.with_ctx
 async def normal_retry_once(msg, ctx: Context):
     if ctx.attempt_number == 1:
@@ -140,7 +144,9 @@ async def normal_retry_once(msg, ctx: Context):
     return msg
 
 
-@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
+@hatchet.task(
+    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+)
 @hatchet.with_signature
 async def retry_to_failure(msg, signature: TaskSignature):
     await TaskSignature.Meta.redis.set(
@@ -149,7 +155,9 @@ async def retry_to_failure(msg, signature: TaskSignature):
     raise ValueError("Test exception")
 
 
-@hatchet.task(retries=3, execution_timeout=60, input_validator=ContextMessage)
+@hatchet.task(
+    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+)
 async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 
