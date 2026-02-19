@@ -25,8 +25,8 @@ if HAS_HATCHET:
 
 class SwarmConfig(AtomicRedisModel):
     max_concurrency: int = 30
-    stop_after_n_failures: Optional[int] = None
-    max_task_allowed: Optional[int] = None
+    stop_after_n_failures: Optional[int] = Field(default=None, gt=0)
+    max_task_allowed: Optional[int] = Field(default=None, gt=0)
     send_swarm_message_to_return_field: bool = False
 
     def can_add_task(self, swarm: "SwarmTaskSignature") -> bool:
