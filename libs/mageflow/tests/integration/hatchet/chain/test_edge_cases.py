@@ -40,7 +40,7 @@ async def test__chain__task_timeout__chain_call_error_callback(
 
     # Act
     await chain_signature.aio_run_no_wait(ContextMessage(), options=trigger_options)
-    await asyncio.sleep(15)
+    await asyncio.sleep(10)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
