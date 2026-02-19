@@ -106,18 +106,15 @@ def get_task_param(wf: V1TaskSummary, param_name: str):
 
 def assert_signature_done(
     runs: HatchetRuns,
-    task_sign: TaskSignature | RapyerKey,
+    task_sign: TaskSignature,
     hatchet_task_results=None,
     check_called_once=True,
     check_finished_once=True,
     allow_fails=False,
     **input_params,
 ) -> V1TaskSummary:
-    task_sign_key = task_sign
-    task_name = ""
-    if isinstance(task_sign, TaskSignature):
-        task_sign_key = task_sign.key
-        task_name = task_sign.task_name
+    task_sign_key = task_sign.key
+    task_name = task_sign.task_name
 
     if check_called_once or check_finished_once:
         task_id_calls = [

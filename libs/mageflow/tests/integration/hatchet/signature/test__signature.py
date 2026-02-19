@@ -85,7 +85,7 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
             return_value_field(task.model_validators): message.model_dump(mode="json")
         }
         input_values.update(task.kwargs)
-        assert_signature_done(runs, success_id, **input_values)
+        assert_signature_done(runs, task, **input_values)
     for error_id in main_signature.error_callbacks:
         assert_signature_not_called(runs, error_id)
     assert_signature_done(runs, main_signature, base_data=test_ctx)
@@ -123,7 +123,7 @@ async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity
     error_tasks = {task.key: task for task in error_callbacks}
     for success_id in error_sign.error_callbacks:
         task = error_tasks[success_id]
-        assert_signature_done(runs, success_id, **task.kwargs)
+        assert_signature_done(runs, task, **task.kwargs)
     for error_id in error_sign.success_callbacks:
         assert_signature_not_called(runs, error_id)
     await assert_redis_is_clean(redis_client)
