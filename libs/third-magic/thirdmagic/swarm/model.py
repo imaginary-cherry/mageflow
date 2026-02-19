@@ -191,7 +191,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         await self.aupdate(is_swarm_closed=True)
         should_finish_swarm = await self.is_swarm_done()
         if should_finish_swarm:
-            await self.ClientAdapter.afill_swarm(self, max_tasks=0, **kwargs)
+            await self.ClientAdapter.afill_swarm(self, max_tasks=0)
         return self
 
     def has_swarm_failed(self):
