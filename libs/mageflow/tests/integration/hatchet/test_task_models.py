@@ -38,7 +38,7 @@ async def test_hatchet_task_model_no_ttl_sanity(hatchet_client_init: HatchetInit
             MageflowTaskDefinition(
                 mageflow_task_name="tests_for_mageflow_timeout_task",
                 task_name="tests_for_mageflow_timeout_task",
-                retries=1,
+                retries=0,
                 input_validator=ContextMessage,
             ),
         ],
@@ -56,7 +56,7 @@ async def test_hatchet_task_model_no_ttl_sanity(hatchet_client_init: HatchetInit
             MageflowTaskDefinition(
                 mageflow_task_name="tests_for_mageflow_callback_with_redis",
                 task_name="tests_for_mageflow_callback_with_redis",
-                retries=1,
+                retries=0,
                 input_validator=CommandMessageWithResult,
             ),
         ],
