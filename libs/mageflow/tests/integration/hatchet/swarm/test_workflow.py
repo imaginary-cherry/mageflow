@@ -2,12 +2,12 @@ import asyncio
 
 import pytest
 
-from tests.integration.hatchet.assertions import get_runs
+from tests.integration.hatchet.assertions import assert_logs_dont_overlap, get_runs
 from tests.integration.hatchet.conftest import HatchetInitData
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_swarm_fill_running_tasks_with_failed_task(
+async def test__fill_swarm_workflow_is_locked(
     hatchet_client_init: HatchetInitData, ctx_metadata, trigger_options, sign_task1
 ):
     # Arrange
@@ -34,3 +34,4 @@ async def test_swarm_fill_running_tasks_with_failed_task(
     logs = await asyncio.gather(
         *[hatchet.logs.aio_list(task_run_id=wf.task_external_id) for wf in runs]
     )
+    assert_logs_dont_overlap(logs)

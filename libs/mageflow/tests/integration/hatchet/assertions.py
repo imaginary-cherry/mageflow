@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 
 from hatchet_sdk import Hatchet
-from hatchet_sdk.clients.rest import V1TaskStatus, V1TaskSummary
+from hatchet_sdk.clients.rest import V1LogLineList, V1TaskStatus, V1TaskSummary
 from hatchet_sdk.runnables.workflow import TaskRunRef
 from pydantic import BaseModel
 from rapyer.fields import RapyerKey
@@ -358,6 +358,25 @@ def assert_task_did_not_repeat(runs: HatchetRuns):
     ]
 
     assert len(task_done) == len(set(task_done)), "Task repeated"
+
+
+def assert_logs_dont_overlap(logs_per_run: list[V1LogLineList]):
+    time_windows = []
+    for i, log_list in enumerate(logs_per_run):
+        if not log_list.rows:
+            continue
+        timestamps = [line.created_at for line in log_list.rows]
+        time_windows.append((min(timestamps), max(timestamps), i))
+
+    time_windows.sort(key=lambda x: x[0])
+
+    for idx in range(len(time_windows) - 1):
+        _, end, wf_i = time_windows[idx]
+        next_start, _, wf_j = time_windows[idx + 1]
+        assert end <= next_start, (
+            f"Logs overlap: run {wf_i} ends at {end}, "
+            f"run {wf_j} starts at {next_start}"
+        )
 
 
 def assert_overlaps_leq_k_workflows(
