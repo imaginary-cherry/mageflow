@@ -119,13 +119,13 @@ def return_multiple_values(msg):
     return [msg, msg, msg]
 
 
-@hatchet.task(execution_timeout=timedelta(1), input_validator=ContextMessage)
+@hatchet.task(execution_timeout=timedelta(seconds=1), input_validator=ContextMessage)
 async def timeout_task(msg: ContextMessage):
     await asyncio.sleep(10)
 
 
 @hatchet.task(
-    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+    retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
 @hatchet.with_ctx
 async def retry_once(msg, ctx: Context):
@@ -135,7 +135,7 @@ async def retry_once(msg, ctx: Context):
 
 
 @hatchet.task(
-    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+    retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
 @hatchet.with_ctx
 async def normal_retry_once(msg, ctx: Context):
@@ -145,7 +145,7 @@ async def normal_retry_once(msg, ctx: Context):
 
 
 @hatchet.task(
-    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+    retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
 @hatchet.with_signature
 async def retry_to_failure(msg, signature: TaskSignature):
@@ -156,7 +156,7 @@ async def retry_to_failure(msg, signature: TaskSignature):
 
 
 @hatchet.task(
-    retries=3, execution_timeout=timedelta(60), input_validator=ContextMessage
+    retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
 async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
