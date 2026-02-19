@@ -7,7 +7,9 @@ from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio
-async def test_close_swarm_sets_is_swarm_closed_to_true_sanity(mock_task_def):
+async def test_close_swarm_sets_is_swarm_closed_to_true_sanity(
+    mock_task_def, mock_adapter
+):
     # Arrange
     swarm_signature = await thirdmagic.swarm(task_name="test_swarm")
     task = await thirdmagic.sign("test_task")
@@ -19,7 +21,7 @@ async def test_close_swarm_sets_is_swarm_closed_to_true_sanity(mock_task_def):
     # Assert
     reloaded = await SwarmTaskSignature.aget(swarm_signature.key)
     assert reloaded.is_swarm_closed is True
-    mock_adapter.afill_swarm.assert_awaited_once_with(swarm_signature, max_tasks=0)
+    mock_adapter.afill_swarm.assert_not_awaited()
 
 
 @pytest.mark.asyncio
