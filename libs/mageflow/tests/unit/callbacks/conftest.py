@@ -8,12 +8,14 @@ import pytest_asyncio
 from hatchet_sdk import Context
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.callbacks import handle_task_callback, AcceptParams
+from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
 from tests.integration.hatchet.models import ContextMessage
 
 
@@ -115,8 +117,18 @@ async def error_callback_signature():
     return await mageflow.asign("error_callback_task", model_validators=ContextMessage)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_adapter():
     adapter = AsyncMock(spec=BaseClientAdapter)
-    TaskSignature.ClientAdapter = adapter
+    adapter.create_lifecycle = (
+        lambda *args, **kwargs: HatchetClientAdapter.create_lifecycle(
+            adapter, *args, **kwargs
+        )
+    )
+    adapter.lifecycle_from_signature = (
+        lambda *args, **kwargs: HatchetClientAdapter.lifecycle_from_signature(
+            adapter, *args, **kwargs
+        )
+    )
+    Signature.ClientAdapter = adapter
     yield adapter
