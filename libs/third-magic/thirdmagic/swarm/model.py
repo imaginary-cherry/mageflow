@@ -21,6 +21,7 @@ from thirdmagic.utils import HAS_HATCHET
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
     from hatchet_sdk.runnables.types import EmptyModel
+    from hatchet_sdk.runnables.workflow import TaskRunRef
 
 
 class SwarmConfig(AtomicRedisModel):
@@ -85,7 +86,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
     if HAS_HATCHET:
 
         async def aio_run_no_wait(
-            self, msg: BaseModel, options: TriggerWorkflowOptions = None
+            self, msg: BaseModel, options: "TriggerWorkflowOptions" = None
         ):
             return await self.acall(
                 msg.model_dump(mode="json", exclude_unset=True),
@@ -99,7 +100,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
             msg: BaseModel,
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
-        ) -> Optional[TaskSignature]:
+        ) -> Optional["TaskRunRef"]:
             sub_task = await self.add_task(task, close_on_max_task)
             await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(
