@@ -87,7 +87,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         start_swarm_msg = FillSwarmMessage(swarm_task_id=swarm.key, max_tasks=max_tasks)
         params = dict(options=options) if options else {}
         stub = self.hatchet.stubs.task(
-            name=SWARM_FILL_TASK, input_validator=SwarmMessage
+            name=SWARM_FILL_TASK, input_validator=FillSwarmMessage
         )
         return await stub.aio_run_no_wait(start_swarm_msg, **params)
 
