@@ -38,7 +38,9 @@ jobs:
       - name: Export and audit dependencies
         run: |
           uv export --no-dev --no-hashes -o requirements-audit.txt
-          pip-audit --strict -r requirements-audit.txt
+          # Replace these lines with pip-audit --strict -r requirements-audit.txt after you upload thirdmagic
+          grep -v "^-e \.\|^thirdmagic" requirements-audit.txt > requirements-audit-filtered.txt
+          pip-audit --strict -r requirements-audit-filtered.txt
 
 
   secrets-scan:
