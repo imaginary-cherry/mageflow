@@ -3,7 +3,12 @@ from hatchet_sdk.runnables.types import EmptyModel
 from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.consts import SWARM_ACTION_FILL
-from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
+from mageflow.swarm.messages import (
+    SwarmResultsMessage,
+    SwarmMessage,
+    SwarmErrorMessage,
+    FillSwarmMessage,
+)
 
 
 async def swarm_item_done(msg: SwarmResultsMessage, ctx: Context):
@@ -39,7 +44,7 @@ async def swarm_item_failed(msg: SwarmErrorMessage, ctx: Context):
         raise
 
 
-async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
+async def fill_swarm_running_tasks(msg: FillSwarmMessage, ctx: Context):
     async with SwarmTaskSignature.alock_from_key(
         msg.swarm_task_id, action=SWARM_ACTION_FILL
     ) as swarm_task:
@@ -60,7 +65,7 @@ async def fill_swarm_running_tasks(msg: SwarmMessage, ctx: Context):
             )
             return
 
-        num_task_started = await swarm_task.fill_running_tasks()
+        num_task_started = await swarm_task.fill_running_tasks(max_tasks=msg.max_tasks)
         if num_task_started:
             ctx.log(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
         else:

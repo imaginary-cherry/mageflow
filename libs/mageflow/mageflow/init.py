@@ -13,7 +13,11 @@ from mageflow.clients.inner_task_names import (
     ON_SWARM_ITEM_ERROR,
 )
 from mageflow.swarm.consts import SWARM_TASK_ID_PARAM_NAME
-from mageflow.swarm.messages import SwarmResultsMessage, SwarmMessage, SwarmErrorMessage
+from mageflow.swarm.messages import (
+    SwarmResultsMessage,
+    SwarmErrorMessage,
+    FillSwarmMessage,
+)
 from mageflow.swarm.workflows import (
     swarm_item_failed,
     swarm_item_done,
@@ -56,7 +60,7 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
 
     swarm_fill_task = hatchet.durable_task(
         name=SWARM_FILL_TASK,
-        input_validator=SwarmMessage,
+        input_validator=FillSwarmMessage,
         execution_timeout=timedelta(minutes=5),
         retries=4,
         concurrency=ConcurrencyExpression(

@@ -18,3 +18,7 @@ class SwarmResultsMessage(SwarmCallbackMessage):
 
 class SwarmErrorMessage(SwarmCallbackMessage):
     error: Optional[str] = None
+
+
+class FillSwarmMessage(SwarmMessage):
+    max_tasks: Optional[int] = None

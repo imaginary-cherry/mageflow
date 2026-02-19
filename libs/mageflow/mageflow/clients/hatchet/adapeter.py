@@ -27,7 +27,12 @@ from mageflow.clients.inner_task_names import (
 from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.lifecycle.signature import SignatureLifecycle
 from mageflow.lifecycle.task import TaskLifecycle
-from mageflow.swarm.messages import SwarmMessage, SwarmResultsMessage, SwarmErrorMessage
+from mageflow.swarm.messages import (
+    SwarmMessage,
+    SwarmResultsMessage,
+    SwarmErrorMessage,
+    FillSwarmMessage,
+)
 
 
 class HatchetClientAdapter(BaseClientAdapter):
@@ -75,10 +80,11 @@ class HatchetClientAdapter(BaseClientAdapter):
     async def afill_swarm(
         self,
         swarm: "SwarmTaskSignature",
+        max_tasks: int = None,
         options: TriggerWorkflowOptions = None,
         **kwargs,
     ):
-        start_swarm_msg = SwarmMessage(swarm_task_id=swarm.key)
+        start_swarm_msg = FillSwarmMessage(swarm_task_id=swarm.key, max_tasks=max_tasks)
         params = dict(options=options) if options else {}
         stub = self.hatchet.stubs.task(
             name=SWARM_FILL_TASK, input_validator=SwarmMessage
