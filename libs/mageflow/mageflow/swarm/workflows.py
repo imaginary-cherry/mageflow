@@ -114,7 +114,7 @@ async def fill_running_tasks(
 
         await swarm.ClientAdapter.acall_signatures(
             tasks,
-            [swarm_msg] * len(tasks),
+            swarm_msg,
             set_return_field=swarm.config.send_swarm_message_to_return_field,
             **pub_kwargs,
         )

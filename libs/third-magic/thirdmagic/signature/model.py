@@ -70,16 +70,12 @@ class Signature(AtomicRedisModel, ABC):
     async def activate_success(self, msg):
         success_signatures = await rapyer.afind(*self.success_callbacks)
         success_signatures = cast(list[Signature], success_signatures)
-        return await self.ClientAdapter.acall_signatures(
-            success_signatures, [msg] * len(success_signatures), True
-        )
+        return await self.ClientAdapter.acall_signatures(success_signatures, msg, True)
 
     async def activate_error(self, msg):
         error_signatures = await rapyer.afind(*self.error_callbacks)
         error_signatures = cast(list[Signature], error_signatures)
-        return await self.ClientAdapter.acall_signatures(
-            error_signatures, [msg] * len(error_signatures), False
-        )
+        return await self.ClientAdapter.acall_signatures(error_signatures, msg, False)
 
     async def remove_task(self):
         await self.aset_ttl(REMOVED_TASK_TTL)

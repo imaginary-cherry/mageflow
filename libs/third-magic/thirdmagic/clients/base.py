@@ -66,14 +66,14 @@ class BaseClientAdapter(ABC):
     async def acall_signatures(
         self,
         signatures: list["Signature"],
-        msgs: list,
+        msg: Any,
         set_return_field: bool,
         **kwargs,
     ):
         return asyncio.gather(
             *[
                 signature.acall(msg, set_return_field, **kwargs)
-                for signature, msg in zip(signatures, msgs)
+                for signature in signatures
             ]
         )
 
