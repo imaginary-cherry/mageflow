@@ -3,11 +3,7 @@ from datetime import timedelta
 from hatchet_sdk import Hatchet
 from hatchet_sdk.runnables.types import ConcurrencyExpression, ConcurrencyLimitStrategy
 
-from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from mageflow.chain.workflows import chain_end_task, chain_error_task
 from mageflow.clients.inner_task_names import (
-    ON_CHAIN_END,
-    ON_CHAIN_ERROR,
     ON_SWARM_ITEM_DONE,
     SWARM_FILL_TASK,
     ON_SWARM_ITEM_ERROR,
@@ -26,22 +22,6 @@ from mageflow.swarm.workflows import (
 
 
 def init_mageflow_hatchet_tasks(hatchet: Hatchet):
-    # Chain tasks
-    hatchet_chain_done = hatchet.durable_task(
-        name=ON_CHAIN_END,
-        input_validator=ChainCallbackMessage,
-        retries=3,
-        execution_timeout=timedelta(minutes=5),
-    )
-    hatchet_chain_error = hatchet.durable_task(
-        name=ON_CHAIN_ERROR,
-        input_validator=ChainErrorMessage,
-        retries=3,
-        execution_timeout=timedelta(minutes=5),
-    )
-    chain_done_task = hatchet_chain_done(chain_end_task)
-    on_chain_error_task = hatchet_chain_error(chain_error_task)
-
     # Swarm tasks
     swarm_done = hatchet.durable_task(
         name=ON_SWARM_ITEM_DONE,
@@ -79,8 +59,6 @@ def init_mageflow_hatchet_tasks(hatchet: Hatchet):
     swarm_fill_task = swarm_fill_task(fill_swarm_running_tasks)
 
     return [
-        on_chain_error_task,
-        chain_done_task,
         swarm_done,
         swarm_error,
         swarm_fill_task,

@@ -17,6 +17,7 @@ from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
 from thirdmagic import sign, chain
+from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.signature import Signature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
@@ -25,6 +26,9 @@ from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, handle_task_callback
+from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
+from mageflow.chain.workflows import chain_end_task, chain_error_task
+from mageflow.clients.inner_task_names import ON_CHAIN_ERROR, ON_CHAIN_END
 from mageflow.init import init_mageflow_hatchet_tasks
 from mageflow.startup import (
     lifespan_initialize,
@@ -85,6 +89,10 @@ class HatchetMageflow(Hatchet):
         self.param_config = param_config
         self._task_defs: list[MageflowTaskDefinition] = []
 
+    @property
+    def mageflow_logger(self):
+        return self.config.logger
+
     def _add_task_def(self, task: Standalone):
         self._task_defs.append(
             MageflowTaskDefinition(
@@ -128,6 +136,27 @@ class HatchetMageflow(Hatchet):
 
         return decorator
 
+    def init_mageflow_hatchet_tasks(self):
+        # Chain tasks
+        hatchet_chain_done = self.hatchet.durable_task(
+            name=ON_CHAIN_END,
+            input_validator=ChainCallbackMessage,
+            retries=3,
+            execution_timeout=timedelta(minutes=5),
+        )
+        hatchet_chain_error = self.hatchet.durable_task(
+            name=ON_CHAIN_ERROR,
+            input_validator=ChainErrorMessage,
+            retries=3,
+            execution_timeout=timedelta(minutes=5),
+        )
+        chain_done_task = hatchet_chain_done(self.chain_end_task)
+        on_chain_error_task = hatchet_chain_error(self.chain_error_task)
+        return init_mageflow_hatchet_tasks(self.hatchet) + [
+            chain_done_task,
+            on_chain_error_task,
+        ]
+
     @override
     def worker(
         self,
@@ -136,7 +165,7 @@ class HatchetMageflow(Hatchet):
         lifespan: LifespanFn | None = None,
         **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
-        mageflow_flows = init_mageflow_hatchet_tasks(self.hatchet)
+        mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:
             lifespan = functools.partial(
@@ -196,3 +225,27 @@ class HatchetMageflow(Hatchet):
             return stagger_wrapper
 
         return decorator
+
+    async def chain_end_task(self, msg: ChainCallbackMessage, ctx: Context):
+        lifecycle_manager = (
+            await ChainTaskSignature.ClientAdapter.lifecycle_from_signature(
+                msg, ctx, msg.chain_task_id
+            )
+        )
+        return await chain_end_task(
+            msg.chain_results, lifecycle_manager, self.mageflow_logger
+        )
+
+    async def chain_error_task(self, msg: ChainErrorMessage, ctx: Context):
+        lifecycle_manager = (
+            await ChainTaskSignature.ClientAdapter.lifecycle_from_signature(
+                msg, ctx, msg.chain_task_id
+            )
+        )
+        return await chain_error_task(
+            msg.chain_task_id,
+            msg.original_msg,
+            msg.error,
+            lifecycle_manager,
+            self.mageflow_logger,
+        )
