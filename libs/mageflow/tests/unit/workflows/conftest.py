@@ -59,9 +59,7 @@ async def completed_swarm_with_success_callback(mock_task_def):
     async with swarm_task.apipeline():
         swarm_task.tasks_left_to_run.remove_range(0, len(swarm_task.tasks_left_to_run))
         swarm_task.finished_tasks.append(task.key)
-
-    async with swarm_task.alock() as locked_swarm:
-        await locked_swarm.aupdate(is_swarm_closed=True)
+        swarm_task.is_swarm_closed = True
 
     ctx = create_mock_context_with_metadata()
     msg = SwarmMessage(swarm_task_id=swarm_task.key)
