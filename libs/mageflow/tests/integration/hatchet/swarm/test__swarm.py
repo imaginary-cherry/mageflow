@@ -15,6 +15,7 @@ from tests.integration.hatchet.assertions import (
     map_wf_by_id,
     assert_overlaps_leq_k_workflows,
     find_sub_calls_by_task_ref,
+    find_called_task_from_run_in_swarm,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
@@ -351,7 +352,8 @@ async def test_swarm_fill_running_tasks_with_success_task(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_task_ref(hatchet, task_ref, runs)
+    called_task = find_called_task_from_run_in_swarm(hatchet, task_ref, runs)
+    tasks_called_by_first_task = find_sub_calls_by_task_ref(hatchet, called_task, runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (
@@ -395,7 +397,8 @@ async def test_swarm_fill_running_tasks_with_failed_task(
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
 
-    tasks_called_by_first_task = find_sub_calls_by_task_ref(hatchet, task_ref, runs)
+    called_task = find_called_task_from_run_in_swarm(hatchet, task_ref, runs)
+    tasks_called_by_first_task = find_sub_calls_by_task_ref(hatchet, called_task, runs)
 
     # Verify exactly 3 tasks were started by fill_running_tasks
     assert (

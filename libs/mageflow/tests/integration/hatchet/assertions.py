@@ -70,13 +70,21 @@ def find_sub_calls_from_wf(
     return called_tasks
 
 
-def find_sub_calls_by_task_ref(
+def find_called_task_from_run_in_swarm(
     hatchet: Hatchet, task_ref: TaskRunRef, runs: HatchetRuns
-) -> list[V1TaskSummary]:
+) -> V1TaskSummary:
     wf_by_id = map_wf_by_external_id(runs)
     ref_wf = wf_by_id[task_ref.workflow_run_id]
 
-    called_tasks = find_sub_calls_from_wf(hatchet, ref_wf, runs)
+    called_task = find_sub_calls_from_wf(hatchet, ref_wf, runs)
+    assert called_task, "No task was called from run in swarm"
+    return called_task[0]
+
+
+def find_sub_calls_by_task_ref(
+    hatchet: Hatchet, wf: V1TaskSummary, runs: HatchetRuns
+) -> list[V1TaskSummary]:
+    called_tasks = find_sub_calls_from_wf(hatchet, wf, runs)
     return called_tasks
 
 
