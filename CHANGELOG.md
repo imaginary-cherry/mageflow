@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.0]
+
+### 🚀 Major Changes
+- **Monorepo Split**: Restructured from a single package into a multi-package workspace using `uv` workspaces.
+  - `libs/mageflow` — Core task orchestration engine
+  - `libs/third-magic` (`thirdmagic`) — Shared models, signatures, and task definitions
+  - `libs/mage-voyance` — Visualizer (extracted from `mageflow/visualizer`)
+- **Client Adapter Pattern**: We changed the design to be ready for future support of additional task managers (like temporal). We extracted the hatchet unique code to client module, there we handle all the hatchet code 
+
+### 🔄 Changed
+- **BREAKING — Package Imports**: All imports changed due to the split. Core orchestration from `mageflow`, shared models from `thirdmagic`.
+- **Swarm Task Calling**: All swarm tasks will be called from `fill_running_tasks` workflow. This is an inner task of mageflow, it is a gateway for publishing new tasks.
+- **Task Lock Responsibility**: Lock management moved from `fill_running_tasks` to the task client layer.
+- **Hatchet SDK Requirement**: Now requires `hatchet-sdk>=1.22.5`.
+
+### 🛠️ Technical Improvements
+- **Per-package CI coverage**: Coverage pipeline reports per-package results with tags.
+- **Publish pipeline for thirdmagic**: CI can now publish the `thirdmagic` package independently.
+
+
 ## [0.2.0]
 
 ### 🏗️ Design Changes
