@@ -10,8 +10,14 @@ from thirdmagic.swarm.model import SwarmConfig
 from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
+from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
+from mageflow.swarm.messages import (
+    FillSwarmMessage,
+    SwarmResultsMessage,
+    SwarmErrorMessage,
+)
 from tests.integration.hatchet.models import ContextMessage, CommandMessageWithResult
 
 
@@ -25,6 +31,18 @@ def mock_run_workflow(hatchet_mock):
     mock = AsyncMock()
     hatchet_mock._client.admin.aio_run_workflow = mock
     return mock
+
+
+@pytest.fixture
+def mock_hatchet():
+    mock = MagicMock()
+    mock.stubs.task.return_value.aio_run_no_wait = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def mock_adapter(mock_hatchet):
+    return HatchetClientAdapter(mock_hatchet)
 
 
 @pytest.fixture
@@ -124,7 +142,7 @@ async def test_acall_signature_msg_none_replaced_with_empty_model(
 
 @pytest.mark.asyncio
 async def test_acall_chain_done_serialized_input(
-    adapter, mock_run_workflow, mock_task_def
+    mock_adapter, mock_hatchet, mock_task_def
 ):
     # Arrange
     tasks = [
@@ -135,12 +153,12 @@ async def test_acall_chain_done_serialized_input(
     results = {"result_key": "result_val"}
 
     # Act
-    await adapter.acall_chain_done(results, chain)
+    await mock_adapter.acall_chain_done(results, chain)
 
     # Assert
-    serialized = mock_run_workflow.call_args.kwargs["input"]
-    assert serialized["chain_results"] == results
-    assert serialized["chain_task_id"] == chain.key
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        ChainCallbackMessage(chain_results=results, chain_task_id=chain.key)
+    )
 
 
 # --- acall_chain_error ---
@@ -148,7 +166,7 @@ async def test_acall_chain_done_serialized_input(
 
 @pytest.mark.asyncio
 async def test_acall_chain_error_serialized_input(
-    adapter, mock_run_workflow, mock_task_def
+    mock_adapter, mock_hatchet, mock_task_def
 ):
     # Arrange
     tasks = [
@@ -160,14 +178,17 @@ async def test_acall_chain_error_serialized_input(
     original_msg = {"orig": "msg"}
 
     # Act
-    await adapter.acall_chain_error(original_msg, error, chain, tasks[0])
+    await mock_adapter.acall_chain_error(original_msg, error, chain, tasks[0])
 
     # Assert
-    serialized = mock_run_workflow.call_args.kwargs["input"]
-    assert serialized["error"] == "boom"
-    assert serialized["original_msg"] == original_msg
-    assert serialized["error_task_key"] == tasks[0].key
-    assert serialized["chain_task_id"] == chain.key
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        ChainErrorMessage(
+            chain_task_id=chain.key,
+            error="boom",
+            original_msg=original_msg,
+            error_task_key=tasks[0].key,
+        )
+    )
 
 
 # --- afill_swarm ---
@@ -183,30 +204,32 @@ async def swarm_sig(mock_task_def):
 
 
 @pytest.mark.asyncio
-async def test_afill_swarm_message_fields(adapter, mock_run_workflow, swarm_sig):
+async def test_afill_swarm_message_fields(mock_adapter, mock_hatchet, swarm_sig):
     # Arrange
     swarm = swarm_sig
 
     # Act
-    await adapter.afill_swarm(swarm, max_tasks=5)
+    await mock_adapter.afill_swarm(swarm, max_tasks=5)
 
     # Assert
-    serialized = mock_run_workflow.call_args.kwargs["input"]
-    assert serialized["swarm_task_id"] == swarm.key
-    assert serialized["max_tasks"] == 5
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        FillSwarmMessage(swarm_task_id=swarm.key, max_tasks=5)
+    )
 
 
 @pytest.mark.asyncio
-async def test_afill_swarm_forwards_options(adapter, mock_run_workflow, swarm_sig):
+async def test_afill_swarm_forwards_options(mock_adapter, mock_hatchet, swarm_sig):
     # Arrange
     options = TriggerWorkflowOptions(additional_metadata={"custom": "opt"})
 
     # Act
-    await adapter.afill_swarm(swarm_sig, options=options)
+    await mock_adapter.afill_swarm(swarm_sig, options=options)
 
     # Assert
-    call_kwargs = mock_run_workflow.call_args.kwargs
-    assert call_kwargs["options"].additional_metadata["custom"] == "opt"
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        FillSwarmMessage(swarm_task_id=swarm_sig.key, max_tasks=None),
+        options=options,
+    )
 
 
 # --- acall_swarm_item_done ---
@@ -214,20 +237,23 @@ async def test_afill_swarm_forwards_options(adapter, mock_run_workflow, swarm_si
 
 @pytest.mark.asyncio
 async def test_acall_swarm_item_done_message_fields(
-    adapter, mock_run_workflow, swarm_sig, mock_task_def
+    mock_adapter, mock_hatchet, swarm_sig, mock_task_def
 ):
     # Arrange
     item = await mageflow.asign("swarm_item", model_validators=ContextMessage)
     results = [1, 2, 3]
 
     # Act
-    await adapter.acall_swarm_item_done(results, swarm_sig, item)
+    await mock_adapter.acall_swarm_item_done(results, swarm_sig, item)
 
     # Assert
-    serialized = mock_run_workflow.call_args.kwargs["input"]
-    assert serialized["swarm_task_id"] == swarm_sig.key
-    assert serialized["swarm_item_id"] == item.key
-    assert serialized["mageflow_results"] == results
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        SwarmResultsMessage(
+            swarm_task_id=swarm_sig.key,
+            swarm_item_id=item.key,
+            mageflow_results=results,
+        )
+    )
 
 
 # --- acall_swarm_item_error ---
@@ -235,20 +261,23 @@ async def test_acall_swarm_item_done_message_fields(
 
 @pytest.mark.asyncio
 async def test_acall_swarm_item_error_message_fields(
-    adapter, mock_run_workflow, swarm_sig, mock_task_def
+    mock_adapter, mock_hatchet, swarm_sig, mock_task_def
 ):
     # Arrange
     item = await mageflow.asign("swarm_item", model_validators=ContextMessage)
     error = RuntimeError("oops")
 
     # Act
-    await adapter.acall_swarm_item_error(error, swarm_sig, item)
+    await mock_adapter.acall_swarm_item_error(error, swarm_sig, item)
 
     # Assert
-    serialized = mock_run_workflow.call_args.kwargs["input"]
-    assert serialized["swarm_task_id"] == swarm_sig.key
-    assert serialized["swarm_item_id"] == item.key
-    assert serialized["error"] == "oops"
+    mock_hatchet.stubs.task.return_value.aio_run_no_wait.assert_awaited_once_with(
+        SwarmErrorMessage(
+            swarm_task_id=swarm_sig.key,
+            swarm_item_id=item.key,
+            error="oops",
+        )
+    )
 
 
 # --- extract_validator ---
