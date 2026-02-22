@@ -27,3 +27,26 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["thirdmagic"]
+
+[tool.coverage.run]
+source = ["thirdmagic"]
+omit = [
+    "*/tests/*",
+    "*/test_*"
+]
+
+[tool.coverage.report]
+skip_covered = false
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@overload"
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
