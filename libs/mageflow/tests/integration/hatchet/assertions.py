@@ -5,7 +5,6 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1LogLineList, V1TaskStatus, V1TaskSummary
 from hatchet_sdk.runnables.workflow import TaskRunRef
 from pydantic import BaseModel
-from rapyer.fields import RapyerKey
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.consts import (
     MAGEFLOW_TASK_INITIALS,
@@ -22,6 +21,13 @@ from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
 WF_MAPPING_BY_WF_ID_TYPE = dict[str, V1TaskSummary]
 HatchetRuns = list[V1TaskSummary]
+
+
+def _task_error_info(wf: V1TaskSummary) -> str:
+    parts = [f"status={wf.status}"]
+    if wf.error_message:
+        parts.append(f"error={wf.error_message}")
+    return " | ".join(parts)
 
 
 def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
@@ -153,7 +159,7 @@ def assert_signature_failed(
     assert (
         summary.status == V1TaskStatus.FAILED
         or summary.status == V1TaskStatus.CANCELLED
-    ), f"{task_sign.key} was not failed"
+    ), f"{task_sign.key} was not failed ({_task_error_info(summary)})"
     return summary
 
 
@@ -170,7 +176,7 @@ def _assert_task_done(
     if not allow_fails:
         assert (
             task_workflow.status == V1TaskStatus.COMPLETED
-        ), f"{task_workflow.workflow_name} didn't finish"
+        ), f"{task_workflow.workflow_name} didn't finish ({_task_error_info(task_workflow)})"
     if input_params is not None:
         task_input = task_workflow.input.get("input", {})
         assert (
@@ -217,7 +223,9 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
 
     # Check kwargs were stored
     hatchet_call = wf_by_task_id[task_id]
-    assert hatchet_call.status == V1TaskStatus.CANCELLED
+    assert hatchet_call.status == V1TaskStatus.CANCELLED, (
+        f"{task.task_name} was not cancelled ({_task_error_info(hatchet_call)})"
+    )
     expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
     expected_saved_params = expected_dump.model_dump(exclude_unset=True)
     for key, value in expected_saved_params.items():
@@ -234,7 +242,7 @@ def assert_tasks_in_order(wf_by_signature: WF_MAPPING_TYPE, tasks: list[TaskSign
         curr_wf = wf_by_signature[tasks[i].key]
         assert (
             curr_wf.status == V1TaskStatus.COMPLETED
-        ), f"Task {curr_wf.workflow_name} - {curr_wf.status}"
+        ), f"Task {curr_wf.workflow_name} - {_task_error_info(curr_wf)}"
         next_wf = wf_by_signature[tasks[i + 1].key]
         assert (
             curr_wf.started_at < next_wf.started_at
@@ -349,7 +357,7 @@ def assert_paused(
         task_was_stopped = is_task_paused(wf)
         assert (
             start_before_pause or started_after_pause or task_was_stopped
-        ), f"{wf.workflow_name} was not paused in {task_start_time}"
+        ), f"{wf.workflow_name} was not paused in {task_start_time} ({_task_error_info(wf)})"
 
     paused_tasks = [wf for wf in wf_by_task_id.values() if is_task_paused(wf)]
     for paused_wf in paused_tasks:
