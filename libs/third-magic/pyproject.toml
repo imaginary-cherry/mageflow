@@ -30,6 +30,7 @@ packages = ["thirdmagic"]
 
 [tool.coverage.run]
 source = ["thirdmagic"]
+branch = true
 omit = [
     "*/tests/*",
     "*/test_*"

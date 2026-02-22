@@ -79,10 +79,11 @@ packages = ["mageflow"]
 
 [tool.coverage.run]
 source = ["mageflow"]
+branch = true
 concurrency = ["multiprocessing"]
 parallel = true
 omit = [
-    "*/tests/*", 
+    "*/tests/*",
     "*/test_*"
 ]
 

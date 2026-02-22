@@ -12,7 +12,37 @@ permissions:
   contents: read
 
 jobs:
-  mageflow-coverage:
+  mageflow-unit-coverage:
+    environment:
+      name: coverage
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run unit coverage with tox
+        working-directory: libs/mageflow
+        env:
+          PYTHONHASHSEED: 0
+        run: tox -e coverage-unit
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: mageflow-unit
+          files: libs/mageflow/coverage-unit.xml
+
+  mageflow-integration-coverage:
     environment:
       name: coverage
     runs-on: ubuntu-22.04
@@ -45,18 +75,18 @@ jobs:
           echo "DYNACONF_REDIS__URL=redis://localhost:6379/" >> $GITHUB_ENV
           echo "HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED=True" >> $GITHUB_ENV
 
-      - name: Run coverage with tox
+      - name: Run integration coverage with tox
         working-directory: libs/mageflow
         env:
           PYTHONHASHSEED: 0
-        run: tox -e coverage
+        run: tox -e coverage-integration
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: mageflow
-          files: libs/mageflow/coverage.xml
+          flags: mageflow-integration
+          files: libs/mageflow/coverage-integration.xml
 
       - name: Clean up
         if: always()
@@ -88,7 +118,7 @@ jobs:
         env:
           PYTHONHASHSEED: 0
         run: |
-          coverage run -m pytest tests/ --junitxml=junit.xml -o junit_family=legacy
+          coverage run --branch -m pytest tests/ --junitxml=junit.xml -o junit_family=legacy
           coverage report --show-missing
           coverage xml
 
