@@ -2,9 +2,8 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
 import pytest_asyncio
-from hatchet_sdk import NonRetryableException
+from hatchet_sdk import NonRetryableException, Context
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from pydantic import TypeAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.swarm.model import SwarmConfig
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -283,25 +282,18 @@ async def test_acall_swarm_item_error_message_fields(
 # --- extract_validator ---
 
 
-def test_extract_validator_base_model_returns_directly(adapter):
-    # Arrange
-    task = MagicMock()
-    task.input_validator = ContextMessage
+@pytest.fixture
+def hatchet_task(hatchet_mock):
+    @hatchet_mock.task(name="my_workflow", input_validator=ContextMessage, retries=5)
+    async def my_task(input: ContextMessage, ctx: Context):
+        pass
 
+    return my_task
+
+
+def test_extract_validator_returns_inner_type(adapter, hatchet_task):
     # Act
-    result = adapter.extract_validator(task)
-
-    # Assert
-    assert result is ContextMessage
-
-
-def test_extract_validator_type_adapter_returns_inner_type(adapter):
-    # Arrange
-    task = MagicMock()
-    task.input_validator = TypeAdapter(ContextMessage)
-
-    # Act
-    result = adapter.extract_validator(task)
+    result = adapter.extract_validator(hatchet_task)
 
     # Assert
     assert result is ContextMessage
@@ -310,13 +302,9 @@ def test_extract_validator_type_adapter_returns_inner_type(adapter):
 # --- extract_retries ---
 
 
-def test_extract_retries_returns_task_retries(adapter):
-    # Arrange
-    task = MagicMock()
-    task.tasks = [MagicMock(retries=5)]
-
+def test_extract_retries_returns_task_retries(adapter, hatchet_task):
     # Act
-    result = adapter.extract_retries(task)
+    result = adapter.extract_retries(hatchet_task)
 
     # Assert
     assert result == 5
@@ -359,13 +347,9 @@ def test_should_task_retry(adapter, retries, attempt_num, exception_class, expec
 # --- task_name ---
 
 
-def test_task_name_returns_task_name(adapter):
-    # Arrange
-    task = MagicMock()
-    task.name = "my_workflow"
-
+def test_task_name_returns_task_name(adapter, hatchet_task):
     # Act
-    result = adapter.task_name(task)
+    result = adapter.task_name(hatchet_task)
 
     # Assert
     assert result == "my_workflow"
