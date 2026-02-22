@@ -6,6 +6,7 @@ on:
       - completed
     branches:
       - main
+  pull_request:  # TODO: remove before merging to main
   workflow_dispatch:
 
 permissions:
