@@ -47,7 +47,7 @@ class BaseClientAdapter(ABC):
 
     @abc.abstractmethod
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
+        self, error: BaseException, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         pass
 
@@ -79,7 +79,7 @@ class BaseClientAdapter(ABC):
 
     @abc.abstractmethod
     def should_task_retry(
-        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: Exception
+        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: BaseException
     ) -> bool:
         pass
 
@@ -115,7 +115,7 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
+        self, error: BaseException, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         raise NotImplementedError("Set a client before we start")
 
@@ -136,7 +136,7 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     def should_task_retry(
-        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: Exception
+        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: BaseException
     ) -> bool:
         raise NotImplementedError("Set a client before we start")
 
