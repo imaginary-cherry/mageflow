@@ -89,7 +89,7 @@ def handler_factory(
     wrap_res: bool = True,
     send_signature: bool = False,
     return_value: Any = "success_result",
-    raises: Exception | None = None,
+    raises: BaseException | None = None,
 ):
     tracked_calls: list[CallTracker] = []
 
