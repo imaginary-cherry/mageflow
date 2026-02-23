@@ -14,7 +14,7 @@ import rapyer
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def redis_client():
     """Provide a clean FakeRedis client for each test function."""
-    client = fakeredis.aioredis.FakeRedis()
+    client = fakeredis.aioredis.FakeRedis(decode_responses=True)
     await client.flushall()
     try:
         yield client
