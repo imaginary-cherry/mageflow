@@ -59,6 +59,7 @@ async def fill_swarm_running_tasks(
         )
         return
 
+    # TODO - TODELETE
     async with swarm_task.alock():
         logger.info(f"Filling swarm {swarm_task_id} with {max_tasks}")
         if swarm_task.has_swarm_failed():
