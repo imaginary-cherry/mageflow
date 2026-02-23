@@ -32,15 +32,15 @@ jobs:
 
       - name: Install tools
         run: |
-          python -m pip install --upgrade pip pipx
           pip install pip-audit
-          pipx install poetry
-          pipx inject poetry poetry-plugin-export
+          pip install uv
 
       - name: Export and audit dependencies
         run: |
-          poetry export -f requirements.txt --without-hashes -o requirements-audit.txt
-          pip-audit --strict -r requirements-audit.txt
+          uv export --no-dev --no-hashes -o requirements-audit.txt
+          # Replace these lines with pip-audit --strict -r requirements-audit.txt after you upload thirdmagic
+          grep -v "^-e \.\|^thirdmagic" requirements-audit.txt > requirements-audit-filtered.txt
+          pip-audit --strict -r requirements-audit-filtered.txt
 
 
   secrets-scan:

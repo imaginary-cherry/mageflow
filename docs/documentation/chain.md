@@ -12,16 +12,14 @@ A chain is a sequence of tasks that execute in order, where:
 
 ## Creating a Chain
 
-Use `mageflow.chain()` to create a task chain:
+Use `mageflow.achain()` to create a task chain:
 
 ```python
 import mageflow
 
-# Create a simple chain
-chain_signature = await mageflow.chain([task1, task2, task3])
+chain_signature = await mageflow.achain([task1, task2, task3])
 
-# Create a chain with name and callbacks
-chain_signature = await mageflow.chain(
+chain_signature = await mageflow.achain(
     tasks=[process_data, validate_results, send_notification],
     name="data-processing-pipeline",
     success=success_callback_task,
@@ -35,11 +33,9 @@ chain_signature = await mageflow.chain(
     ```python
     from mageflow import Mageflow
 
-    # Create mageflow client
     hatchet = Mageflow(hatchet, redis)
 
-    # Use client to create chains
-    chain_signature = await hatchet.chain([task1, task2, task3])
+    chain_signature = await hatchet.achain([task1, task2, task3])
     ```
 
 ### Parameters
@@ -58,16 +54,14 @@ Each task in the chain receives the output of the previous task:
 ```python
 @hatchet.task()
 async def extract_data(msg: InputMessage) -> DataOutput:
-    # Process initial input
     return DataOutput(processed_data="...")
 
 
 class SecondMessage(BaseModel):
     results: DataOutput
 
-@hatchet.task()  
+@hatchet.task()
 async def transform_data(msg: SecondMessage) -> TransformedData:
-    # Receives DataOutput from extract_data
     return TransformedData(transformed=msg.processed_data)
 
 class ThirdMessage(BaseModel):
@@ -76,16 +70,13 @@ class ThirdMessage(BaseModel):
 
 @hatchet.task()
 async def save_data(msg: ThirdMessage) -> SaveResult:
-    # Receives TransformedData from transform_data
     return SaveResult(saved_id=123)
 
-# Sign second task
-transform_task = await mageflow.sign(transform_data, field_int=123)
+transform_task = await mageflow.asign(transform_data, field_int=123)
 
-# Create the chain
-chain = await mageflow.chain([
+chain = await mageflow.achain([
     extract_data,
-    transform_task, 
+    transform_task,
     save_data
 ])
 ```
@@ -104,15 +95,14 @@ When a task fails in a chain:
 ### Data Processing Pipeline
 
 ```python
-# ETL Pipeline
-extract_task = await mageflow.sign("extract-from-database")
-transform_task = await mageflow.sign("apply-business-rules") 
-load_task = await mageflow.sign("save-to-warehouse")
+extract_task = await mageflow.asign("extract-from-database")
+transform_task = await mageflow.asign("apply-business-rules")
+load_task = await mageflow.asign("save-to-warehouse")
 
-audit_task = await mageflow.sign("log-pipeline-completion")
-alert_task = await mageflow.sign("send-failure-alert")
+audit_task = await mageflow.asign("log-pipeline-completion")
+alert_task = await mageflow.asign("send-failure-alert")
 
-etl_chain = await mageflow.chain(
+etl_chain = await mageflow.achain(
     tasks=[extract_task, transform_task, load_task],
     name="daily-etl",
     success=audit_task,
@@ -123,16 +113,15 @@ etl_chain = await mageflow.chain(
 ### Document Processing Workflow
 
 ```python
-# Document processing chain
-parse_doc = await mageflow.sign("parse-document")
-extract_entities = await mageflow.sign("extract-entities")
-classify_content = await mageflow.sign("classify-content")
-index_document = await mageflow.sign("index-in-search")
+parse_doc = await mageflow.asign("parse-document")
+extract_entities = await mageflow.asign("extract-entities")
+classify_content = await mageflow.asign("classify-content")
+index_document = await mageflow.asign("index-in-search")
 
-notify_completion = await mageflow.sign("notify-user")
-handle_processing_error = await mageflow.sign("handle-doc-error")
+notify_completion = await mageflow.asign("notify-user")
+handle_processing_error = await mageflow.asign("handle-doc-error")
 
-doc_chain = await mageflow.chain(
+doc_chain = await mageflow.achain(
     tasks=[parse_doc, extract_entities, classify_content, index_document],
     name="document-processing",
     success=notify_completion,

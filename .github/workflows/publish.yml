@@ -9,80 +9,70 @@ on:
       - main
 
 jobs:
-  publish:
+  publish-thirdmagic:
     environment:
       name: publish-pip
     runs-on: ubuntu-22.04
     permissions:
       id-token: write  # Required for trusted publishing
       contents: read
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
-    
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-    
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install project
-      run: poetry install --no-interaction
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: "18"
-        cache: "npm"
-        cache-dependency-path: app/package-lock.json
+    - name: Install build tools
+      run: pip install build
 
-    - name: Install React dependencies
-      run: npm ci
-      working-directory: app
+    - name: Build thirdmagic
+      run: python -m build
+      working-directory: libs/third-magic
 
-    - name: Build React app
-      run: npm run build
-      working-directory: app
-
-    - name: Copy React build to static directory
-      run: |
-        mkdir -p mageflow/visualizer/static
-        cp -r app/build/* mageflow/visualizer/static/
-
-    - name: Build package
-      run: |
-        poetry build
-    
-    - name: Publish to PyPI
+    - name: Publish thirdmagic to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        packages-dir: dist/
+        packages-dir: libs/third-magic/dist/
+
+  publish-mageflow:
+    needs: publish-thirdmagic
+    environment:
+      name: publish-pip
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install build tools
+      run: pip install build
+
+    - name: Build mageflow
+      run: python -m build
+      working-directory: libs/mageflow
+
+    - name: Publish mageflow to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: libs/mageflow/dist/
 
     - name: Extract version and create tag
       id: version
       run: |
-        VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+        VERSION=$(grep '^version = ' libs/mageflow/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Extracted version: $VERSION"
 
-        # Check if tag already exists
         if git rev-parse "v$VERSION" >/dev/null 2>&1; then
           echo "Tag v$VERSION already exists, skipping tag creation"
         else

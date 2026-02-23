@@ -1,0 +1,80 @@
+from typing import TypeVar, Literal, cast
+
+import rapyer
+from rapyer.fields import RapyerKey
+from redis.asyncio import Redis
+
+from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.signature import Signature
+from thirdmagic.task import TaskSignature
+
+T = TypeVar("T", bound=Signature)
+SwarmListName = Literal["finished_tasks", "failed_tasks", "tasks_results", "tasks"]
+
+
+async def assert_task_reloaded_as_type(
+    task_key: RapyerKey,
+    expected_type: type[T],
+) -> T:
+    reloaded = await rapyer.aget(task_key)
+    assert reloaded is not None, f"Task {task_key} not found"
+    assert isinstance(
+        reloaded, expected_type
+    ), f"Expected {expected_type.__name__}, got {type(reloaded).__name__}"
+    return reloaded
+
+
+def assert_callback_contains(
+    task: Signature,
+    success_keys: list[RapyerKey] | None = None,
+    error_keys: list[RapyerKey] | None = None,
+) -> None:
+    for success_key in success_keys or []:
+        assert (
+            success_key in task.success_callbacks
+        ), f"{success_key} not in success_callbacks"
+    for error_key in error_keys or []:
+        assert error_key in task.error_callbacks, f"{error_key} not in error_callbacks"
+
+
+async def assert_tasks_not_exists(tasks_ids: list[str]):
+    for task_id in tasks_ids:
+        reloaded_signature = await TaskSignature.afind_one(task_id)
+        assert reloaded_signature is None
+
+
+async def assert_tasks_changed_status(
+    tasks_ids: list[str | TaskSignature], status: str, old_status: str = None
+):
+    tasks_ids = tasks_ids if isinstance(tasks_ids, list) else [tasks_ids]
+    all_tasks = []
+    for task_key in tasks_ids:
+        task_key = task_key.key if isinstance(task_key, Signature) else task_key
+        reloaded_signature = await rapyer.aget(task_key)
+        reloaded_signature = cast(TaskSignature, reloaded_signature)
+        all_tasks.append(reloaded_signature)
+        assert reloaded_signature.task_status.status == status
+        if old_status:
+            assert reloaded_signature.task_status.last_status == old_status
+    return all_tasks
+
+
+async def assert_redis_keys_do_not_contain_sub_task_ids(redis_client, sub_task_ids):
+    all_keys = await redis_client.keys("*")
+    all_keys_str = [
+        key.decode() if isinstance(key, bytes) else str(key) for key in all_keys
+    ]
+
+    for sub_task_id in sub_task_ids:
+        sub_task_id_str = str(sub_task_id)
+        keys_containing_sub_task = [
+            key for key in all_keys_str if sub_task_id_str in key
+        ]
+        assert (
+            not keys_containing_sub_task
+        ), f"Found Redis keys containing deleted sub-task ID {sub_task_id}: {keys_containing_sub_task}"
+
+
+async def assert_task_has_short_ttl(redis_client: Redis, task_key: str):
+    ttl = await redis_client.ttl(task_key)
+    assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"

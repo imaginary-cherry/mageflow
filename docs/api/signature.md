@@ -2,16 +2,16 @@
 
 This page provides detailed API documentation for task signature functionality in MageFlow.
 
-## mageflow.sign()
+## `mageflow.asign(task, **options)`
 
 Create a new task signature.
 
 ```python
-async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature
+async def asign(task: str | HatchetTaskType, **options: Any) -> TaskSignature
 ```
 
 **Parameters:**
-- `task`: Task name (string) or HatchetTask instance to create signature for
+- `task` (str | HatchetTaskType): Task name (string) or HatchetTask instance to create signature for
 - `**options`: Additional signature options including:
   - `kwargs`: Dictionary of task parameters
   - `creation_time`: Timestamp when signature was created
@@ -20,7 +20,10 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature
   - `error_callbacks`: List of task IDs to execute on error
   - `task_status`: Initial status for the task
 
-**Returns:** `TaskSignature` - The created task signature
+**Example:**
+```python
+signature = await mageflow.asign("process-order", priority="high")
+```
 
 ## TaskSignature
 
@@ -34,11 +37,11 @@ The main signature class that manages task execution and lifecycle.
 - `success_callbacks`: Tasks executed when task completes successfully
 - `error_callbacks`: Tasks executed when task fails
 - `task_status`: Current status information
-- `id`: Unique identifier for the signature
+- `key`: Unique identifier for the signature
 
 ### Class Methods
 
-#### delete_signature()
+#### `delete_signature(task_id)`
 
 Delete a signature by ID.
 
@@ -49,19 +52,18 @@ async def delete_signature(cls, task_id: TaskIdentifierType)
 
 ### Instance Methods
 
-#### aio_run_no_wait()
+#### `aio_run_no_wait(msg)`
 
 Execute the task asynchronously without waiting for completion.
 
 ```python
-async def aio_run_no_wait(self, msg: BaseModel, **kwargs)
+async def aio_run_no_wait(self, msg: BaseModel)
 ```
 
 **Parameters:**
-- `msg`: Message object to pass to the task
-- `**kwargs`: Additional execution parameters
+- `msg` (BaseModel): Message object to pass to the task
 
-#### remove()
+#### `remove(with_error, with_success)`
 
 Remove the signature and optionally its callbacks.
 
@@ -71,7 +73,7 @@ async def remove(self, with_error: bool = True, with_success: bool = True)
 
 ### Lifecycle Management
 
-#### suspend()
+#### `suspend()`
 
 Suspend task execution before it starts.
 
@@ -81,7 +83,7 @@ async def suspend()
 
 Sets task status to `SUSPENDED`. The task will not execute until resumed.
 
-#### resume()
+#### `resume()`
 
 Resume a suspended task.
 
@@ -91,7 +93,7 @@ async def resume()
 
 Restores the previous status and re-triggers execution if needed.
 
-#### interrupt()
+#### `interrupt()`
 
 Aggressively interrupt task execution.
 
@@ -99,9 +101,7 @@ Aggressively interrupt task execution.
 async def interrupt()
 ```
 
-**Note:** This method is not yet implemented and will raise `NotImplementedError`.
-
-#### pause_task()
+#### `pause_task(pause_type)`
 
 Pause task with specified action type.
 
@@ -110,30 +110,41 @@ async def pause_task(self, pause_type: PauseActionTypes = PauseActionTypes.SUSPE
 ```
 
 **Parameters:**
-- `pause_type`: Either `SUSPEND` or `INTERRUPT`
-- 
+- `pause_type` (PauseActionTypes): Either `SUSPEND` or `INTERRUPT`
 
 ## Helper Functions
 
-### mageflow.load_signature()
+### `mageflow.load_signature(key)`
 
 Load stored signature by ID from redis.
 
 ```python
-async def load_signature(task_id: TaskIdentifierType) -> Optional[TaskSignature]
+async def load_signature(key) -> Optional[Signature]
 ```
 
-### mageflow.resume_task() / mageflow.resume()
+### `mageflow.resume_task(task_id)` / `mageflow.resume(task_id)`
 
 ```python
-async def resume_task(task_id: TaskIdentifierType)
-async def resume(task_id: TaskIdentifierType)  # Same as resume_task
+async def resume_task(task_id)
+async def resume(task_id)  # Same as resume_task
 ```
 
-### mageflow.lock_task()
+### `mageflow.pause(task_id)`
 
 ```python
-def lock_task(task_id: TaskIdentifierType, **kwargs)
+async def pause(task_id)
+```
+
+### `mageflow.remove(task_id)`
+
+```python
+async def remove(task_id)
+```
+
+### `mageflow.lock_task(task_id)`
+
+```python
+def lock_task(task_id, **kwargs)
 ```
 
 Create a lock of the task signature, the signature will not be deleted nor change status while locked.
