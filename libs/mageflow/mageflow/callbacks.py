@@ -54,7 +54,8 @@ def handle_task_callback(
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except asyncio.CancelledError as e:
-                await lifecycle.task_failed(msg_data, e)
+                if not is_normal_run:
+                    await lifecycle.task_failed(msg_data, e)
                 raise
             except Exception as e:
                 if is_normal_run:
