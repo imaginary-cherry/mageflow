@@ -11,7 +11,7 @@ class TaskLifecycle(BaseLifecycle):
     async def task_success(self, result: Any):
         pass
 
-    async def task_failed(self, message: BaseModel, error: Exception):
+    async def task_failed(self, message: BaseModel, error: BaseException):
         raise
 
     async def should_run_task(self, message: BaseModel) -> bool:
