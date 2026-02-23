@@ -2,4 +2,4 @@
 # Each package under libs/ manages its own dependencies independently.
 
 [tool.uv.workspace]
-members = ["libs/mageflow", "libs/third-magic"]
+members = ["libs/mageflow", "libs/third-magic", "libs/mageflow-mcp"]
