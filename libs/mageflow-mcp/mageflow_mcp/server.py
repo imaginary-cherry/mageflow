@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from redis.asyncio import Redis
 
 from mageflow_mcp.adapters.base import BaseMCPAdapter
+from mageflow_mcp.tools import register_tools
 
 
 @asynccontextmanager
@@ -32,18 +33,19 @@ def create_server(
     server_name: str = "mageflow-mcp",
     adapter: BaseMCPAdapter | None = None,
 ) -> FastMCP:
-    """Create and return a configured FastMCP instance.
+    """Create and return a configured FastMCP instance with all tools registered.
 
     Args:
         server_name: Display name registered with the MCP client.
-        adapter: Optional backend adapter for log retrieval. Tools added in
-                 Phase 2 will receive the adapter via the MCP context.
+        adapter: Optional backend adapter for log retrieval. Tools may receive
+                 the adapter via the MCP context in future phases.
 
     Returns:
-        A FastMCP instance with the lifespan hook wired. No tools are
-        registered here — that is handled in Phase 2.
+        A FastMCP instance with the lifespan hook wired and all read tools
+        registered via register_tools().
     """
     mcp = FastMCP(name=server_name, lifespan=lifespan)
+    register_tools(mcp)
     return mcp
 
 

@@ -23,6 +23,8 @@ def test__signature_info__serializes_to_valid_json() -> None:
         task_name="my_task",
         status=SignatureStatus.ACTIVE,
         creation_time=datetime(2026, 2, 23, 12, 0, 0, tzinfo=timezone.utc),
+        kwargs={"input": "hello"},
+        return_value="world",
         worker_task_id="worker-task-001",
     )
     raw = sig.model_dump_json()
@@ -32,6 +34,8 @@ def test__signature_info__serializes_to_valid_json() -> None:
     assert data["signature_type"] == "TaskSignature"
     assert data["task_name"] == "my_task"
     assert data["status"] == "active"
+    assert data["kwargs"] == {"input": "hello"}
+    assert data["return_value"] == "world"
     assert data["worker_task_id"] == "worker-task-001"
 
 
@@ -43,9 +47,11 @@ def test__signature_info__optional_worker_task_id_defaults_to_none() -> None:
         task_name="chain_step",
         status=SignatureStatus.PENDING,
         creation_time=datetime(2026, 2, 23, 9, 0, 0, tzinfo=timezone.utc),
+        kwargs={},
     )
     data = json.loads(sig.model_dump_json())
     assert data["worker_task_id"] is None
+    assert data["return_value"] is None
 
 
 def test__container_summary__serializes_to_valid_json() -> None:

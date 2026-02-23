@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -16,6 +17,8 @@ class SignatureInfo(BaseModel):
     task_name: str
     status: SignatureStatus
     creation_time: datetime
+    kwargs: dict[str, Any]
+    return_value: Any | None = None
     worker_task_id: str | None = None
 
 
@@ -54,3 +57,33 @@ class TaskDefinitionInfo(BaseModel):
     mageflow_task_name: str
     task_name: str
     retries: int | None = None
+
+
+class PaginatedSignatureList(BaseModel):
+    """Paginated list of signature summaries."""
+
+    items: list[SignatureInfo]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaginatedSubTaskList(BaseModel):
+    """Paginated list of sub-task summaries."""
+
+    items: list[SubTaskInfo]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaginatedTaskDefinitionList(BaseModel):
+    """Paginated list of registered task definitions."""
+
+    items: list[TaskDefinitionInfo]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
