@@ -15,6 +15,9 @@
 - **Task Lock Responsibility**: Lock management moved from `fill_running_tasks` to the task client layer.
 - **Hatchet SDK Requirement**: Now requires `hatchet-sdk>=1.22.5`.
 
+### 🐛 Fixed
+- **Task Cancellation Handling**: `asyncio.CancelledError` (raised on timeout or cancellation) is now caught separately and marks the task as failed immediately without retrying. Previously, cancellation errors could be swallowed or trigger unnecessary retries.
+
 ### 🛠️ Technical Improvements
 - **Per-package CI coverage**: Coverage pipeline reports per-package results with tags.
 - **Publish pipeline for thirdmagic**: CI can now publish the `thirdmagic` package independently.
