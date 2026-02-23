@@ -16,7 +16,7 @@
 - **Hatchet SDK Requirement**: Now requires `hatchet-sdk>=1.22.5`.
 
 ### 🐛 Fixed
-- **Task Cancellation Handling**: `asyncio.CancelledError` (raised on timeout or cancellation) is now caught separately and marks the task as failed immediately without retrying. Previously, cancellation errors could be swallowed or trigger unnecessary retries.
+- **Task Cancellation Handling**: We dont retry task when it is cancelled or when there is a timeout.
 
 ### 🛠️ Technical Improvements
 - **Per-package CI coverage**: Coverage pipeline reports per-package results with tags.
