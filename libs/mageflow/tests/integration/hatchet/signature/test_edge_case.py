@@ -50,8 +50,10 @@ async def test__timeout_task__call_error_callback(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    task_summary = assert_signature_done(runs, error_sign, **expected_task_input)
-    assert task_summary.retry_count == 0
+    assert_signature_done(runs, error_sign, **expected_task_input)
+    map_runs = map_wf_by_id(runs)
+    timeout_task_summary = map_runs[timeout_sign.key]
+    assert timeout_task_summary.retry_count == 0
 
     # Check signature has failed
     reloaded_sign = await TaskSignature.aget(timeout_sign.key)
