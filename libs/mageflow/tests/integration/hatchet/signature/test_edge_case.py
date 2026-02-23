@@ -4,6 +4,7 @@ from datetime import datetime
 import pytest
 from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.signature import SignatureStatus
 from thirdmagic.task import TaskSignature
 
 import mageflow
@@ -45,11 +46,18 @@ async def test__timeout_task__call_error_callback(
 
     # Act
     await timeout_sign.aio_run_no_wait(message, options=trigger_options)
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, error_sign, **expected_task_input)
+    map_runs = map_wf_by_id(runs)
+    timeout_task_summary = map_runs[timeout_sign.key]
+    assert timeout_task_summary.retry_count == 0
+
+    # Check signature has failed
+    reloaded_sign = await TaskSignature.aget(timeout_sign.key)
+    assert reloaded_sign.task_status.status == SignatureStatus.FAILED
 
 
 @pytest.mark.asyncio(loop_scope="session")

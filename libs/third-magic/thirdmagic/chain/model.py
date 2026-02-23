@@ -39,7 +39,7 @@ class ChainTaskSignature(ContainerTaskSignature):
             await next_task.acall(results, set_return_field=True, **self.kwargs)
 
     async def on_sub_task_error(
-        self, sub_task: TaskSignature, error: Exception, original_msg: dict
+        self, sub_task: TaskSignature, error: BaseException, original_msg: dict
     ):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 

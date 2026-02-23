@@ -48,7 +48,7 @@ class SignatureLifecycle(BaseLifecycle):
         await current_task.done()
         await current_task.remove(with_success=False)
 
-    async def task_failed(self, message: dict, error: Exception):
+    async def task_failed(self, message: dict, error: BaseException):
         current_task = self.signature
         error_publish_tasks = []
 

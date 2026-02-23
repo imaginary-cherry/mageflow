@@ -62,7 +62,7 @@ class HatchetClientAdapter(BaseClientAdapter):
     async def acall_chain_error(
         self,
         original_msg: dict,
-        error: Exception,
+        error: BaseException,
         chain: "ChainTaskSignature",
         failed_task: "Signature",
     ):
@@ -105,7 +105,7 @@ class HatchetClientAdapter(BaseClientAdapter):
         return await stub.aio_run_no_wait(swarm_done_msg)
 
     async def acall_swarm_item_error(
-        self, error: Exception, swarm: "SwarmTaskSignature", swarm_item: "Signature"
+        self, error: BaseException, swarm: "SwarmTaskSignature", swarm_item: "Signature"
     ):
         swarm_error_msg = SwarmErrorMessage(
             swarm_task_id=swarm.key, swarm_item_id=swarm_item.key, error=str(error)
@@ -147,7 +147,10 @@ class HatchetClientAdapter(BaseClientAdapter):
         return await mageflow_wf.aio_run_no_wait(msg, options)
 
     def should_task_retry(
-        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: Exception
+        self,
+        task_definition: MageflowTaskDefinition,
+        attempt_num: int,
+        e: BaseException,
     ) -> bool:
         finish_retry = (
             task_definition.retries is not None

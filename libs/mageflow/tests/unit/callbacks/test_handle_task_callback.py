@@ -115,6 +115,35 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
 
 
 @pytest.mark.asyncio
+async def test__pending_signature__cancel_error__marks_failed_and_reraises(
+    adapter_with_lifecycle,
+    error_callback_signature,
+):
+    # Arrange
+    signature, _ = await task_signature_factory(
+        status=SignatureStatus.PENDING,
+        retries=3,
+        error_callbacks=[error_callback_signature],
+    )
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
+    )
+    raising_handler, _ = handler_factory(raises=asyncio.CancelledError())
+    message = ContextMessage()
+
+    # Act & Assert
+    with pytest.raises(asyncio.CancelledError):
+        await raising_handler(message, ctx)
+
+    await assert_tasks_changed_status([signature.key], SignatureStatus.FAILED)
+    adapter_with_lifecycle.acall_signatures.assert_awaited_once_with(
+        [error_callback_signature],
+        message.model_dump(mode="json", exclude_unset=True),
+        False,
+    )
+
+
+@pytest.mark.asyncio
 async def test__active_signature__success__marks_done(
     adapter_with_lifecycle,
     callback_signature,

@@ -15,7 +15,7 @@ class BaseLifecycle(ABC):
         pass
 
     @abc.abstractmethod
-    async def task_failed(self, message: dict, error: Exception):
+    async def task_failed(self, message: dict, error: BaseException):
         pass
 
     @abc.abstractmethod
