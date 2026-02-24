@@ -11,19 +11,19 @@ from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
 
-from mageflow_mcp.models import PaginatedSignatureList, SignatureInfo
+from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 
 PAGE_SIZE_DEFAULT = 20
 PAGE_SIZE_MAX = 50
 MAX_FETCH = 200
 
 
-async def get_signature(signature_id: str) -> SignatureInfo | dict:
+async def get_signature(signature_id: str) -> SignatureInfo | ErrorResponse:
     """Retrieve a single task signature by its Redis key.
 
     Returns curated signature details including type, status, task_name,
     kwargs, creation_time, return_value, and worker_task_id (if applicable).
-    Returns a structured error dict if the key is not found or Redis is unavailable.
+    Returns a structured ErrorResponse if the key is not found or Redis is unavailable.
 
     Args:
         signature_id: The full Redis key for the signature,
@@ -32,17 +32,17 @@ async def get_signature(signature_id: str) -> SignatureInfo | dict:
     try:
         sig = await rapyer.aget(signature_id)
     except KeyNotFound:
-        return {
-            "error": "key_not_found",
-            "message": f"Signature '{signature_id}' does not exist or has expired.",
-            "suggestion": "Use list_signatures to browse available signature IDs.",
-        }
+        return ErrorResponse(
+            error="key_not_found",
+            message=f"Signature '{signature_id}' does not exist or has expired.",
+            suggestion="Use list_signatures to browse available signature IDs.",
+        )
     except Exception:
-        return {
-            "error": "redis_error",
-            "message": "Could not retrieve signature from Redis.",
-            "suggestion": "Verify that the MCP server started successfully with a valid REDIS_URL.",
-        }
+        return ErrorResponse(
+            error="redis_error",
+            message="Could not retrieve signature from Redis.",
+            suggestion="Verify that the MCP server started successfully with a valid REDIS_URL.",
+        )
     return SignatureInfo(
         key=sig.key,
         signature_type=type(sig).__name__,
@@ -66,7 +66,7 @@ async def list_signatures(
     created_before: datetime | None = None,
     page: int = 1,
     page_size: int = PAGE_SIZE_DEFAULT,
-) -> PaginatedSignatureList | dict:
+) -> PaginatedSignatureList | ErrorResponse:
     """List task signatures with optional filters and pagination.
 
     Fetches TaskSignature, ChainTaskSignature, and SwarmTaskSignature records
@@ -90,11 +90,11 @@ async def list_signatures(
         chains = await ChainTaskSignature.afind(max_results=MAX_FETCH)
         swarms = await SwarmTaskSignature.afind(max_results=MAX_FETCH)
     except Exception:
-        return {
-            "error": "redis_error",
-            "message": "Could not retrieve signatures from Redis.",
-            "suggestion": "Verify that the MCP server started successfully with a valid REDIS_URL.",
-        }
+        return ErrorResponse(
+            error="redis_error",
+            message="Could not retrieve signatures from Redis.",
+            suggestion="Verify that the MCP server started successfully with a valid REDIS_URL.",
+        )
 
     all_sigs = list(tasks) + list(chains) + list(swarms)
 

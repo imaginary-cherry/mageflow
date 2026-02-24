@@ -8,18 +8,18 @@ from rapyer.errors.base import KeyNotFound
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.signature.status import SignatureStatus
 
-from mageflow_mcp.models import ContainerSummary, PaginatedSubTaskList, SubTaskInfo
+from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList, SubTaskInfo
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
 
 
-async def get_container_summary(container_id: str) -> ContainerSummary | dict:
+async def get_container_summary(container_id: str) -> ContainerSummary | ErrorResponse:
     """Get a summary of sub-task counts by status for a chain or swarm container.
 
     Fetches the container signature from Redis, retrieves all sub-task signatures
     in bulk, and returns a breakdown of sub-task counts by status (pending, active,
     done, failed, suspended, canceled).
 
-    Returns a structured error dict if the key is not found, the key refers to a
+    Returns a structured ErrorResponse if the key is not found, the key refers to a
     non-container signature, or Redis is unavailable.
 
     Args:
@@ -29,34 +29,34 @@ async def get_container_summary(container_id: str) -> ContainerSummary | dict:
     try:
         container = await rapyer.aget(container_id)
     except KeyNotFound:
-        return {
-            "error": "key_not_found",
-            "message": f"Container '{container_id}' does not exist or has expired.",
-            "suggestion": (
+        return ErrorResponse(
+            error="key_not_found",
+            message=f"Container '{container_id}' does not exist or has expired.",
+            suggestion=(
                 "Use list_signatures to find valid container IDs "
                 "(look for ChainTaskSignature or SwarmTaskSignature types)."
             ),
-        }
+        )
     except Exception:
-        return {
-            "error": "redis_error",
-            "message": "Could not retrieve container from Redis.",
-            "suggestion": (
+        return ErrorResponse(
+            error="redis_error",
+            message="Could not retrieve container from Redis.",
+            suggestion=(
                 "Verify that the MCP server started successfully with a valid REDIS_URL."
             ),
-        }
+        )
 
     if not isinstance(container, ContainerTaskSignature):
-        return {
-            "error": "not_a_container",
-            "message": (
+        return ErrorResponse(
+            error="not_a_container",
+            message=(
                 f"'{container_id}' is a {type(container).__name__}, "
                 "not a container (chain/swarm)."
             ),
-            "suggestion": (
+            suggestion=(
                 "Use get_signature instead for non-container task signatures."
             ),
-        }
+        )
 
     task_keys = list(container.task_ids)
     sub_tasks = (
@@ -85,14 +85,14 @@ async def list_sub_tasks(
     page: int = 1,
     page_size: int = PAGE_SIZE_DEFAULT,
     status: SignatureStatus | None = None,
-) -> PaginatedSubTaskList | dict:
+) -> PaginatedSubTaskList | ErrorResponse:
     """List sub-tasks of a chain or swarm container with optional filtering and pagination.
 
     When no status filter is provided, paginates the sub-task key list directly
     (efficient — avoids loading all sub-tasks). When a status filter is provided,
     all sub-tasks must be loaded to apply the filter before pagination.
 
-    Returns a structured error dict if the container key is not found, refers to a
+    Returns a structured ErrorResponse if the container key is not found, refers to a
     non-container signature, or Redis is unavailable.
 
     Args:
@@ -108,34 +108,34 @@ async def list_sub_tasks(
     try:
         container = await rapyer.aget(container_id)
     except KeyNotFound:
-        return {
-            "error": "key_not_found",
-            "message": f"Container '{container_id}' does not exist or has expired.",
-            "suggestion": (
+        return ErrorResponse(
+            error="key_not_found",
+            message=f"Container '{container_id}' does not exist or has expired.",
+            suggestion=(
                 "Use list_signatures to find valid container IDs "
                 "(look for ChainTaskSignature or SwarmTaskSignature types)."
             ),
-        }
+        )
     except Exception:
-        return {
-            "error": "redis_error",
-            "message": "Could not retrieve container from Redis.",
-            "suggestion": (
+        return ErrorResponse(
+            error="redis_error",
+            message="Could not retrieve container from Redis.",
+            suggestion=(
                 "Verify that the MCP server started successfully with a valid REDIS_URL."
             ),
-        }
+        )
 
     if not isinstance(container, ContainerTaskSignature):
-        return {
-            "error": "not_a_container",
-            "message": (
+        return ErrorResponse(
+            error="not_a_container",
+            message=(
                 f"'{container_id}' is a {type(container).__name__}, "
                 "not a container (chain/swarm)."
             ),
-            "suggestion": (
+            suggestion=(
                 "Use get_signature instead for non-container task signatures."
             ),
-        }
+        )
 
     all_keys = list(container.task_ids)
 

@@ -8,7 +8,7 @@ from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task.model import TaskSignature
 
-from mageflow_mcp.models import PaginatedSignatureList, SignatureInfo
+from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX, get_signature, list_signatures
 
 
@@ -47,23 +47,23 @@ async def test__get_signature__valid_chain_signature__returns_chain_type():
 
 
 @pytest.mark.asyncio
-async def test__get_signature__nonexistent_key__returns_error_dict():
-    """get_signature with a nonexistent key returns a structured error dict."""
+async def test__get_signature__nonexistent_key__returns_error_response():
+    """get_signature with a nonexistent key returns a structured ErrorResponse."""
     result = await get_signature("TaskSignature:nonexistent-uuid-0000")
 
-    assert isinstance(result, dict)
-    assert result["error"] == "key_not_found"
-    assert "suggestion" in result
-    assert "message" in result
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "key_not_found"
+    assert result.suggestion
+    assert result.message
 
 
 @pytest.mark.asyncio
-async def test__get_signature__invalid_prefix__returns_error_dict():
-    """get_signature with an unknown key prefix returns a structured error dict."""
+async def test__get_signature__invalid_prefix__returns_error_response():
+    """get_signature with an unknown key prefix returns a structured ErrorResponse."""
     result = await get_signature("InvalidModel:abc")
 
-    assert isinstance(result, dict)
-    assert result["error"] == "key_not_found"
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "key_not_found"
 
 
 # ---------------------------------------------------------------------------

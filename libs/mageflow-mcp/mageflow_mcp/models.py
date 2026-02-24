@@ -9,6 +9,14 @@ from pydantic import BaseModel
 from thirdmagic.signature.status import SignatureStatus
 
 
+class ErrorResponse(BaseModel):
+    """Structured error response returned by MCP tools when an operation fails."""
+
+    error: str
+    message: str
+    suggestion: str
+
+
 class SignatureInfo(BaseModel):
     """Projected view of a task signature stored in Redis."""
 

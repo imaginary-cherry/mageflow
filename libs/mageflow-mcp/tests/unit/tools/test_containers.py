@@ -9,7 +9,7 @@ from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
 
-from mageflow_mcp.models import ContainerSummary, PaginatedSubTaskList
+from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList
 from mageflow_mcp.tools.containers import get_container_summary, list_sub_tasks
 
 
@@ -81,27 +81,27 @@ async def test__get_container_summary__swarm__returns_summary():
 
 @pytest.mark.asyncio
 async def test__get_container_summary__nonexistent_key__returns_error():
-    """get_container_summary returns key_not_found error for nonexistent key."""
+    """get_container_summary returns key_not_found ErrorResponse for nonexistent key."""
     result = await get_container_summary("ChainTaskSignature:nonexistent-uuid-0000")
 
-    assert isinstance(result, dict)
-    assert result["error"] == "key_not_found"
-    assert "message" in result
-    assert "suggestion" in result
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "key_not_found"
+    assert result.message
+    assert result.suggestion
 
 
 @pytest.mark.asyncio
 async def test__get_container_summary__non_container_key__returns_not_a_container_error():
-    """get_container_summary returns not_a_container error for a plain TaskSignature key."""
+    """get_container_summary returns not_a_container ErrorResponse for a plain TaskSignature key."""
     task_sig = TaskSignature(task_name="plain_task")
     await task_sig.asave()
 
     result = await get_container_summary(task_sig.key)
 
-    assert isinstance(result, dict)
-    assert result["error"] == "not_a_container"
-    assert "message" in result
-    assert "suggestion" in result
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "not_a_container"
+    assert result.message
+    assert result.suggestion
 
 
 @pytest.mark.asyncio
@@ -170,24 +170,24 @@ async def test__list_sub_tasks__pagination__respects_page_size():
 
 @pytest.mark.asyncio
 async def test__list_sub_tasks__nonexistent_container__returns_error():
-    """list_sub_tasks returns key_not_found error for a nonexistent container key."""
+    """list_sub_tasks returns key_not_found ErrorResponse for a nonexistent container key."""
     result = await list_sub_tasks("ChainTaskSignature:nonexistent-container")
 
-    assert isinstance(result, dict)
-    assert result["error"] == "key_not_found"
-    assert "message" in result
-    assert "suggestion" in result
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "key_not_found"
+    assert result.message
+    assert result.suggestion
 
 
 @pytest.mark.asyncio
 async def test__list_sub_tasks__non_container__returns_not_a_container_error():
-    """list_sub_tasks returns not_a_container error for a plain TaskSignature key."""
+    """list_sub_tasks returns not_a_container ErrorResponse for a plain TaskSignature key."""
     task_sig = TaskSignature(task_name="plain_task")
     await task_sig.asave()
 
     result = await list_sub_tasks(task_sig.key)
 
-    assert isinstance(result, dict)
-    assert result["error"] == "not_a_container"
-    assert "message" in result
-    assert "suggestion" in result
+    assert isinstance(result, ErrorResponse)
+    assert result.error == "not_a_container"
+    assert result.message
+    assert result.suggestion

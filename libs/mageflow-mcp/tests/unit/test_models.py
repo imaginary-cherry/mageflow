@@ -8,11 +8,27 @@ from thirdmagic.signature.status import SignatureStatus
 
 from mageflow_mcp.models import (
     ContainerSummary,
+    ErrorResponse,
     LogEntry,
     SignatureInfo,
     SubTaskInfo,
     TaskDefinitionInfo,
 )
+
+
+def test__error_response__serializes_to_valid_json() -> None:
+    """ErrorResponse should serialize all fields to valid JSON."""
+    err = ErrorResponse(
+        error="key_not_found",
+        message="The requested key does not exist or has expired.",
+        suggestion="Use list_signatures to browse available signature IDs.",
+    )
+    raw = err.model_dump_json()
+    data = json.loads(raw)
+    assert isinstance(data, dict)
+    assert data["error"] == "key_not_found"
+    assert data["message"] == "The requested key does not exist or has expired."
+    assert data["suggestion"] == "Use list_signatures to browse available signature IDs."
 
 
 def test__signature_info__serializes_to_valid_json() -> None:
