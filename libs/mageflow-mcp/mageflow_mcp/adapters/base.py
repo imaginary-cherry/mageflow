@@ -41,3 +41,18 @@ class BaseMCPAdapter(ABC):
                        timeout, backend unavailable). Does NOT raise for
                        missing or expired run IDs — return empty list instead.
         """
+
+    @abc.abstractmethod
+    async def get_run_status(self, task_run_id: str) -> str:
+        """Return the backend run status as a string.
+
+        Expected values: 'QUEUED', 'RUNNING', 'COMPLETED', 'CANCELLED', 'FAILED'.
+        Return 'RUNNING' if the status cannot be determined — this is the safe
+        non-terminal default that avoids marking a log stream as complete prematurely.
+
+        Args:
+            task_run_id: The backend-specific identifier for the task run.
+
+        Returns:
+            A string status value. Safe to compare against terminal status set.
+        """

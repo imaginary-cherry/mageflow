@@ -57,6 +57,20 @@ class LogEntry(BaseModel):
 
     line: str
     timestamp: datetime | None = None
+    level: str | None = None
+    sub_task_id: str | None = None
+
+
+class LogsResponse(BaseModel):
+    """Paginated log line response with run completion status."""
+
+    items: list[LogEntry]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
+    is_complete: bool
+    worker_task_id: str
 
 
 class TaskDefinitionInfo(BaseModel):
