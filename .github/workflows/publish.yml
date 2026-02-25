@@ -82,3 +82,32 @@ jobs:
           git push origin "v$VERSION"
           echo "Created and pushed tag v$VERSION"
         fi
+
+  publish-mageflow-mcp:
+    needs: publish-thirdmagic
+    environment:
+      name: publish-pip
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install build tools
+      run: pip install build
+
+    - name: Build mageflow-mcp
+      run: python -m build
+      working-directory: libs/mageflow-mcp
+
+    - name: Publish mageflow-mcp to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: libs/mageflow-mcp/dist/
