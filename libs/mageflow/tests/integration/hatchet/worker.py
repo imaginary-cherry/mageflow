@@ -190,6 +190,7 @@ workflows = [
     normal_retry_once,
     retry_to_failure,
     cancel_retry,
+    accept_msg_results,
 ]
 
 
