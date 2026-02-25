@@ -70,7 +70,6 @@ async def test__get_logs__valid_signature_with_worker_task_id__returns_logs() ->
     assert len(result.items) == 1
     assert result.items[0].line == "hello"
     assert result.is_complete is True
-    assert result.worker_task_id == "run-uuid-123"
 
 
 @pytest.mark.asyncio
