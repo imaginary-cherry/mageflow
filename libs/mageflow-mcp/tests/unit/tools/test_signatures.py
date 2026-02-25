@@ -1,4 +1,5 @@
 """Unit tests for get_signature and list_signatures MCP tool functions."""
+
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +11,6 @@ from thirdmagic.task.model import TaskSignature
 
 from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX, get_signature, list_signatures
-
 
 # ---------------------------------------------------------------------------
 # get_signature tests

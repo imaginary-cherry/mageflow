@@ -1,4 +1,5 @@
 """Unit tests for get_container_summary and list_sub_tasks MCP tool functions."""
+
 from __future__ import annotations
 
 import uuid
@@ -12,13 +13,14 @@ from thirdmagic.task.model import TaskSignature
 from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList
 from mageflow_mcp.tools.containers import get_container_summary, list_sub_tasks
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-async def _make_chain(*task_names: str) -> tuple[ChainTaskSignature, list[TaskSignature]]:
+async def _make_chain(
+    *task_names: str,
+) -> tuple[ChainTaskSignature, list[TaskSignature]]:
     """Create and save a ChainTaskSignature with sub-tasks."""
     subs = [TaskSignature(task_name=name) for name in task_names]
     for sub in subs:
@@ -28,7 +30,9 @@ async def _make_chain(*task_names: str) -> tuple[ChainTaskSignature, list[TaskSi
     return chain, subs
 
 
-async def _make_swarm(*task_names: str) -> tuple[SwarmTaskSignature, list[TaskSignature]]:
+async def _make_swarm(
+    *task_names: str,
+) -> tuple[SwarmTaskSignature, list[TaskSignature]]:
     """Create and save a SwarmTaskSignature with sub-tasks."""
     subs = [TaskSignature(task_name=name) for name in task_names]
     for sub in subs:
