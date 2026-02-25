@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 from thirdmagic.signature import Signature
 
 from mageflow.callbacks import AcceptParams
-from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
+from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
 
 T = TypeVar("T")

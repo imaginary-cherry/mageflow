@@ -5,7 +5,6 @@ from hatchet_sdk.clients.rest import V1TaskStatus
 
 from tests.integration.hatchet.assertions import (
     assert_logs_dont_overlap,
-    get_runs,
     get_specific_refs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData

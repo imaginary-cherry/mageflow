@@ -28,7 +28,9 @@ async def test_swarm_item_done_sanity_basic_flow(mock_adapter, mock_logger):
     )
 
     # Act
-    await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger)
+    await swarm_item_done(
+        msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger
+    )
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -61,7 +63,9 @@ async def test_swarm_item_done_sanity_last_item_completes(mock_adapter, mock_log
     )
 
     # Act
-    await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger)
+    await swarm_item_done(
+        msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, setup.logger
+    )
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -82,7 +86,9 @@ async def test_swarm_item_done_nonexistent_swarm_edge_case():
 
     # Act & Assert
     with pytest.raises(Exception):
-        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger)
+        await swarm_item_done(
+            msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger
+        )
 
 
 @pytest.mark.asyncio
@@ -97,12 +103,15 @@ async def test_swarm_item_done_swarm_not_found_edge_case():
 
     # Act & Assert
     with pytest.raises(Exception):
-        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger)
+        await swarm_item_done(
+            msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, logger
+        )
 
 
 @pytest.mark.asyncio
 async def test_swarm_item_done_exception_during_handle_finish_edge_case(
-    mock_adapter, mock_logger,
+    mock_adapter,
+    mock_logger,
 ):
     # Arrange
     mock_adapter.afill_swarm.side_effect = RuntimeError("Finish tasks error")
@@ -127,6 +136,8 @@ async def test_swarm_item_done_exception_during_handle_finish_edge_case(
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="Finish tasks error"):
-        await swarm_item_done(msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, mock_logger)
+        await swarm_item_done(
+            msg.swarm_task_id, msg.swarm_item_id, msg.mageflow_results, mock_logger
+        )
 
     mock_adapter.afill_swarm.assert_awaited_once()

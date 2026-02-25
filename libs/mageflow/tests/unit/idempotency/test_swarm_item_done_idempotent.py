@@ -36,8 +36,18 @@ async def test_two_consecutive_calls_same_item_no_duplicate_idempotent(
     setup = swarm_item_done_setup
 
     # Act
-    await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
-    await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+    await swarm_item_done(
+        setup.msg.swarm_task_id,
+        setup.msg.swarm_item_id,
+        setup.msg.mageflow_results,
+        setup.logger,
+    )
+    await swarm_item_done(
+        setup.msg.swarm_task_id,
+        setup.msg.swarm_item_id,
+        setup.msg.mageflow_results,
+        setup.logger,
+    )
 
     # Assert
     await assert_swarm_item_done_state(setup)
@@ -55,8 +65,18 @@ async def test_retry_with_prepopulated_done_state_skips_update_idempotent(
         SwarmTaskSignature.ClientAdapter, "afill_swarm", side_effect=Exception
     ):
         with pytest.raises(Exception):
-            await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
-    await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+            await swarm_item_done(
+                setup.msg.swarm_task_id,
+                setup.msg.swarm_item_id,
+                setup.msg.mageflow_results,
+                setup.logger,
+            )
+    await swarm_item_done(
+        setup.msg.swarm_task_id,
+        setup.msg.swarm_item_id,
+        setup.msg.mageflow_results,
+        setup.logger,
+    )
 
     # Assert
     await assert_swarm_item_done_state(setup)
@@ -73,7 +93,12 @@ async def test_crash_before_pipeline_retry_executes_normally_idempotent(
     # Act - First call crashes before pipeline
     with patch.object(SwarmTaskSignature, "aget", side_effect=RuntimeError):
         with pytest.raises(RuntimeError):
-            await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+            await swarm_item_done(
+                setup.msg.swarm_task_id,
+                setup.msg.swarm_item_id,
+                setup.msg.mageflow_results,
+                setup.logger,
+            )
 
     # Verify no state change - crashed before pipeline
     await assert_swarm_item_done_state(
@@ -85,7 +110,12 @@ async def test_crash_before_pipeline_retry_executes_normally_idempotent(
     )
 
     # Act - Retry should succeed
-    await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+    await swarm_item_done(
+        setup.msg.swarm_task_id,
+        setup.msg.swarm_item_id,
+        setup.msg.mageflow_results,
+        setup.logger,
+    )
 
     # Assert idempotency
     await assert_swarm_item_done_state(setup, expected_results_count=None)
@@ -105,9 +135,19 @@ async def test_retry_after_wait_task_failure_no_duplicate_idempotent(
         side_effect=RuntimeError("Simulated wait_task failure"),
     ):
         with pytest.raises(RuntimeError, match="Simulated wait_task failure"):
-            await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+            await swarm_item_done(
+                setup.msg.swarm_task_id,
+                setup.msg.swarm_item_id,
+                setup.msg.mageflow_results,
+                setup.logger,
+            )
 
-    await swarm_item_done(setup.msg.swarm_task_id, setup.msg.swarm_item_id, setup.msg.mageflow_results, setup.logger)
+    await swarm_item_done(
+        setup.msg.swarm_task_id,
+        setup.msg.swarm_item_id,
+        setup.msg.mageflow_results,
+        setup.logger,
+    )
 
     # Assert
     await assert_swarm_item_done_state(setup)

@@ -15,7 +15,9 @@ from tests.unit.workflows.conftest import create_swarm_item_test_setup
 
 
 @pytest.mark.asyncio
-async def test_swarm_item_failed_sanity_continue_after_failure(mock_adapter, mock_logger):
+async def test_swarm_item_failed_sanity_continue_after_failure(
+    mock_adapter, mock_logger
+):
     # Arrange
     setup = await create_swarm_item_test_setup(
         num_tasks=3,
@@ -24,11 +26,15 @@ async def test_swarm_item_failed_sanity_continue_after_failure(mock_adapter, moc
         logger=mock_logger,
     )
     msg = SwarmErrorMessage(
-        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.tasks[0].key, error="test error"
+        swarm_task_id=setup.swarm_task.key,
+        swarm_item_id=setup.tasks[0].key,
+        error="test error",
     )
 
     # Act
-    await swarm_item_failed(msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger)
+    await swarm_item_failed(
+        msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger
+    )
 
     # Assert
     reloaded_swarm = await SwarmTaskSignature.aget(setup.swarm_task.key)
@@ -56,11 +62,15 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
         logger=mock_logger,
     )
     msg = SwarmErrorMessage(
-        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.tasks[1].key, error="test error"
+        swarm_task_id=setup.swarm_task.key,
+        swarm_item_id=setup.tasks[1].key,
+        error="test error",
     )
 
     # Act
-    await swarm_item_failed(msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger)
+    await swarm_item_failed(
+        msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger
+    )
 
     # Assert
     mock_adapter.afill_swarm.assert_awaited_once()
@@ -80,11 +90,15 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
         logger=mock_logger,
     )
     msg = SwarmErrorMessage(
-        swarm_task_id=setup.swarm_task.key, swarm_item_id=setup.tasks[2].key, error="test error"
+        swarm_task_id=setup.swarm_task.key,
+        swarm_item_id=setup.tasks[2].key,
+        error="test error",
     )
 
     # Act
-    await swarm_item_failed(msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger)
+    await swarm_item_failed(
+        msg.swarm_task_id, msg.swarm_item_id, msg.error, setup.logger
+    )
 
     # Assert
     mock_activate_error.assert_not_awaited()
@@ -114,10 +128,14 @@ async def test_swarm_item_failed_below_threshold_edge_case(
     async with swarm_task.apipeline():
         swarm_task.current_running_tasks = 1
 
-    msg = SwarmErrorMessage(swarm_task_id=swarm_task.key, swarm_item_id=task.key, error="test error")
+    msg = SwarmErrorMessage(
+        swarm_task_id=swarm_task.key, swarm_item_id=task.key, error="test error"
+    )
 
     # Act
-    await swarm_item_failed(msg.swarm_task_id, msg.swarm_item_id, msg.error, mock_logger)
+    await swarm_item_failed(
+        msg.swarm_task_id, msg.swarm_item_id, msg.error, mock_logger
+    )
 
     # Assert
     mock_activate_error.assert_not_awaited()
@@ -128,7 +146,9 @@ async def test_swarm_item_failed_below_threshold_edge_case(
 async def test_swarm_item_failed_missing_task_key_edge_case():
     # Arrange
     logger = MagicMock(spec=Logger)
-    msg = SwarmErrorMessage(swarm_task_id="some_swarm", swarm_item_id="some_item", error="test error")
+    msg = SwarmErrorMessage(
+        swarm_task_id="some_swarm", swarm_item_id="some_item", error="test error"
+    )
 
     # Act & Assert
     with pytest.raises(KeyNotFound):
@@ -165,7 +185,10 @@ async def test_swarm_item_failed_concurrent_failures_edge_case():
 
     # Act
     await asyncio.gather(
-        *[swarm_item_failed(m.swarm_task_id, m.swarm_item_id, m.error, logger) for m in msgs],
+        *[
+            swarm_item_failed(m.swarm_task_id, m.swarm_item_id, m.error, logger)
+            for m in msgs
+        ],
         return_exceptions=True,
     )
 

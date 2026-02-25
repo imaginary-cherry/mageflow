@@ -10,7 +10,7 @@ from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
-from mageflow.clients.hatchet.adapeter import HatchetClientAdapter
+from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.swarm.messages import (
     FillSwarmMessage,
