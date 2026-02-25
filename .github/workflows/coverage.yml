@@ -129,37 +129,3 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: thirdmagic
           files: libs/third-magic/coverage.xml
-
-  mageflow-mcp-coverage:
-    environment:
-      name: coverage
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: libs/mageflow-mcp
-        run: |
-          pip install --upgrade pip
-          pip install ".[dev]"
-
-      - name: Run coverage
-        working-directory: libs/mageflow-mcp
-        run: |
-          coverage run --branch -m pytest tests/unit --junitxml=junit.xml -o junit_family=legacy
-          coverage report --show-missing
-          coverage xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: mageflow-mcp
-          files: libs/mageflow-mcp/coverage.xml

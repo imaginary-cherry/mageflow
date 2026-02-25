@@ -73,10 +73,10 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        working-directory: libs/mageflow-mcp
         run: |
           pip install --upgrade pip
-          pip install ".[dev,hatchet]"
+          pip install ./libs/third-magic
+          pip install "./libs/mageflow-mcp[dev,hatchet]"
 
       - name: Run Unit Tests
         working-directory: libs/mageflow-mcp
