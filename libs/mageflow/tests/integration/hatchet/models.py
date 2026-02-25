@@ -13,6 +13,10 @@ class ContextMessage(BaseWorkerMessage):
     more_context: dict = Field(default_factory=dict)
 
 
+class MessageWithMsgResults(ContextMessage):
+    msg_results: ReturnValue[ContextMessage]
+
+
 class MessageWithData(ContextMessage):
     data: ReturnValue[Any]
     field_int: int = 1

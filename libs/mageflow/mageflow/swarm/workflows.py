@@ -52,6 +52,7 @@ async def fill_swarm_running_tasks(
     lifecycle: BaseLifecycle,
     logger: Logger,
 ):
+    logger.info(f"Filling swarm {swarm_task_id} with {max_tasks}")
     swarm_task = await SwarmTaskSignature.afind_one(swarm_task_id)
     if swarm_task is None:
         logger.info(
@@ -59,38 +60,31 @@ async def fill_swarm_running_tasks(
         )
         return
 
-    # TODO - TODELETE
-    async with swarm_task.alock():
-        logger.info(f"Filling swarm {swarm_task_id} with {max_tasks}")
-        if swarm_task.has_swarm_failed():
-            logger.info(f"Swarm failed too much {swarm_task_id}")
+    if swarm_task.has_swarm_failed():
+        logger.info(f"Swarm failed too much {swarm_task_id}")
 
-            if swarm_task is None or swarm_task.has_published_errors():
-                logger.info(
-                    f"Swarm {swarm_task_id} was deleted already deleted or failed"
-                )
-                return
-            await swarm_task.interrupt()
-            await lifecycle.task_failed({}, RuntimeError("Swarm failed too much"))
+        if swarm_task is None or swarm_task.has_published_errors():
+            logger.info(f"Swarm {swarm_task_id} was deleted already deleted or failed")
             return
+        await swarm_task.interrupt()
+        await lifecycle.task_failed({}, RuntimeError("Swarm failed too much"))
+        return
 
-        tasks_started = await fill_running_tasks(swarm_task, max_tasks=max_tasks)
-        num_task_started = len(tasks_started)
-        if num_task_started:
-            logger.info(
-                f"Swarm item started new task {num_task_started}/{swarm_task.key}"
-            )
-        else:
-            logger.info(f"Swarm item no new task to run in {swarm_task.key}")
+    tasks_started = await fill_running_tasks(swarm_task, max_tasks=max_tasks)
+    num_task_started = len(tasks_started)
+    if num_task_started:
+        logger.info(f"Swarm item started new task {num_task_started}/{swarm_task.key}")
+    else:
+        logger.info(f"Swarm item no new task to run in {swarm_task.key}")
 
-        # Check if the swarm should end
-        not_yet_published = not swarm_task.has_published_callback()
-        is_swarm_finished_running = await swarm_task.is_swarm_done()
-        if is_swarm_finished_running and not_yet_published:
-            logger.info(f"Swarm item done - closing swarm {swarm_task.key}")
-            await lifecycle.task_success(None)
-            logger.info(f"Swarm item done - closed swarm {swarm_task.key}")
-        logger.info(f"Swarm item done - done filling swarm {swarm_task.key}")
+    # Check if the swarm should end
+    not_yet_published = not swarm_task.has_published_callback()
+    is_swarm_finished_running = await swarm_task.is_swarm_done()
+    if is_swarm_finished_running and not_yet_published:
+        logger.info(f"Swarm item done - closing swarm {swarm_task.key}")
+        await lifecycle.task_success(None)
+        logger.info(f"Swarm item done - closed swarm {swarm_task.key}")
+    logger.info(f"Swarm item done - done filling swarm {swarm_task.key}")
 
 
 async def fill_running_tasks(

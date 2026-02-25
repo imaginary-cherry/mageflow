@@ -24,6 +24,7 @@ from tests.integration.hatchet.worker import (
     ContextMessage,
     task1_test_reg_name,
     return_multiple_values,
+    accept_msg_results,
 )
 
 
@@ -65,7 +66,12 @@ async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sani
         task1_callback, base_data={"callback_data": 1}
     )
     callback_signature2 = await mageflow.asign(task1_callback)
-    success_callbacks: list[TaskSignature] = [callback_signature1, callback_signature2]
+    callback_with_msg_res = await mageflow.asign(accept_msg_results)
+    success_callbacks: list[TaskSignature] = [
+        callback_signature1,
+        callback_signature2,
+        callback_with_msg_res,
+    ]
     main_signature = await mageflow.asign(
         task2,
         success_callbacks=success_callbacks,

@@ -274,3 +274,6 @@ async def test__suspended_task_with_retries__does_not_retry(
     assert (
         task_summary.retry_count == 0
     ), f"Expected retry_count=0, got {task_summary.retry_count}"
+
+
+# TODO - what happen when task is cancelled from outside? does the server allow it to continue later? should we call error callback?
