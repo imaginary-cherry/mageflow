@@ -77,7 +77,7 @@ def task2(msg):
     return msg
 
 
-@hatchet.task(name="accept_msg_results", input_validator=MessageWithResult)
+@hatchet.task(name="accept_msg_results", input_validator=MessageWithMsgResults)
 async def accept_msg_results(msg: MessageWithMsgResults):
     return msg
 
