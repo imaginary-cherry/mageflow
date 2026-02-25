@@ -30,6 +30,7 @@ from tests.integration.hatchet.models import (
     CommandMessageWithResult,
     SleepTaskMessage,
     MageflowTestError,
+    MessageWithMsgResults,
 )
 
 settings = Dynaconf(
@@ -73,6 +74,11 @@ def error_callback(msg: ContextMessage):
 
 @hatchet.task(name="task2", input_validator=ContextMessage)
 def task2(msg):
+    return msg
+
+
+@hatchet.task(name="accept_msg_results", input_validator=MessageWithResult)
+async def accept_msg_results(msg: MessageWithMsgResults):
     return msg
 
 
