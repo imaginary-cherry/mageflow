@@ -4,8 +4,8 @@ import thirdmagic
 from tests.unit.assertions import assert_task_reloaded_as_type, assert_callback_contains
 from tests.unit.messages import ContextMessage
 from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio

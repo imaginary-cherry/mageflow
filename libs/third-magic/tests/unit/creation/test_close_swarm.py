@@ -2,8 +2,7 @@ import pytest
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
-from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
-from thirdmagic.task import TaskSignature
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio

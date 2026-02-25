@@ -1,6 +1,5 @@
 import pytest
 
-
 from tests.unit.assertions import assert_tasks_changed_status
 from tests.unit.change_status.assertions import assert_resume_signature
 from thirdmagic.task import TaskSignature, SignatureStatus

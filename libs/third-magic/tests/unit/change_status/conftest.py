@@ -7,8 +7,8 @@ import thirdmagic
 from tests.unit.messages import ContextMessage
 from tests.unit.utils import extract_hatchet_validator
 from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.task import TaskSignature, SignatureStatus
 from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature, SignatureStatus
 
 
 @dataclass

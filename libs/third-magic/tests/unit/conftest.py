@@ -8,7 +8,6 @@ from hatchet_sdk import ClientConfig, Hatchet
 
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.signature import Signature
-from thirdmagic.task import TaskSignature
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 

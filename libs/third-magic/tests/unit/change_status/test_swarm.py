@@ -12,8 +12,8 @@ from tests.unit.change_status.conftest import (
     get_non_deleted_task_keys,
 )
 from tests.unit.messages import ContextMessage
-from thirdmagic.task import TaskSignature, SignatureStatus
 from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature, SignatureStatus
 
 
 @pytest.mark.asyncio
