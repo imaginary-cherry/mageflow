@@ -8,7 +8,7 @@ from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio
-async def test_aio_run_no_wait_calls_workflow_with_correct_params(
+async def test_aio_run_no_wait_calls_workflow_with_correct_params_for_chain(
     chain_with_two_tasks, mock_adapter
 ):
     # Arrange
@@ -28,7 +28,7 @@ async def test_aio_run_no_wait_calls_workflow_with_correct_params(
 
 
 @pytest.mark.asyncio
-async def test_aio_run_no_wait_calls_workflow_with_correct_params(
+async def test_aio_run_no_wait_calls_workflow_with_correct_params_for_signature(
     mock_adapter,
 ):
     # Arrange
