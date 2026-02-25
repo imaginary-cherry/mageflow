@@ -30,4 +30,4 @@ class MageflowWorkflow(Workflow):
             return_field = input
 
         full_msg = deep_merge(return_field, kwargs)
-        return super()._serialize_input(full_msg)
+        return super(MageflowWorkflow, self)._serialize_input(full_msg)
