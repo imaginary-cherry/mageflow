@@ -81,7 +81,6 @@ class LogsResponse(BaseModel):
     page_size: int
     total_pages: int
     is_complete: bool
-    worker_task_id: str
 
 
 class TaskDefinitionInfo(BaseModel):

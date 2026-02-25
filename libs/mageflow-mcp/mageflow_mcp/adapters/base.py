@@ -1,14 +1,3 @@
-"""Base adapter ABC for MCP observation clients.
-
-This module defines the adapter interface for plugging in backend-specific
-log retrieval. BaseMCPAdapter is a sibling to BaseClientAdapter (from
-thirdmagic) — it is NOT a subclass. BaseMCPAdapter is for observation
-(read-only log access), while BaseClientAdapter is for orchestration
-(task publishing and management). These are parallel hierarchies with
-distinct responsibilities.
-"""
-from __future__ import annotations
-
 import abc
 from abc import ABC
 
@@ -16,16 +5,10 @@ from mageflow_mcp.models import LogEntry
 
 
 class BaseMCPAdapter(ABC):
-    """Abstract base class for MCP backend adapters.
-
-    Implementations provide log retrieval from a specific backend (e.g.,
-    Hatchet). This class is intentionally minimal: Phase 3 will add the
-    HatchetMCPAdapter as the first concrete implementation.
-    """
-
     @abc.abstractmethod
     async def get_logs(self, task_run_id: str) -> list[LogEntry]:
-        """Retrieve log entries for a given backend task run ID.
+        """
+        Retrieve log entries for a given backend task run ID.
 
         Args:
             task_run_id: The backend-specific identifier for the task run.
@@ -44,7 +27,8 @@ class BaseMCPAdapter(ABC):
 
     @abc.abstractmethod
     async def get_run_status(self, task_run_id: str) -> str:
-        """Return the backend run status as a string.
+        """
+        Return the backend run status as a string.
 
         Expected values: 'QUEUED', 'RUNNING', 'COMPLETED', 'CANCELLED', 'FAILED'.
         Return 'RUNNING' if the status cannot be determined — this is the safe
