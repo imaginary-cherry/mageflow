@@ -1,7 +1,3 @@
-"""Unit tests for list_registered_tasks MCP tool function."""
-
-from __future__ import annotations
-
 import pytest
 from thirdmagic.task_def import MageflowTaskDefinition
 

@@ -1,7 +1,3 @@
-"""Unit tests for get_signature and list_signatures MCP tool functions."""
-
-from __future__ import annotations
-
 import asyncio
 
 import pytest

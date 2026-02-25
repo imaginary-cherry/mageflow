@@ -1,7 +1,3 @@
-"""Unit tests for the get_logs MCP tool function."""
-
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 

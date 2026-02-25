@@ -1,6 +1,3 @@
-"""Unit tests for mageflow_mcp.adapters.base — verify ABC enforcement."""
-from __future__ import annotations
-
 import pytest
 
 from mageflow_mcp.adapters.base import BaseMCPAdapter
@@ -37,7 +34,9 @@ def test__base_mcp_adapter__is_abstract() -> None:
         BaseMCPAdapter()
 
 
-def test__base_mcp_adapter__subclass_missing_get_run_status__raises_type_error() -> None:
+def test__base_mcp_adapter__subclass_missing_get_run_status__raises_type_error() -> (
+    None
+):
     """A subclass missing get_run_status must raise TypeError."""
 
     class PartialAdapter(BaseMCPAdapter):

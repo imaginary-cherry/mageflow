@@ -1,7 +1,3 @@
-"""Unit tests for get_container_summary and list_sub_tasks MCP tool functions."""
-
-from __future__ import annotations
-
 import uuid
 
 import pytest

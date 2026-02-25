@@ -1,6 +1,3 @@
-"""Unit tests for mageflow_mcp.models — verify all five Pydantic response models serialize to valid JSON."""
-from __future__ import annotations
-
 import json
 from datetime import datetime, timezone
 
@@ -28,7 +25,9 @@ def test__error_response__serializes_to_valid_json() -> None:
     assert isinstance(data, dict)
     assert data["error"] == "key_not_found"
     assert data["message"] == "The requested key does not exist or has expired."
-    assert data["suggestion"] == "Use list_signatures to browse available signature IDs."
+    assert (
+        data["suggestion"] == "Use list_signatures to browse available signature IDs."
+    )
 
 
 def test__signature_info__serializes_to_valid_json() -> None:

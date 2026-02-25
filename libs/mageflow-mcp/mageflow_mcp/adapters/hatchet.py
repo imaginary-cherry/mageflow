@@ -1,6 +1,3 @@
-"""Hatchet backend adapter for MCP log retrieval."""
-from __future__ import annotations
-
 from hatchet_sdk import Hatchet
 
 from mageflow_mcp.adapters.base import BaseMCPAdapter

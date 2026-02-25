@@ -1,12 +1,3 @@
-"""Shared fixtures for mageflow-mcp unit tests.
-
-Provides fakeredis + rapyer fixtures for tool-level tests that need
-Redis-backed data retrieval. All fixtures are autouse and function-scoped
-to ensure test isolation.
-"""
-
-from __future__ import annotations
-
 import fakeredis
 import pytest_asyncio
 import rapyer
