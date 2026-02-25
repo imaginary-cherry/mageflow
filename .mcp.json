@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "rapyer-docs": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://gitmcp.io/imaginary-cherry/rapyer"
+      ]
+    }
+  }
+}

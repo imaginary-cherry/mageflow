@@ -9,6 +9,10 @@
   - `libs/mage-voyance` — Visualizer (extracted from `mageflow/visualizer`)
 - **Client Adapter Pattern**: We changed the design to be ready for future support of additional task managers (like temporal). We extracted the hatchet unique code to client module, there we handle all the hatchet code 
 
+### ✨ Added
+- **`mageflow-mcp` Package**: New MCP (Model Context Protocol) server for workflow observability, enabling AI agents to inspect mageflow workflows.
+  - MCP tools: `get_signature`, `list_signatures`, `list_registered_tasks`, `get_container_summary`, `list_sub_tasks`, `get_logs`
+
 ### 🔄 Changed
 - **BREAKING — Package Imports**: All imports changed due to the split. Core orchestration from `mageflow`, shared models from `thirdmagic`.
 - **Swarm Task Calling**: All swarm tasks will be called from `fill_running_tasks` workflow. This is an inner task of mageflow, it is a gateway for publishing new tasks.
