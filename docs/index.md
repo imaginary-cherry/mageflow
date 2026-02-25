@@ -25,7 +25,7 @@ Mageflow abstracts away the complexity of task management systems, providing a u
 
 ## Key Features
 
-### 🔗 Task Chaining
+### Task Chaining
 Create sequential workflows where each task depends on the previous one's completion. Perfect for multi-step processes where order matters.
 
 ```python
@@ -37,10 +37,10 @@ task_order = [
     analyze_data_task,
     generate_report_task
 ]
-workflow = await mageflow.chain(task_order, name="data-pipeline")
+workflow = await mageflow.achain(task_order, name="data-pipeline")
 ```
 
-### 🐝 Task Swarms
+### Task Swarms
 Execute multiple tasks in parallel with intelligent coordination. Ideal for processing large datasets or performing independent operations simultaneously.
 
 ```python
@@ -52,31 +52,29 @@ swarm_tasks = [
     send_notifications_task,
     update_cache_task
 ]
-parallel_workflow = await mageflow.swarm(swarm_tasks, task_name="user-processing")
+parallel_workflow = await mageflow.aswarm(swarm_tasks, task_name="user-processing")
 ```
 
 ### 📞 Callback System
 Robust error handling and success callbacks ensure your workflows are resilient and responsive.
 
 ```python
-from mageflow import register_task, handle_task_callback
+from mageflow import handle_task_callback
 
-
-@register_task("my-task")
+@hatchet.task(name="my-task")
 @handle_task_callback()
 async def my_task(message):
-    # Your task logic here
     return {"status": "completed"}
 ```
 
-### 🎯 Task Signatures
+### Task Signatures
 Flexible task definition system with validation, state management, and lifecycle control.
 
 ```python
 import mageflow
 
 # Create a task signature with callbacks
-task_signature = await mageflow.sign(
+task_signature = await mageflow.asign(
     "process-order",
     success_callbacks=[send_confirmation_task],
     error_callbacks=[handle_error_task]
@@ -105,22 +103,11 @@ task_signature = await mageflow.sign(
 - **Retry Logic**: Automatic retry mechanisms for failed tasks
 - **Graceful Degradation**: Continue workflow execution even when individual tasks fail
 
-## Use Cases
-
-MageFlow is perfect for:
-
-- **Data Processing Pipelines**: Sequential data transformation and analysis workflows
-- **Microservice Coordination**: Orchestrating calls across multiple services
-- **Batch Processing**: Parallel processing of large datasets
-- **ETL Operations**: Extract, Transform, Load operations with error handling
-- **User Onboarding**: Multi-step user registration and setup processes
-- **Content Processing**: Image/video processing workflows with multiple stages
-
 ## Architecture
 
 The package is built on top of proven task management systems and provides:
 
-- **Backend Agnostic**: Currently supports Hatchet with plans for Taskiq and other backends
+- **Backend Agnostic**: Currently supports Hatchet with plans for other backends
 - **Redis Storage**: Persistent state management using Redis
 - **Async-First**: Built for modern async Python applications
 - **Type Safe**: Full type hints and Pydantic model validation
@@ -136,4 +123,4 @@ To start using MageFlow, you'll need to:
 4. **Define** your tasks and workflows
 5. **Run** your tasks
 
-Ready to get started? Check out our [Installation Guide](installation.md) and [Setup Documentation](setup.md).
+Ready to get started? Check out the [Setup Documentation](setup.md).

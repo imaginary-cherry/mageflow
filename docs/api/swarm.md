@@ -2,32 +2,39 @@
 
 This page provides detailed API documentation for swarm functionality in MageFlow.
 
-## mageflow.swarm()
+## `mageflow.aswarm(tasks, task_name, **options)`
 
 Create a new task swarm for parallel execution.
 
 ```python
-async def swarm(
+async def aswarm(
     tasks: List[TaskSignatureConvertible],
+    task_name: Optional[str] = None,
     success_callbacks: Optional[List[TaskSignatureConvertible]] = None,
     error_callbacks: Optional[List[TaskSignatureConvertible]] = None,
     config: SwarmConfig = SwarmConfig(),
-    task_name: Optional[str] = None,
     is_swarm_closed: bool = False,
     **kwargs
 ) -> SwarmTaskSignature
 ```
 
 **Parameters:**
-- `tasks`: List of tasks to run in parallel
-- `success_callbacks`: Tasks executed when all tasks complete successfully
-- `error_callbacks`: Tasks executed when failure conditions are met
-- `config`: Configuration object controlling swarm behavior
-- `task_name`: Optional name for the swarm
-- `is_swarm_closed`: Whether to close swarm immediately (prevents adding new tasks)
-- `**kwargs`: Additional parameters passed to task contexts
+- `tasks` (list): List of tasks to run in parallel
+- `task_name` (str): Optional name for the swarm
+- `success_callbacks` (list): Tasks executed when all tasks complete successfully
+- `error_callbacks` (list): Tasks executed when failure conditions are met
+- `config` (SwarmConfig): Configuration object controlling swarm behavior
+- `is_swarm_closed` (bool): Whether to close swarm immediately (prevents adding new tasks)
 
-**Returns:** `SwarmTaskSignature` - The swarm task signature
+**Example:**
+```python
+swarm = await mageflow.aswarm(
+    tasks=file_tasks,
+    task_name="file-processing",
+    config=SwarmConfig(max_concurrency=5),
+    is_swarm_closed=True
+)
+```
 
 ## SwarmConfig
 
@@ -41,9 +48,9 @@ class SwarmConfig(BaseModel):
 ```
 
 **Fields:**
-- `max_concurrency`: Maximum number of tasks running simultaneously (default: 30)
-- `stop_after_n_failures`: Stop swarm after N task failures (default: None - no limit)
-- `max_task_allowed`: Maximum total tasks allowed in swarm (default: None - no limit)
+- `max_concurrency` (int): Maximum number of tasks running simultaneously (default: 30)
+- `stop_after_n_failures` (int): Stop swarm after N task failures (default: None - no limit)
+- `max_task_allowed` (int): Maximum total tasks allowed in swarm (default: None - no limit)
 
 ## SwarmTaskSignature
 
@@ -61,18 +68,18 @@ The main swarm class that manages parallel task execution.
 
 ### Methods
 
-#### aio_run_no_wait()
+#### `aio_run_no_wait(msg)`
 
 Start the swarm execution.
 
 ```python
-async def aio_run_no_wait(self, msg: BaseModel, **kwargs)
+async def aio_run_no_wait(self, msg: BaseModel)
 ```
 
 **Parameters:**
-- `msg`: Message object to pass to tasks
+- `msg` (BaseModel): Message object to pass to tasks
 
-#### aio_run_in_swarm()
+#### `aio_run_in_swarm(task, msg, close_on_max_task)`
 
 Add a task to the swarm and immediately schedule it for execution.
 
@@ -87,14 +94,10 @@ async def aio_run_in_swarm(
 
 **Parameters:**
 - `task`: Task signature, function, or task name to add and run
-- `msg`: Message object with data specific to this task
-- `close_on_max_task`: Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
+- `msg` (BaseModel): Message object with data specific to this task
+- `close_on_max_task` (bool): Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
 
-**Raises:**
-- `TooManyTasksError`: If `max_task_allowed` limit exceeded
-- `SwarmIsCanceledError`: If swarm is canceled
-
-#### close_swarm()
+#### `close_swarm()`
 
 Close the swarm to prevent new tasks and trigger completion callbacks.
 
@@ -102,17 +105,13 @@ Close the swarm to prevent new tasks and trigger completion callbacks.
 async def close_swarm() -> SwarmTaskSignature
 ```
 
-**Returns:** The swarm instance
-
-#### is_swarm_done()
+#### `is_swarm_done()`
 
 Check if swarm has completed all tasks.
 
 ```python
 async def is_swarm_done() -> bool
 ```
-
-**Returns:** `True` if swarm is closed and all tasks finished
 
 ## Error Classes
 

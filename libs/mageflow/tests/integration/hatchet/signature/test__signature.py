@@ -1,0 +1,268 @@
+import asyncio
+
+import pytest
+from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.task import TaskSignature
+from thirdmagic.utils import return_value_field
+
+import mageflow
+from tests.integration.hatchet.assertions import (
+    assert_redis_is_clean,
+    assert_signature_done,
+    get_runs,
+    assert_signature_not_called,
+)
+from tests.integration.hatchet.conftest import HatchetInitData
+from tests.integration.hatchet.models import MessageWithResult
+from tests.integration.hatchet.worker import (
+    task1,
+    task1_callback,
+    task2,
+    error_callback,
+    fail_task,
+    CommandMessageWithResult,
+    ContextMessage,
+    task1_test_reg_name,
+    return_multiple_values,
+    accept_msg_results,
+)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_signature_creation_and_execution_with_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    message = ContextMessage(base_data=test_ctx)
+
+    # Act
+    signature = await mageflow.asign(task1)
+    await signature.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(3)
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(runs, signature, base_data=test_ctx)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_signature_with_success_callbacks_execution_and_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    message = ContextMessage(base_data=test_ctx)
+
+    error_callback_signature = await mageflow.asign(error_callback)
+    callback_signature1 = await mageflow.asign(
+        task1_callback, base_data={"callback_data": 1}
+    )
+    callback_signature2 = await mageflow.asign(task1_callback)
+    callback_with_msg_res = await mageflow.asign(accept_msg_results)
+    success_callbacks: list[TaskSignature] = [
+        callback_signature1,
+        callback_signature2,
+        callback_with_msg_res,
+    ]
+    main_signature = await mageflow.asign(
+        task2,
+        success_callbacks=success_callbacks,
+        error_callbacks=[error_callback_signature],
+    )
+
+    # Act
+    await main_signature.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(7)
+    runs = await get_runs(hatchet, ctx_metadata)
+    success_tasks = {task.key: task for task in success_callbacks}
+    for success_id in main_signature.success_callbacks:
+        task = success_tasks[success_id]
+        input_values = {
+            return_value_field(task.model_validators): message.model_dump(mode="json")
+        }
+        input_values.update(task.kwargs)
+        assert_signature_done(runs, task, **input_values)
+    for error_id in main_signature.error_callbacks:
+        assert_signature_not_called(runs, error_id)
+    assert_signature_done(runs, main_signature, base_data=test_ctx)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_signature_with_error_callbacks_execution_and_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    message = ContextMessage(base_data=test_ctx)
+
+    error_msg = "This is error"
+    error_callback_signature1 = await mageflow.asign(error_callback, error=error_msg)
+    error_callback_signature2 = await mageflow.asign(error_callback)
+    error_callbacks = [error_callback_signature1, error_callback_signature2]
+    callback_signature = await mageflow.asign(task1_callback)
+    error_sign = await mageflow.asign(
+        fail_task,
+        error_callbacks=error_callbacks,
+        success_callbacks=[callback_signature],
+    )
+
+    # Act
+    await error_sign.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(7)
+    runs = await get_runs(hatchet, ctx_metadata)
+    error_tasks = {task.key: task for task in error_callbacks}
+    for success_id in error_sign.error_callbacks:
+        task = error_tasks[success_id]
+        assert_signature_done(runs, task, **task.kwargs)
+    for error_id in error_sign.success_callbacks:
+        assert_signature_not_called(runs, error_id)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_signature_from_registered_task_name_execution_and_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+    message = ContextMessage(base_data=test_ctx)
+
+    # Act
+    signature = await mageflow.asign(
+        task1_test_reg_name, model_validators=ContextMessage
+    )
+    await signature.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(3)
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(runs, signature, base_data=test_ctx)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_task_with_success_callback_execution_and_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    success_callback_signature = await mageflow.asign(
+        task1_callback, base_data=test_ctx
+    )
+    message = ContextMessage(base_data=test_ctx)
+    task = await mageflow.asign(
+        task2, success_callbacks=[success_callback_signature.key], base_data=test_ctx
+    )
+
+    # Act
+    await task.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(3)
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(
+        runs, success_callback_signature, task_result=message.model_dump(mode="json")
+    )
+    assert_signature_done(runs, task, base_data=test_ctx)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_task_with_failure_callback_execution_and_redis_cleanup_sanity(
+    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+):
+    # Arrange
+    redis_client, hatchet = (
+        hatchet_client_init.redis_client,
+        hatchet_client_init.hatchet,
+    )
+
+    error_callback_signature = await mageflow.asign(error_callback)
+    message = ContextMessage(base_data=test_ctx)
+    task = await mageflow.asign(
+        fail_task, error_callbacks=[error_callback_signature], base_data=test_ctx
+    )
+
+    # Act
+    await task.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(5)
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(runs, task, base_data=test_ctx, allow_fails=True)
+    # Ensure we send the original msg back as callback
+    assert_signature_done(runs, error_callback_signature, base_data=test_ctx)
+    await assert_redis_is_clean(redis_client)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test__call_signed_task_with_normal_workflow__check_task_is_done(
+    hatchet_client_init: HatchetInitData, ctx_metadata, trigger_options, test_ctx
+):
+    # Arrange
+    hatchet = hatchet_client_init.hatchet
+    message = CommandMessageWithResult(task_result=test_ctx)
+
+    # Act
+    await task1_callback.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(3)
+    runs = await get_runs(hatchet, ctx_metadata)
+
+    assert len(runs) == 1
+    task_summary = runs[0]
+    assert task_summary.status == V1TaskStatus.COMPLETED
+    assert task_summary.output == message.model_dump()
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test__call_task_that_return_multiple_values_of_basemodel__sanity(
+    hatchet_client_init: HatchetInitData, ctx_metadata, trigger_options, test_ctx
+):
+    # Arrange
+    hatchet = hatchet_client_init.hatchet
+    message = MessageWithResult(
+        mageflow_results=CommandMessageWithResult(task_result=test_ctx)
+    )
+
+    callback_sign = await mageflow.asign(task1_callback)
+    return_multiple_values_sign = await mageflow.asign(
+        return_multiple_values, success_callbacks=[callback_sign.key]
+    )
+
+    # Act
+    await return_multiple_values_sign.aio_run_no_wait(message, options=trigger_options)
+
+    # Assert
+    await asyncio.sleep(5)
+    runs = await get_runs(hatchet, ctx_metadata)
+    assert_signature_done(runs, return_multiple_values_sign, **message.model_dump())
+    assert_signature_done(
+        runs,
+        callback_sign,
+        task_result=[message.model_dump(), message.model_dump(), message.model_dump()],
+    )
