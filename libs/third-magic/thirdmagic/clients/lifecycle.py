@@ -2,8 +2,6 @@ import abc
 from abc import ABC
 from typing import Any
 
-from pydantic import BaseModel
-
 
 class BaseLifecycle(ABC):
     @abc.abstractmethod
