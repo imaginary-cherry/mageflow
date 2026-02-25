@@ -1,5 +1,4 @@
-from logging import Logger
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock
 
 import pytest
 from thirdmagic.clients.lifecycle import BaseLifecycle
@@ -21,7 +20,9 @@ async def test_handle_finish_tasks_sanity_starts_next_task(
     lifecycle = AsyncMock(spec=BaseLifecycle)
 
     # Act
-    await fill_swarm_running_tasks(msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger)
+    await fill_swarm_running_tasks(
+        msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger
+    )
 
     # Assert
     assert mock_adapter.acall_signatures.call_count == 1
@@ -44,7 +45,9 @@ async def test_fill_swarm_with_max_tasks_zero_does_not_publish(
     lifecycle = AsyncMock(spec=BaseLifecycle)
 
     # Act
-    await fill_swarm_running_tasks(msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger)
+    await fill_swarm_running_tasks(
+        msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger
+    )
 
     # Assert
     mock_adapter.acall_signatures.assert_not_called()
@@ -62,7 +65,9 @@ async def test_handle_finish_tasks_no_tasks_left_edge_case(
     lifecycle = AsyncMock(spec=BaseLifecycle)
 
     # Act
-    await fill_swarm_running_tasks(msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger)
+    await fill_swarm_running_tasks(
+        msg.swarm_task_id, msg.max_tasks, lifecycle, mock_logger
+    )
 
     # Assert
     mock_logger.info.assert_any_call(
