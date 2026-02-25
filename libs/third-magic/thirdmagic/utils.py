@@ -40,10 +40,6 @@ def deep_merge(base: dict, updates: dict) -> dict:
     return results
 
 
-class ModelToDump(BaseModel):
-    value: Any
-
-
 # Which client is installed
 HatchetTaskType = Callable
 try:
