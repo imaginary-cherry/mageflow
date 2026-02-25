@@ -23,7 +23,7 @@ async def test_aio_run_no_wait_calls_workflow_with_correct_params_for_chain(
 
     # Assert
     mock_adapter.acall_signature.assert_awaited_once_with(
-        first_task, msg, set_return_field=False, options=options
+        first_task, msg, False, options=options
     )
 
 
