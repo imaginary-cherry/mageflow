@@ -70,7 +70,7 @@ class BaseClientAdapter(ABC):
         set_return_field: bool,
         **kwargs,
     ):
-        return asyncio.gather(
+        return await asyncio.gather(
             *[
                 signature.acall(msg, set_return_field, **kwargs)
                 for signature in signatures
