@@ -1,12 +1,10 @@
-"""Pydantic response models for MCP tool outputs."""
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
-
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 
 class ErrorResponse(BaseModel):
@@ -26,8 +24,21 @@ class SignatureInfo(BaseModel):
     status: SignatureStatus
     creation_time: datetime
     kwargs: dict[str, Any]
-    return_value: Any | None = None
     worker_task_id: str | None = None
+
+    @classmethod
+    def from_sig(cls, sig: Signature):
+        return cls(
+            key=sig.key,
+            signature_type=type(sig).__name__,
+            task_name=sig.task_name,
+            status=sig.task_status.status,
+            creation_time=sig.creation_time,
+            kwargs=sig.kwargs,
+            worker_task_id=(
+                sig.worker_task_id if isinstance(sig, TaskSignature) else None
+            ),
+        )
 
 
 class ContainerSummary(BaseModel):

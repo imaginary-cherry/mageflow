@@ -1,19 +1,25 @@
-"""Container read tools for the mageflow MCP server."""
-from __future__ import annotations
-
 import math
+from typing import cast
 
 import rapyer
+from rapyer.errors import RapyerError
 from rapyer.errors.base import KeyNotFound
 from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 
-from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList, SubTaskInfo
+from mageflow_mcp.models import (
+    ContainerSummary,
+    ErrorResponse,
+    PaginatedSubTaskList,
+    SubTaskInfo,
+)
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
 
 
 async def get_container_summary(container_id: str) -> ContainerSummary | ErrorResponse:
-    """Get a summary of sub-task counts by status for a chain or swarm container.
+    """
+    Get a summary of sub-task counts by status for a chain or swarm container.
 
     Fetches the container signature from Redis, retrieves all sub-task signatures
     in bulk, and returns a breakdown of sub-task counts by status (pending, active,
@@ -21,13 +27,10 @@ async def get_container_summary(container_id: str) -> ContainerSummary | ErrorRe
 
     Returns a structured ErrorResponse if the key is not found, the key refers to a
     non-container signature, or Redis is unavailable.
-
-    Args:
-        container_id: The full Redis key of a ChainTaskSignature or
-            SwarmTaskSignature, e.g. 'ChainTaskSignature:abc-123'.
     """
     try:
         container = await rapyer.aget(container_id)
+        container = cast(ContainerTaskSignature, container)
     except KeyNotFound:
         return ErrorResponse(
             error="key_not_found",
@@ -37,7 +40,7 @@ async def get_container_summary(container_id: str) -> ContainerSummary | ErrorRe
                 "(look for ChainTaskSignature or SwarmTaskSignature types)."
             ),
         )
-    except Exception:
+    except RapyerError:
         return ErrorResponse(
             error="redis_error",
             message="Could not retrieve container from Redis.",
@@ -53,15 +56,12 @@ async def get_container_summary(container_id: str) -> ContainerSummary | ErrorRe
                 f"'{container_id}' is a {type(container).__name__}, "
                 "not a container (chain/swarm)."
             ),
-            suggestion=(
-                "Use get_signature instead for non-container task signatures."
-            ),
+            suggestion="Use get_signature instead for non-container task signatures.",
         )
 
     task_keys = list(container.task_ids)
-    sub_tasks = (
-        await rapyer.afind(*task_keys, skip_missing=True) if task_keys else []
-    )
+    sub_tasks = await rapyer.afind(*task_keys, skip_missing=True) if task_keys else []
+    sub_tasks = cast(list[Signature], sub_tasks)
 
     counts = {s: 0 for s in SignatureStatus}
     for t in sub_tasks:
@@ -86,7 +86,8 @@ async def list_sub_tasks(
     page_size: int = PAGE_SIZE_DEFAULT,
     status: SignatureStatus | None = None,
 ) -> PaginatedSubTaskList | ErrorResponse:
-    """List sub-tasks of a chain or swarm container with optional filtering and pagination.
+    """
+    List sub-tasks of a chain or swarm container with optional filtering and pagination.
 
     When no status filter is provided, paginates the sub-task key list directly
     (efficient — avoids loading all sub-tasks). When a status filter is provided,
@@ -94,14 +95,6 @@ async def list_sub_tasks(
 
     Returns a structured ErrorResponse if the container key is not found, refers to a
     non-container signature, or Redis is unavailable.
-
-    Args:
-        container_id: The full Redis key of a ChainTaskSignature or
-            SwarmTaskSignature, e.g. 'ChainTaskSignature:abc-123'.
-        page: Page number (1-based, default 1).
-        page_size: Number of results per page (default 20, maximum 50).
-        status: Filter sub-tasks by status (pending, active, done, failed,
-            suspended, canceled). Omit to return all sub-tasks.
     """
     effective_page_size = min(page_size, PAGE_SIZE_MAX)
 
@@ -116,7 +109,7 @@ async def list_sub_tasks(
                 "(look for ChainTaskSignature or SwarmTaskSignature types)."
             ),
         )
-    except Exception:
+    except RapyerError:
         return ErrorResponse(
             error="redis_error",
             message="Could not retrieve container from Redis.",
@@ -132,18 +125,16 @@ async def list_sub_tasks(
                 f"'{container_id}' is a {type(container).__name__}, "
                 "not a container (chain/swarm)."
             ),
-            suggestion=(
-                "Use get_signature instead for non-container task signatures."
-            ),
+            suggestion="Use get_signature instead for non-container task signatures.",
         )
 
     all_keys = list(container.task_ids)
 
+    # TODO - add server side filtering (no Redis indexes available on thirdmagic models)
     if status is not None:
         # Must load all sub-tasks to apply status filter
-        all_subs = (
-            await rapyer.afind(*all_keys, skip_missing=True) if all_keys else []
-        )
+        all_subs = await rapyer.afind(*all_keys, skip_missing=True) if all_keys else []
+        all_subs = cast(list[Signature], all_subs)
         filtered = [t for t in all_subs if t.task_status.status == status]
         total = len(filtered)
         start = (page - 1) * effective_page_size

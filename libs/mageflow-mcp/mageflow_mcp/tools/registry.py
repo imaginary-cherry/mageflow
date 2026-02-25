@@ -1,11 +1,13 @@
-"""Registry read tools for the mageflow MCP server."""
-from __future__ import annotations
-
 import math
 
+from rapyer.errors import RapyerError
 from thirdmagic.task_def import MageflowTaskDefinition
 
-from mageflow_mcp.models import ErrorResponse, PaginatedTaskDefinitionList, TaskDefinitionInfo
+from mageflow_mcp.models import (
+    ErrorResponse,
+    PaginatedTaskDefinitionList,
+    TaskDefinitionInfo,
+)
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
 
 
@@ -13,19 +15,16 @@ async def list_registered_tasks(
     page: int = 1,
     page_size: int = PAGE_SIZE_DEFAULT,
 ) -> PaginatedTaskDefinitionList | ErrorResponse:
-    """List all registered MageflowTaskDefinition entries from the Redis registry.
+    """
+    List all registered MageflowTaskDefinition entries from the Redis registry.
 
     Returns paginated results with task name, type, and retry configuration.
-
-    Args:
-        page: Page number (1-based).
-        page_size: Results per page (max 50, default 20).
     """
     effective_page_size = min(page_size, PAGE_SIZE_MAX)
 
     try:
         all_defs = await MageflowTaskDefinition.afind()
-    except Exception:
+    except RapyerError:
         return ErrorResponse(
             error="redis_error",
             message="Could not retrieve task definitions from Redis.",

@@ -1,6 +1,3 @@
-"""Log retrieval tool for the mageflow MCP server."""
-from __future__ import annotations
-
 import math
 
 import rapyer
@@ -22,12 +19,12 @@ _VALID_LEVELS = {"debug", "info", "warn", "error"}
 
 async def get_logs(
     signature_id: str,
-    ctx: Context,
     level: str | None = None,
     page: int = 1,
     page_size: int = PAGE_SIZE_DEFAULT,
 ) -> LogsResponse | ErrorResponse:
-    """Retrieve execution log lines for a dispatched task signature.
+    """
+    Retrieve execution log lines for a dispatched task signature.
 
     Fetches logs from the Hatchet API for the workflow run associated with
     the given signature's worker_task_id. Returns paginated log entries with
@@ -35,13 +32,6 @@ async def get_logs(
 
     For container signatures (chains/swarms), logs are grouped by sub-task
     with separator entries. Each sub-task's logs are fetched individually.
-
-    Args:
-        signature_id: The Redis key of the signature, e.g. 'TaskSignature:abc-123'
-            or 'ChainTaskSignature:abc-123'.
-        level: Filter by log level. One of: debug, info, warn, error. Omit for all levels.
-        page: Page number (1-based, default 1).
-        page_size: Number of log lines per page (default 20, maximum 50).
     """
     # Step 0 — Get adapter from context
     adapter = ctx.request_context.lifespan_context.get("adapter")
@@ -72,7 +62,9 @@ async def get_logs(
     # Step 2 — Handle container vs simple task
     if isinstance(sig, ContainerTaskSignature):
         task_keys = list(sig.task_ids)
-        sub_tasks = await rapyer.afind(*task_keys, skip_missing=True) if task_keys else []
+        sub_tasks = (
+            await rapyer.afind(*task_keys, skip_missing=True) if task_keys else []
+        )
 
         all_logs: list[LogEntry] = []
         dispatched_worker_task_id = ""
@@ -80,7 +72,11 @@ async def get_logs(
 
         for sub_task in sub_tasks:
             sub_worker_task_id = getattr(sub_task, "worker_task_id", None)
-            status_str = sub_task.task_status.status.value if hasattr(sub_task.task_status, "status") else str(sub_task.task_status.status)
+            status_str = (
+                sub_task.task_status.status.value
+                if hasattr(sub_task.task_status, "status")
+                else str(sub_task.task_status.status)
+            )
 
             if sub_worker_task_id:
                 if not dispatched_worker_task_id:
