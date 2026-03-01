@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1]
+
+### 🐛 Fixed
+- **Swarm bug**: Fixed a bug that causes swarm concurrency to fill without actually tasks running.
+
+
 ## [0.3.0]
 
 ### 🚀 Major Changes
