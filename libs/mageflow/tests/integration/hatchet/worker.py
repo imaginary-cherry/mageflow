@@ -32,6 +32,7 @@ from tests.integration.hatchet.models import (
     SleepTaskMessage,
     MageflowTestError,
     MessageWithMsgResults,
+    SignatureKeysResult,
 )
 
 settings = Dynaconf(
@@ -191,6 +192,33 @@ async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 
 
+@hatchet.durable_task(name="create_signatures_for_ttl_test", input_validator=ContextMessage)
+async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysResult:
+    # Standalone task signature
+    task_sig = await hatchet.asign(task1)
+
+    # Chain with pre-created sub-tasks
+    chain_sub1 = await hatchet.asign(task1)
+    chain_sub2 = await hatchet.asign(task2)
+    chain_sig = await hatchet.achain([chain_sub1, chain_sub2])
+
+    # Swarm with pre-created sub-tasks
+    swarm_sub1 = await hatchet.asign(task1)
+    swarm_sub2 = await hatchet.asign(task2)
+    swarm_sig = await hatchet.aswarm(
+        [swarm_sub1, swarm_sub2], is_swarm_closed=True
+    )
+
+    return SignatureKeysResult(
+        task_keys=[task_sig.key],
+        chain_key=chain_sig.key,
+        chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
+        swarm_key=swarm_sig.key,
+        swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
+        publish_state_key=swarm_sig.publishing_state_id,
+    )
+
+
 workflows = [
     task1,
     task2,
@@ -210,6 +238,7 @@ workflows = [
     retry_to_failure,
     cancel_retry,
     accept_msg_results,
+    create_signatures_for_ttl_test,
 ]
 
 

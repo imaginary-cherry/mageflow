@@ -41,5 +41,14 @@ class SleepTaskMessage(ContextMessage):
     result: Any = None
 
 
+class SignatureKeysResult(BaseModel):
+    task_keys: list[str]
+    chain_key: str
+    chain_sub_task_keys: list[str]
+    swarm_key: str
+    swarm_sub_task_keys: list[str]
+    publish_state_key: str
+
+
 class MageflowTestError(Exception):
     pass
