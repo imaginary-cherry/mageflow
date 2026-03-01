@@ -19,7 +19,7 @@ class SignatureTTLConfig:
 @dataclass
 class TTLConfig:
     active_ttl: int = 24 * 60 * 60  # general active TTL (default 24h)
-    done_ttl: int = REMOVED_TASK_TTL  # general done TTL (default 5min)
+    ttl_when_sign_done: int = REMOVED_TASK_TTL  # general done TTL (default 5min)
     task: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
     chain: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
     swarm: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
@@ -37,9 +37,9 @@ def apply_ttl_config(ttl_config: TTLConfig):
         SwarmTaskSignature: ttl_config.swarm,
         PublishState: ttl_config.swarm,
     }
-    for sig_type, ttl_config in config_mapping.items():
-        active_ttl = ttl_config.active_ttl
-        done_ttl = ttl_config.ttl_when_sign_done
+    for sig_type, sig_config in config_mapping.items():
+        active_ttl = sig_config.active_ttl or ttl_config.active_ttl
+        done_ttl = sig_config.ttl_when_sign_done or ttl_config.ttl_when_sign_done
 
         sig_type.Meta = dataclasses.replace(sig_type.Meta, ttl=active_ttl)
         sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)
