@@ -10,10 +10,8 @@ async def init_mageflow(
     tasks: list[MageflowTaskDefinition],
     config: MageflowConfig = None,
 ):
-    if config is None:
-        config = MageflowConfig()
-    # Apply TTL config before rapyer init so new Meta objects receive the Redis client
-    apply_ttl_config(config.ttl)
+    if config is not None:
+        apply_ttl_config(config.ttl)
     # Init redis in local async loop
     redis = Redis(**redis.connection_pool.connection_kwargs)
     await rapyer.init_rapyer(redis, prefer_normal_json_dump=True)
