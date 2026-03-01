@@ -23,6 +23,7 @@ from hatchet_sdk import Hatchet, ClientConfig, Context, NonRetryableException
 from hatchet_sdk.config import HealthcheckConfig
 
 import mageflow
+from mageflow import MageflowConfig, TTLConfig, SignatureTTLConfig
 from tests.integration.hatchet.models import (
     ContextMessage,
     MessageWithData,
@@ -48,7 +49,25 @@ config_obj = ClientConfig(
 
 redis = redis.asyncio.from_url(settings.redis.url, decode_responses=True)
 hatchet = Hatchet(debug=True, config=config_obj)
-hatchet = mageflow.Mageflow(hatchet, redis_client=redis)
+
+# Per-type TTL configuration for tests
+TASK_ACTIVE_TTL = 600  # 10 minutes
+TASK_DONE_TTL = 60  # 1 minute
+CHAIN_ACTIVE_TTL = 900  # 15 minutes
+CHAIN_DONE_TTL = 90  # 1.5 minutes
+SWARM_ACTIVE_TTL = 1200  # 20 minutes
+SWARM_DONE_TTL = 120  # 2 minutes
+MAX_DONE_TTL = max(TASK_DONE_TTL, CHAIN_DONE_TTL, SWARM_DONE_TTL)
+
+TEST_MAGEFLOW_CONFIG = MageflowConfig(
+    ttl=TTLConfig(
+        task=SignatureTTLConfig(active_ttl=TASK_ACTIVE_TTL, ttl_when_sign_done=TASK_DONE_TTL),
+        chain=SignatureTTLConfig(active_ttl=CHAIN_ACTIVE_TTL, ttl_when_sign_done=CHAIN_DONE_TTL),
+        swarm=SignatureTTLConfig(active_ttl=SWARM_ACTIVE_TTL, ttl_when_sign_done=SWARM_DONE_TTL),
+    )
+)
+
+hatchet = mageflow.Mageflow(hatchet, redis_client=redis, config=TEST_MAGEFLOW_CONFIG)
 
 # > Default priority
 DEFAULT_PRIORITY = 1
