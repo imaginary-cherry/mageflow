@@ -28,7 +28,6 @@ from thirdmagic.task_def import MageflowTaskDefinition
 import mageflow
 from mageflow import Mageflow
 from mageflow.client import HatchetMageflow
-from mageflow.startup import init_mageflow
 from tests.integration.hatchet.worker import (
     config_obj,
     task1,
@@ -77,16 +76,6 @@ async def hatchet_client_init(
     yield worker_data
 
     await rapyer.teardown_rapyer()
-
-
-@pytest_asyncio.fixture(scope="function", loop_scope="session", autouse=True)
-async def init_settings(hatchet_client_init: HatchetInitData):
-    redis_client, hatchet = (
-        hatchet_client_init.redis_client,
-        hatchet_client_init.hatchet,
-    )
-    # Load the subclasses of the task signature
-    await init_mageflow(redis_client, [])
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
