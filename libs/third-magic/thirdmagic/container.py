@@ -3,8 +3,6 @@ import asyncio
 from abc import ABC
 from typing import Any
 
-from pydantic import BaseModel
-
 from thirdmagic.signature import Signature
 
 
