@@ -1,4 +1,8 @@
+import dataclasses
+
+import pytest
 from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import Signature
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
@@ -8,6 +12,17 @@ from mageflow.config import (
     TTLConfig,
     SignatureTTLConfig,
 )
+from tests.unit.utils import sub_classes
+
+
+@pytest.fixture(autouse=True)
+def _restore_signature_class_vars():
+    classes = sub_classes(Signature)
+    originals = [(cls, cls.Meta.ttl, cls.SignatureSettings) for cls in classes]
+    yield
+    for cls, orig_ttl, orig_settings in originals:
+        cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
+        cls.SignatureSettings = orig_settings
 
 
 def test_per_type_overrides_propagate():
