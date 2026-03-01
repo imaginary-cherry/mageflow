@@ -6,6 +6,7 @@ from typing import Optional, Self, Any, TypeAlias, ClassVar, cast
 
 import rapyer
 from pydantic import BaseModel, field_validator, Field
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
@@ -21,6 +22,11 @@ if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 
+@pydantic_dataclass
+class SignatureConfig:
+    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, gt=0)
+
+
 class Signature(AtomicRedisModel, ABC):
     task_name: str
     kwargs: RedisDict[Any] = Field(default_factory=dict)
@@ -32,6 +38,7 @@ class Signature(AtomicRedisModel, ABC):
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
     ClientAdapter: ClassVar[BaseClientAdapter] = DefaultClientAdapter()
+    SignatureSettings: ClassVar[SignatureConfig] = SignatureConfig()
 
     @field_validator("success_callbacks", "error_callbacks", mode="before")
     @classmethod
@@ -78,7 +85,7 @@ class Signature(AtomicRedisModel, ABC):
         return await self.ClientAdapter.acall_signatures(error_signatures, msg, False)
 
     async def remove_task(self):
-        await self.aset_ttl(REMOVED_TASK_TTL)
+        await self.aset_ttl(self.SignatureSettings.ttl_when_sign_done)
 
     async def remove_branches(self, success: bool = True, errors: bool = True):
         keys_to_remove = []

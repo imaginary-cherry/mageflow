@@ -9,13 +9,14 @@ The main MageFlow client that wraps your task manager (Hatchet) and provides enh
 ### Initialization
 
 ```python
-from mageflow import Mageflow
+from mageflow import Mageflow, MageflowConfig
 from hatchet_sdk import Hatchet
 
 client = Mageflow(
     hatchet_client: Hatchet,
     redis_client: Redis | str = None,
-    param_config: AcceptParams = AcceptParams.NO_CTX
+    param_config: AcceptParams = AcceptParams.NO_CTX,
+    config: MageflowConfig = None
 )
 ```
 
@@ -23,6 +24,7 @@ client = Mageflow(
 - `hatchet_client` (Hatchet): The Hatchet SDK client instance
 - `redis_client` (Redis | str): Redis client instance or connection string for state management
 - `param_config` (AcceptParams): Parameter configuration for context handling (NO_CTX, ALL, CTX_ONLY)
+- `config` (MageflowConfig): Optional configuration for TTL and other settings. See [TTL](../documentation/task-lifecycle.md#ttl-time-to-live)
 
 ### Client Methods
 

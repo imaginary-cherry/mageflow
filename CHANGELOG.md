@@ -2,6 +2,19 @@
 
 ## [0.3.1]
 
+### ✨ Added
+
+- **Configurable TTL for Signatures**: Added `MageflowConfig` with per-signature-type TTL settings for active and post-completion states.
+  - `TTLConfig` controls general active/done TTL defaults
+  - `SignatureTTLConfig` allows overriding TTL per signature type (task, chain, swarm)
+  - Pass config via `Mageflow(hatchet, redis, config=MageflowConfig(ttl=TTLConfig(...)))`
+- **`SignatureConfig` model in `thirdmagic`**: New `SignatureSettings` class variable on `Signature` for configurable `ttl_when_sign_done`.
+
+### 🔄 Changed
+
+- **Signature cleanup TTL**: `Signature.remove_task()` now uses the configurable `SignatureSettings.ttl_when_sign_done` instead of the hardcoded `REMOVED_TASK_TTL` constant.
+
+
 ### 🐛 Fixed
 - **Swarm bug**: Fixed a bug that causes swarm concurrency to fill without actually tasks running.
 

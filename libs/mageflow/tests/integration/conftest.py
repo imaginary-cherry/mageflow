@@ -2,6 +2,9 @@ import pytest_asyncio
 import redis.asyncio
 from dynaconf import Dynaconf
 
+from mageflow import start_mageflow
+from tests.integration.hatchet.worker import TEST_MAGEFLOW_CONFIG
+
 settings = Dynaconf(
     envvar_prefix="DYNACONF",
     settings_files=["settings.toml", ".secrets.toml"],
@@ -24,3 +27,8 @@ async def real_redis(redis_client):
     if delete_keys:
         await redis_client.delete(*delete_keys)
     await redis_client.aclose()
+
+
+@pytest_asyncio.fixture(scope="function", loop_scope="session", autouse=True)
+async def init_settings(real_redis):
+    await start_mageflow(real_redis, TEST_MAGEFLOW_CONFIG)

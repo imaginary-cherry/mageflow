@@ -9,7 +9,6 @@ from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.consts import (
     MAGEFLOW_TASK_INITIALS,
     TASK_ID_PARAM_NAME,
-    REMOVED_TASK_TTL,
 )
 from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature
@@ -17,6 +16,7 @@ from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
 
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
+from tests.integration.hatchet.worker import MAX_DONE_TTL
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
 WF_MAPPING_BY_WF_ID_TYPE = dict[str, V1TaskSummary]
@@ -209,11 +209,11 @@ async def assert_redis_is_clean(redis_client):
     keys_with_invalid_ttl = [
         (key, ttl)
         for key, ttl in zip(non_persistent_keys, ttls)
-        if ttl == -1 or ttl > REMOVED_TASK_TTL
+        if ttl == -1 or ttl > MAX_DONE_TTL
     ]
     assert (
         len(keys_with_invalid_ttl) == 0
-    ), f"Keys without proper TTL (should be <= {REMOVED_TASK_TTL}s): {keys_with_invalid_ttl}"
+    ), f"Keys without proper TTL (should be <= {MAX_DONE_TTL}s): {keys_with_invalid_ttl}"
 
 
 def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=False):

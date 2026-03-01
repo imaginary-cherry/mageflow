@@ -37,6 +37,7 @@ from mageflow.clients.inner_task_names import (
     ON_SWARM_ITEM_ERROR,
     ON_SWARM_ITEM_DONE,
 )
+from mageflow.config import MageflowConfig
 from mageflow.startup import (
     lifespan_initialize,
     init_mageflow,
@@ -86,9 +87,12 @@ class WorkerOptions(TypedDict, total=False):
 
 
 async def merge_lifespan(
-    redis: Redis, tasks: list[MageflowTaskDefinition], original_lifespan: LifespanFn
+    redis: Redis,
+    tasks: list[MageflowTaskDefinition],
+    config: MageflowConfig,
+    original_lifespan: LifespanFn,
 ):
-    await init_mageflow(redis, tasks)
+    await init_mageflow(redis, tasks, config)
     async for res in original_lifespan():
         yield res
     await teardown_mageflow()
@@ -100,11 +104,13 @@ class HatchetMageflow(Hatchet):
         hatchet: Hatchet,
         redis_client: Redis,
         param_config: AcceptParams = AcceptParams.NO_CTX,
+        config: MageflowConfig = None,
     ):
         super().__init__(client=hatchet._client)
         self.hatchet = hatchet
         self.redis = redis_client
         self.param_config = param_config
+        self.mageflow_config = config or MageflowConfig()
         self._task_defs: list[MageflowTaskDefinition] = []
 
     @property
@@ -227,11 +233,15 @@ class HatchetMageflow(Hatchet):
         workflows += mageflow_flows
         if lifespan is None:
             lifespan = functools.partial(
-                lifespan_initialize, self.redis, self._task_defs
+                lifespan_initialize, self.redis, self._task_defs, self.mageflow_config
             )
         else:
             lifespan = functools.partial(
-                merge_lifespan, self.redis, self._task_defs, lifespan
+                merge_lifespan,
+                self.redis,
+                self._task_defs,
+                self.mageflow_config,
+                lifespan,
             )
 
         return super().worker(name, workflows=workflows, lifespan=lifespan, **kwargs)

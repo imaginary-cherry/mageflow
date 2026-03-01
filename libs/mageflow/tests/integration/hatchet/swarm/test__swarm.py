@@ -271,7 +271,7 @@ async def test_swarm_run_concurrently(
     # Act
     regular_message = ContextMessage(base_data=test_ctx)
     await swarm.aio_run_no_wait(regular_message, options=trigger_options)
-    await asyncio.sleep(40)
+    await asyncio.sleep(20)
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)

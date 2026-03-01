@@ -9,13 +9,16 @@ from thirdmagic.signature import Signature
 from mageflow.callbacks import AcceptParams
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
+from mageflow.config import MageflowConfig
 
 T = TypeVar("T")
 
 
 @overload
 def Mageflow(
-    hatchet_client: Hatchet, redis_client: Redis | str = None
+    hatchet_client: Hatchet,
+    redis_client: Redis | str = None,
+    config: MageflowConfig = None,
 ) -> HatchetMageflow: ...
 
 
@@ -23,7 +26,11 @@ def Mageflow(
     hatchet_client: T = None,
     redis_client: Redis | str = None,
     param_config: AcceptParams = AcceptParams.NO_CTX,
+    config: MageflowConfig = None,
 ) -> T:
+    if config is None:
+        config = MageflowConfig()
+
     if hatchet_client is None:
         hatchet_client = Hatchet()
 
@@ -35,4 +42,4 @@ def Mageflow(
         redis_client = redis.asyncio.from_url(redis_url, decode_responses=True)
     if isinstance(redis_client, str):
         redis_client = redis.asyncio.from_url(redis_client, decode_responses=True)
-    return HatchetMageflow(hatchet_client, redis_client, param_config)
+    return HatchetMageflow(hatchet_client, redis_client, param_config, config)

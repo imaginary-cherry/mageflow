@@ -85,6 +85,77 @@ active → interrupt() → interrupted  → resume() → active (may be inconsis
 active → suspend() → suspended  → resume() → active (may be inconsistent)
 ```
 
+## TTL (Time-To-Live)
+
+<div style="background: linear-gradient(135deg, #7c4dff 0%, #b388ff 100%); color: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px;">
+  <strong style="font-size: 1.1em;">🧪 Beta Feature</strong><br>
+  <span style="opacity: 0.95;">TTL configuration is currently experimental. The API may change in future releases based on feedback.</span>
+</div>
+
+MageFlow stores task signatures in Redis during execution. TTL controls how long these signatures persist — both while active and after completion.
+
+By default:
+
+- **Active signatures** expire after **24 hours**
+- **Completed signatures** are cleaned up after **5 minutes**
+
+### Configuring TTL
+
+Pass a `MageflowConfig` with a `TTLConfig` to the `Mageflow()` constructor:
+
+```python
+from mageflow import Mageflow, MageflowConfig, TTLConfig
+
+hatchet = Mageflow(
+    hatchet_client,
+    redis_client=redis_client,
+    config=MageflowConfig(
+        ttl=TTLConfig(
+            active_ttl=12 * 60 * 60,  # 12 hours
+            done_ttl=10 * 60,          # 10 minutes
+        )
+    ),
+)
+```
+
+`active_ttl` sets the Redis TTL on signatures while they're running. `done_ttl` sets the TTL after a signature completes (success or failure). Both values are in **seconds**.
+
+### Per-Signature-Type TTL
+
+Override TTL for specific signature types — tasks, chains, or swarms — using `SignatureTTLConfig`:
+
+```python
+from mageflow import Mageflow, MageflowConfig, TTLConfig, SignatureTTLConfig
+
+config = MageflowConfig(
+    ttl=TTLConfig(
+        active_ttl=24 * 60 * 60,  # general default
+        done_ttl=5 * 60,
+        task=SignatureTTLConfig(
+            active_ttl=6 * 60 * 60,       # tasks expire after 6h
+            ttl_when_sign_done=60,         # cleaned up after 1 minute
+        ),
+        swarm=SignatureTTLConfig(
+            active_ttl=48 * 60 * 60,      # swarms get 48h
+            ttl_when_sign_done=15 * 60,   # cleaned up after 15 minutes
+        ),
+    )
+)
+
+hatchet = Mageflow(hatchet_client, redis_client=redis_client, config=config)
+```
+
+Per-type settings override the general defaults. If a per-type field is `None`, the general value is used.
+
+### Defaults
+
+| Setting | Default |
+|---------|---------|
+| `active_ttl` | 24 hours (86400s) |
+| `done_ttl` | 5 minutes (300s) |
+| Per-type `active_ttl` | `None` (uses general) |
+| Per-type `ttl_when_sign_done` | `None` (uses general) |
+
 ## Examples
 
 ### Graceful Workflow Pause and Resume
