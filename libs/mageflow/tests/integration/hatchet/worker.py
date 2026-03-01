@@ -23,6 +23,7 @@ from hatchet_sdk import Hatchet, ClientConfig, Context, NonRetryableException
 from hatchet_sdk.config import HealthcheckConfig
 
 import mageflow
+from mageflow import MageflowConfig, TTLConfig, SignatureTTLConfig
 from tests.integration.hatchet.models import (
     ContextMessage,
     MessageWithData,
@@ -31,6 +32,7 @@ from tests.integration.hatchet.models import (
     SleepTaskMessage,
     MageflowTestError,
     MessageWithMsgResults,
+    SignatureKeysResult,
 )
 
 settings = Dynaconf(
@@ -48,7 +50,25 @@ config_obj = ClientConfig(
 
 redis = redis.asyncio.from_url(settings.redis.url, decode_responses=True)
 hatchet = Hatchet(debug=True, config=config_obj)
-hatchet = mageflow.Mageflow(hatchet, redis_client=redis)
+
+# Per-type TTL configuration for tests
+TASK_ACTIVE_TTL = 600  # 10 minutes
+TASK_DONE_TTL = 60  # 1 minute
+CHAIN_ACTIVE_TTL = 900  # 15 minutes
+CHAIN_DONE_TTL = 90  # 1.5 minutes
+SWARM_ACTIVE_TTL = 1200  # 20 minutes
+SWARM_DONE_TTL = 120  # 2 minutes
+MAX_DONE_TTL = max(TASK_DONE_TTL, CHAIN_DONE_TTL, SWARM_DONE_TTL)
+
+TEST_MAGEFLOW_CONFIG = MageflowConfig(
+    ttl=TTLConfig(
+        task=SignatureTTLConfig(active_ttl=TASK_ACTIVE_TTL, ttl_when_sign_done=TASK_DONE_TTL),
+        chain=SignatureTTLConfig(active_ttl=CHAIN_ACTIVE_TTL, ttl_when_sign_done=CHAIN_DONE_TTL),
+        swarm=SignatureTTLConfig(active_ttl=SWARM_ACTIVE_TTL, ttl_when_sign_done=SWARM_DONE_TTL),
+    )
+)
+
+hatchet = mageflow.Mageflow(hatchet, redis_client=redis, config=TEST_MAGEFLOW_CONFIG)
 
 # > Default priority
 DEFAULT_PRIORITY = 1
@@ -172,6 +192,33 @@ async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 
 
+@hatchet.durable_task(name="create_signatures_for_ttl_test", input_validator=ContextMessage)
+async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysResult:
+    # Standalone task signature
+    task_sig = await hatchet.asign(task1)
+
+    # Chain with pre-created sub-tasks
+    chain_sub1 = await hatchet.asign(task1)
+    chain_sub2 = await hatchet.asign(task2)
+    chain_sig = await hatchet.achain([chain_sub1, chain_sub2])
+
+    # Swarm with pre-created sub-tasks
+    swarm_sub1 = await hatchet.asign(task1)
+    swarm_sub2 = await hatchet.asign(task2)
+    swarm_sig = await hatchet.aswarm(
+        [swarm_sub1, swarm_sub2], is_swarm_closed=True
+    )
+
+    return SignatureKeysResult(
+        task_keys=[task_sig.key],
+        chain_key=chain_sig.key,
+        chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
+        swarm_key=swarm_sig.key,
+        swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
+        publish_state_key=swarm_sig.publishing_state_id,
+    )
+
+
 workflows = [
     task1,
     task2,
@@ -191,6 +238,7 @@ workflows = [
     retry_to_failure,
     cancel_retry,
     accept_msg_results,
+    create_signatures_for_ttl_test,
 ]
 
 

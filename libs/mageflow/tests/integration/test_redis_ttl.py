@@ -4,9 +4,13 @@ from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.startup import init_mageflow
+from tests.integration.hatchet.worker import (
+    TASK_ACTIVE_TTL,
+    CHAIN_ACTIVE_TTL,
+    SWARM_ACTIVE_TTL,
+)
 
 TASK_NAME = "dummy_ttl_test_task"
-EXPECTED_TTL = 24 * 60 * 60  # 1 day in seconds
 TTL_TOLERANCE = 100  # seconds tolerance for test execution time
 
 
@@ -26,9 +30,9 @@ async def test_signature_redis_ttl(real_redis, mageflow_task_def):
 
     # Assert
     assert (
-        ttl_result > EXPECTED_TTL - TTL_TOLERANCE
+        ttl_result > TASK_ACTIVE_TTL - TTL_TOLERANCE
     ), f"TTL for signature is too low: {ttl_result}"
-    assert ttl_result <= EXPECTED_TTL, f"TTL for signature is too high: {ttl_result}"
+    assert ttl_result <= TASK_ACTIVE_TTL, f"TTL for signature is too high: {ttl_result}"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -43,9 +47,9 @@ async def test_chain_redis_ttl(real_redis, mageflow_task_def):
 
     # Assert
     assert (
-        ttl_result > EXPECTED_TTL - TTL_TOLERANCE
+        ttl_result > CHAIN_ACTIVE_TTL - TTL_TOLERANCE
     ), f"TTL for chain is too low: {ttl_result}"
-    assert ttl_result <= EXPECTED_TTL, f"TTL for chain is too high: {ttl_result}"
+    assert ttl_result <= CHAIN_ACTIVE_TTL, f"TTL for chain is too high: {ttl_result}"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -60,6 +64,6 @@ async def test_swarm_redis_ttl(real_redis, mageflow_task_def):
 
     # Assert
     assert (
-        ttl_result > EXPECTED_TTL - TTL_TOLERANCE
+        ttl_result > SWARM_ACTIVE_TTL - TTL_TOLERANCE
     ), f"TTL for swarm is too low: {ttl_result}"
-    assert ttl_result <= EXPECTED_TTL, f"TTL for swarm is too high: {ttl_result}"
+    assert ttl_result <= SWARM_ACTIVE_TTL, f"TTL for swarm is too high: {ttl_result}"

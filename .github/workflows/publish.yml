@@ -36,6 +36,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         packages-dir: libs/third-magic/dist/
+        skip-existing: true
 
   publish-mageflow:
     needs: publish-thirdmagic
@@ -65,6 +66,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         packages-dir: libs/mageflow/dist/
+        skip-existing: true
 
     - name: Extract version and create tag
       id: version
@@ -111,3 +113,4 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         packages-dir: libs/mageflow-mcp/dist/
+        skip-existing: true
