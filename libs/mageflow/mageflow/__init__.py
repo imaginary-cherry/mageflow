@@ -8,6 +8,7 @@ from thirdmagic.task import sign as asign, TaskSignature
 from mageflow.callbacks import handle_task_callback
 from mageflow.client import Mageflow
 from mageflow.config import MageflowConfig, TTLConfig, SignatureTTLConfig
+from mageflow.startup import start_mageflow
 
 resume_task = TaskSignature.resume_from_key
 lock_task = TaskSignature.alock_from_key
@@ -38,4 +39,5 @@ __all__ = [
     "SignatureTTLConfig",
     "achain",
     "aswarm",
+    "start_mageflow",
 ]

@@ -5,6 +5,10 @@ from thirdmagic.task_def import MageflowTaskDefinition
 from mageflow.config import MageflowConfig, apply_ttl_config
 
 
+async def start_mageflow(redis: Redis, config: MageflowConfig = None):
+    await init_mageflow(redis, [], config)
+
+
 async def init_mageflow(
     redis: Redis,
     tasks: list[MageflowTaskDefinition],
