@@ -74,3 +74,8 @@ async def assert_redis_keys_do_not_contain_sub_task_ids(redis_client, sub_task_i
 async def assert_task_has_short_ttl(redis: Redis, task_key: str):
     ttl = await redis.ttl(task_key)
     assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"
+
+
+async def assert_task_has_done_ttl(redis: Redis, task_key: str, expected_ttl: int):
+    ttl = await redis.ttl(task_key)
+    assert 0 < ttl <= expected_ttl, f"Expected TTL in (0, {expected_ttl}], got {ttl}"
