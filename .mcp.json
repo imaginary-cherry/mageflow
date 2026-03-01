@@ -6,6 +6,10 @@
         "mcp-remote",
         "https://gitmcp.io/imaginary-cherry/rapyer"
       ]
+    },
+    "hatchet-docs": {
+      "type": "http",
+      "url": "https://docs.hatchet.run/api/mcp"
     }
   }
 }
