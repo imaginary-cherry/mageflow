@@ -7,7 +7,6 @@ from rapyer import AtomicRedisModel
 from rapyer.fields import RapyerKey
 from rapyer.types import RedisList, RedisInt
 
-from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
 from thirdmagic.signature import Signature
@@ -20,7 +19,6 @@ from thirdmagic.utils import HAS_HATCHET
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-    from hatchet_sdk.runnables.types import EmptyModel
     from hatchet_sdk.runnables.workflow import TaskRunRef
 
 
@@ -218,5 +216,5 @@ class SwarmTaskSignature(ContainerTaskSignature):
         publish_state = await PublishState.aget(self.publishing_state_id)
         async with self.apipeline():
             # TODO - this should be removed once we use foreign key
-            await publish_state.aset_ttl(REMOVED_TASK_TTL)
+            await publish_state.aset_ttl(self.SignatureSettings.ttl_when_sign_done)
             return await super().remove_task()
