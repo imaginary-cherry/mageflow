@@ -41,5 +41,5 @@ def apply_ttl_config(ttl_config: TTLConfig):
         active_ttl = ttl_config.active_ttl
         done_ttl = ttl_config.ttl_when_sign_done
 
-        sig_type.Meta = dataclasses.replace(sig_type.Meta, ttl=active_ttl)
+        sig_type.Meta.ttl = active_ttl
         sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)
