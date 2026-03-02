@@ -139,7 +139,9 @@ class HatchetMageflow(Hatchet):
 
     def task_decorator(self, func: Callable, hatchet_task):
         param_config = (
-            AcceptParams.ALL if does_task_wants_ctx(func) else self.mageflow_config.param_config
+            AcceptParams.ALL
+            if does_task_wants_ctx(func)
+            else self.mageflow_config.param_config
         )
         send_signature = getattr(func, "__send_signature__", False)
         handler_dec = handle_task_callback(param_config, send_signature=send_signature)
