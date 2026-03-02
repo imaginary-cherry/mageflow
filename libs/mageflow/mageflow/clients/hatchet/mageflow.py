@@ -2,7 +2,7 @@ import asyncio
 import functools
 import inspect
 import random
-import warnings
+
 from datetime import timedelta
 from typing import Any, Unpack, Callable, TypedDict
 
@@ -104,23 +104,12 @@ class HatchetMageflow(Hatchet):
         self,
         hatchet: Hatchet,
         redis_client: Redis,
-        param_config: AcceptParams = None,
         config: MageflowConfig = None,
     ):
         super().__init__(client=hatchet._client)
         self.hatchet = hatchet
         self.redis = redis_client
         self.mageflow_config = config or MageflowConfig()
-
-        if param_config is not None:
-            warnings.warn(
-                "Passing 'param_config' directly to Mageflow() is deprecated. "
-                "Set it via MageflowConfig(param_config=...) instead.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            self.mageflow_config.param_config = param_config
-
         self._task_defs: list[MageflowTaskDefinition] = []
 
     @property

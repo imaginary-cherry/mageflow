@@ -1,11 +1,12 @@
 import warnings
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from hatchet_sdk import Hatchet
 from redis import Redis
 
 from mageflow.callbacks import AcceptParams
+from mageflow.client import Mageflow
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
 from mageflow.config import MageflowConfig
 
@@ -48,12 +49,13 @@ class TestParamConfigViaConfig:
         assert client.mageflow_config.param_config == AcceptParams.JUST_MESSAGE
 
 
-class TestParamConfigDeprecation:
-    def test_direct_param_config_emits_deprecation_warning(self, hatchet, redis):
+class TestParamConfigDeprecationViaFactory:
+    @patch("mageflow.client.HatchetClientAdapter")
+    def test_direct_param_config_emits_deprecation_warning(self, _mock_adapter, hatchet, redis):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            HatchetMageflow(
-                hatchet=hatchet,
+            Mageflow(
+                hatchet_client=hatchet,
                 redis_client=redis,
                 param_config=AcceptParams.ALL,
             )
@@ -62,30 +64,33 @@ class TestParamConfigDeprecation:
             assert "param_config" in str(deprecation_warnings[0].message)
             assert "MageflowConfig" in str(deprecation_warnings[0].message)
 
-    def test_direct_param_config_value_is_used(self, hatchet, redis):
+    @patch("mageflow.client.HatchetClientAdapter")
+    def test_direct_param_config_value_is_stored_in_config(self, _mock_adapter, hatchet, redis):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            client = HatchetMageflow(
-                hatchet=hatchet,
+            client = Mageflow(
+                hatchet_client=hatchet,
                 redis_client=redis,
                 param_config=AcceptParams.JUST_MESSAGE,
             )
         assert client.mageflow_config.param_config == AcceptParams.JUST_MESSAGE
 
-    def test_no_deprecation_warning_when_using_config_model(self, hatchet, redis):
+    @patch("mageflow.client.HatchetClientAdapter")
+    def test_no_deprecation_warning_when_using_config_model(self, _mock_adapter, hatchet, redis):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             config = MageflowConfig(param_config=AcceptParams.ALL)
-            HatchetMageflow(hatchet=hatchet, redis_client=redis, config=config)
+            Mageflow(hatchet_client=hatchet, redis_client=redis, config=config)
             deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
             assert len(deprecation_warnings) == 0
 
-    def test_direct_param_config_overrides_config_model(self, hatchet, redis):
+    @patch("mageflow.client.HatchetClientAdapter")
+    def test_direct_param_config_overrides_config_model(self, _mock_adapter, hatchet, redis):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             config = MageflowConfig(param_config=AcceptParams.NO_CTX)
-            client = HatchetMageflow(
-                hatchet=hatchet,
+            client = Mageflow(
+                hatchet_client=hatchet,
                 redis_client=redis,
                 param_config=AcceptParams.ALL,
                 config=config,
