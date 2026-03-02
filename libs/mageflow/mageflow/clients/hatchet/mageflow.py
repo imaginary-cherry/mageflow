@@ -103,13 +103,11 @@ class HatchetMageflow(Hatchet):
         self,
         hatchet: Hatchet,
         redis_client: Redis,
-        param_config: AcceptParams = AcceptParams.NO_CTX,
         config: MageflowConfig = None,
     ):
         super().__init__(client=hatchet._client)
         self.hatchet = hatchet
         self.redis = redis_client
-        self.param_config = param_config
         self.mageflow_config = config or MageflowConfig()
         self._task_defs: list[MageflowTaskDefinition] = []
 
@@ -129,7 +127,9 @@ class HatchetMageflow(Hatchet):
 
     def task_decorator(self, func: Callable, hatchet_task):
         param_config = (
-            AcceptParams.ALL if does_task_wants_ctx(func) else self.param_config
+            AcceptParams.ALL
+            if does_task_wants_ctx(func)
+            else self.mageflow_config.param_config
         )
         send_signature = getattr(func, "__send_signature__", False)
         handler_dec = handle_task_callback(param_config, send_signature=send_signature)

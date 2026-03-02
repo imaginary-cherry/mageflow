@@ -28,7 +28,6 @@ from mageflow.clients.inner_task_names import SWARM_FILL_TASK
 from mageflow.lifecycle.signature import SignatureLifecycle
 from mageflow.lifecycle.task import TaskLifecycle
 from mageflow.swarm.messages import (
-    SwarmMessage,
     SwarmResultsMessage,
     SwarmErrorMessage,
     FillSwarmMessage,
