@@ -18,6 +18,7 @@ T = TypeVar("T")
 def Mageflow(
     hatchet_client: Hatchet,
     redis_client: Redis | str = None,
+    param_config: AcceptParams = None,
     config: MageflowConfig = None,
 ) -> HatchetMageflow: ...
 
@@ -25,7 +26,7 @@ def Mageflow(
 def Mageflow(
     hatchet_client: T = None,
     redis_client: Redis | str = None,
-    param_config: AcceptParams = AcceptParams.NO_CTX,
+    param_config: AcceptParams = None,
     config: MageflowConfig = None,
 ) -> T:
     if config is None:

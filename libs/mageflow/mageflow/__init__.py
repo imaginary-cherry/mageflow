@@ -5,7 +5,7 @@ from thirdmagic.signature import Signature
 from thirdmagic.swarm.creator import swarm as aswarm
 from thirdmagic.task import sign as asign, TaskSignature
 
-from mageflow.callbacks import handle_task_callback
+from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.client import Mageflow
 from mageflow.config import MageflowConfig, TTLConfig, SignatureTTLConfig
 from mageflow.startup import start_mageflow
@@ -32,6 +32,7 @@ __all__ = [
     "remove",
     "pause",
     "asign",
+    "AcceptParams",
     "handle_task_callback",
     "Mageflow",
     "MageflowConfig",

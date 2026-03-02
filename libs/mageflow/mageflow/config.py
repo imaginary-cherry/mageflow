@@ -9,6 +9,8 @@ from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
 
+from mageflow.callbacks import AcceptParams
+
 
 @dataclass
 class SignatureTTLConfig:
@@ -28,6 +30,7 @@ class TTLConfig:
 @dataclass
 class MageflowConfig:
     ttl: TTLConfig = field(default_factory=TTLConfig)
+    param_config: AcceptParams = AcceptParams.NO_CTX
 
 
 def apply_ttl_config(ttl_config: TTLConfig):
