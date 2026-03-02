@@ -36,16 +36,16 @@ class TestParamConfigViaConfig:
     def test_uses_param_config_from_config_model(self, hatchet, redis):
         config = MageflowConfig(param_config=AcceptParams.ALL)
         client = HatchetMageflow(hatchet=hatchet, redis_client=redis, config=config)
-        assert client.param_config == AcceptParams.ALL
+        assert client.mageflow_config.param_config == AcceptParams.ALL
 
     def test_uses_default_param_config_when_nothing_provided(self, hatchet, redis):
         client = HatchetMageflow(hatchet=hatchet, redis_client=redis)
-        assert client.param_config == AcceptParams.NO_CTX
+        assert client.mageflow_config.param_config == AcceptParams.NO_CTX
 
     def test_uses_just_message_from_config(self, hatchet, redis):
         config = MageflowConfig(param_config=AcceptParams.JUST_MESSAGE)
         client = HatchetMageflow(hatchet=hatchet, redis_client=redis, config=config)
-        assert client.param_config == AcceptParams.JUST_MESSAGE
+        assert client.mageflow_config.param_config == AcceptParams.JUST_MESSAGE
 
 
 class TestParamConfigDeprecation:
@@ -70,7 +70,7 @@ class TestParamConfigDeprecation:
                 redis_client=redis,
                 param_config=AcceptParams.JUST_MESSAGE,
             )
-        assert client.param_config == AcceptParams.JUST_MESSAGE
+        assert client.mageflow_config.param_config == AcceptParams.JUST_MESSAGE
 
     def test_no_deprecation_warning_when_using_config_model(self, hatchet, redis):
         with warnings.catch_warnings(record=True) as w:
@@ -90,4 +90,4 @@ class TestParamConfigDeprecation:
                 param_config=AcceptParams.ALL,
                 config=config,
             )
-        assert client.param_config == AcceptParams.ALL
+        assert client.mageflow_config.param_config == AcceptParams.ALL
