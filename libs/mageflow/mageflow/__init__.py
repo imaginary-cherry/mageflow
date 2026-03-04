@@ -22,6 +22,7 @@ async def load_sign(key: RapyerKey) -> Signature:
 
 
 load_signature = rapyer.afind_one
+abounded_field = rapyer.apipeline
 
 
 __all__ = [
@@ -40,4 +41,5 @@ __all__ = [
     "achain",
     "aswarm",
     "start_mageflow",
+    "abounded_field",
 ]
