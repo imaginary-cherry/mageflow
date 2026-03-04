@@ -105,6 +105,19 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 self, max_tasks=1, options=options
             )
 
+        async def aio_run_tasks_in_swarm(
+            self,
+            tasks: list[TaskSignatureConvertible],
+            msg: BaseModel,
+            options: TriggerWorkflowOptions = None,
+            close_on_max_task: bool = True,
+        ) -> Optional["TaskRunRef"]:
+            sub_tasks = await self.add_tasks(tasks, close_on_max_task)
+            async with self.apipeline():
+                for sub_task in sub_tasks:
+                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
+            return await self.ClientAdapter.afill_swarm(self, options=options)
+
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
             TaskSignature.safe_change_status(task, status) for task in self.tasks
