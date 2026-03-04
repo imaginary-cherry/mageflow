@@ -28,6 +28,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["thirdmagic"]
 
+[tool.pytest.ini_options]
+markers = [
+    "hatchet: tests that require hatchet SDK fixtures",
+]
+
 [tool.coverage.run]
 source = ["thirdmagic"]
 branch = true
