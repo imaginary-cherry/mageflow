@@ -94,27 +94,30 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
         async def aio_run_in_swarm(
             self,
-            task: TaskSignatureConvertible,
+            task: TaskSignatureConvertible | list[TaskSignatureConvertible],
             msg: BaseModel,
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
-            sub_task = await self.add_task(task, close_on_max_task)
-            await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
+            tasks = task if isinstance(task, list) else [task]
+            sub_tasks = await self.add_tasks(tasks, close_on_max_task)
+            async with self.apipeline():
+                for sub_task in sub_tasks:
+                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(
-                self, max_tasks=1, options=options
+                self, max_tasks=len(tasks), options=options
             )
 
         async def aio_run_tasks_in_swarm(
             self,
             tasks: list[TaskSignatureConvertible],
-            msg: BaseModel,
+            msgs: list[BaseModel],
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
             sub_tasks = await self.add_tasks(tasks, close_on_max_task)
             async with self.apipeline():
-                for sub_task in sub_tasks:
+                for sub_task, msg in zip(sub_tasks, msgs):
                     sub_task.kwargs.update(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(self, options=options)
 
