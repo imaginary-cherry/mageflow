@@ -7,6 +7,11 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
+from thirdmagic.signature.retry_cache import (
+    retry_cache_ctx,
+    setup_retry_cache,
+    teardown_retry_cache,
+)
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
@@ -42,6 +47,15 @@ def handle_task_callback(
             is_normal_run = lifecycle.is_vanilla_run()
             signature = await lifecycle.start_task()
 
+            # Setup retry cache for signature idempotency on retries
+            cache_token = None
+            cache_state = None
+            if not is_normal_run:
+                cache_state = await setup_retry_cache(
+                    ctx.workflow_id, ctx.attempt_number
+                )
+                cache_token = retry_cache_ctx.set(cache_state)
+
             # Add params if user requires
             if send_signature:
                 kwargs["signature"] = signature
@@ -60,10 +74,13 @@ def handle_task_callback(
             except Exception as e:
                 if is_normal_run:
                     raise
-                if not TaskSignature.ClientAdapter.should_task_retry(
+                will_retry = TaskSignature.ClientAdapter.should_task_retry(
                     task_model, ctx.attempt_number, e
-                ):
+                )
+                if not will_retry:
                     await lifecycle.task_failed(msg_data, e)
+                    if cache_state:
+                        await teardown_retry_cache(cache_state)
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation
@@ -72,10 +89,15 @@ def handle_task_callback(
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await lifecycle.task_success(dumped_results["hatchet_results"])
+                if cache_state:
+                    await teardown_retry_cache(cache_state)
                 if wrap_res:
                     return task_results
                 else:
                     return result
+            finally:
+                if cache_token is not None:
+                    retry_cache_ctx.reset(cache_token)
 
         wrapper.__signature__ = inspect.signature(func)
         return wrapper

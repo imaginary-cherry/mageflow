@@ -5,6 +5,11 @@ import rapyer
 from rapyer.fields import RapyerKey
 
 from thirdmagic.signature import Signature
+from thirdmagic.signature.retry_cache import (
+    retry_cache_ctx,
+    get_cached_signature,
+    cache_signature,
+)
 from thirdmagic.signature.status import TaskStatus
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.typing_support import Unpack
@@ -74,6 +79,12 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature: ..
 
 
 async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
+    cache_state = retry_cache_ctx.get()
+    if cache_state and cache_state.is_retry and cache_state.cache:
+        cached = await get_cached_signature(cache_state, TaskSignature)
+        if cached is not None:
+            return cached
+
     model_fields = list(TaskSignature.model_fields.keys())
     kwargs = {
         field_name: options.pop(field_name)
@@ -82,6 +93,11 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
     }
 
     if isinstance(task, str):
-        return await TaskSignature.from_task_name(task, kwargs=options, **kwargs)
+        signature = await TaskSignature.from_task_name(task, kwargs=options, **kwargs)
     else:
-        return await TaskSignature.from_task(task, kwargs=options, **kwargs)
+        signature = await TaskSignature.from_task(task, kwargs=options, **kwargs)
+
+    if cache_state and not cache_state.is_retry:
+        await cache_signature(cache_state, signature)
+
+    return signature

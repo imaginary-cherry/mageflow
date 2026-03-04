@@ -3,6 +3,11 @@ from typing import overload, Any
 
 import rapyer
 
+from thirdmagic.signature.retry_cache import (
+    retry_cache_ctx,
+    get_cached_signature,
+    cache_signature,
+)
 from thirdmagic.task.creator import TaskSignatureOptions, TaskSignatureConvertible
 from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
@@ -32,6 +37,12 @@ async def swarm(
     task_name: str = None,
     **options: Unpack[SignatureOptions],
 ) -> SwarmTaskSignature:
+    cache_state = retry_cache_ctx.get()
+    if cache_state and cache_state.is_retry and cache_state.cache:
+        cached = await get_cached_signature(cache_state, SwarmTaskSignature)
+        if cached is not None:
+            return cached
+
     tasks = tasks or []
     task_name = task_name or f"swarm-task-{uuid.uuid4()}"
     publish_state = PublishState()
@@ -50,4 +61,8 @@ async def swarm(
     )
     await rapyer.ainsert(publish_state, swarm_signature)
     await swarm_signature.add_tasks(tasks)
+
+    if cache_state and not cache_state.is_retry:
+        await cache_signature(cache_state, swarm_signature)
+
     return swarm_signature
