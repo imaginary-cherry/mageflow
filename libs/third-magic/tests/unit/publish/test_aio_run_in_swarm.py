@@ -198,3 +198,42 @@ async def test_aio_run_in_swarm_no_close_when_close_on_max_task_false(
     await swarm.aio_run_in_swarm([t1, t2], msg, close_on_max_task=False)
 
     mock_close_swarm.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.hatchet
+async def test_aio_run_in_swarm_tasks_in_redis_before_afill_swarm_called(
+    mock_adapter,
+):
+    """Tasks must be persisted to Redis BEFORE afill_swarm is invoked."""
+    swarm = await thirdmagic.swarm(
+        task_name="swarm_ordering", config=SwarmConfig(max_concurrency=5)
+    )
+    t1 = await thirdmagic.sign("task_a", model_validators=ContextMessage)
+    t2 = await thirdmagic.sign("task_b", model_validators=ContextMessage)
+    msg = ContextMessage(base_data={"order": "check"})
+
+    # Capture swarm state from Redis on the FIRST afill_swarm call only
+    snapshots = []
+
+    async def capture_redis_state_on_call(swarm_arg, **kwargs):
+        if not snapshots:
+            reloaded = await SwarmTaskSignature.aget(swarm_arg.key)
+            snapshots.append(
+                {
+                    "tasks": list(reloaded.tasks),
+                    "tasks_left_to_run": list(reloaded.tasks_left_to_run),
+                }
+            )
+
+    mock_adapter.afill_swarm.side_effect = capture_redis_state_on_call
+
+    await swarm.aio_run_in_swarm([t1, t2], msg)
+
+    mock_adapter.afill_swarm.assert_awaited_once()
+
+    # At the moment afill_swarm was first called, both tasks were already in Redis
+    first_call_state = snapshots[0]
+    assert len(first_call_state["tasks"]) == 2
+    assert len(first_call_state["tasks_left_to_run"]) == 2
+    assert set(first_call_state["tasks"]) == set(first_call_state["tasks_left_to_run"])
