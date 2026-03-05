@@ -128,6 +128,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
+    # TODO - once there is if statements in rapyer we need to use them to add tasks only if swarm is not closed
     async def add_tasks(
         self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
     ) -> list[Signature]:
@@ -202,6 +203,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
         await super().change_status(self.task_status.last_status)
 
     async def close_swarm(self) -> Self:
+        """
+        We close the swarm when no more tasks are going to be added, the success callback wont be activated untile the swarm is closed.
+        It is user responsibility to ensure no tasks are added after the task is closed. There is no gate for adding more tasks after the task is closed.
+        """
         await self.aupdate(is_swarm_closed=True)
         await self.ClientAdapter.afill_swarm(self, max_tasks=0)
         return self
