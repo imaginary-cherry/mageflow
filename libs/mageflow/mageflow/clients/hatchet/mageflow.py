@@ -127,12 +127,14 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def task_decorator(self, func: Callable, hatchet_task):
+    def task_decorator(self, func: Callable, hatchet_task, durable: bool = False):
         param_config = (
             AcceptParams.ALL if does_task_wants_ctx(func) else self.param_config
         )
         send_signature = getattr(func, "__send_signature__", False)
-        handler_dec = handle_task_callback(param_config, send_signature=send_signature)
+        handler_dec = handle_task_callback(
+            param_config, send_signature=send_signature, durable=durable
+        )
         func = handler_dec(func)
         wf = hatchet_task(func)
         self._add_task_def(wf)
@@ -146,7 +148,9 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().task(name=name, **kwargs)
 
-        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
+        decorator = functools.partial(
+            self.task_decorator, hatchet_task=hatchet_task, durable=False
+        )
         return decorator
 
     @override
@@ -156,7 +160,9 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().durable_task(name=name, **kwargs)
 
-        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
+        decorator = functools.partial(
+            self.task_decorator, hatchet_task=hatchet_task, durable=True
+        )
 
         return decorator
 

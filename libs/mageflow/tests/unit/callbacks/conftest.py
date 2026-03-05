@@ -86,6 +86,7 @@ def handler_factory(
     send_signature: bool = False,
     return_value: Any = "success_result",
     raises: BaseException | None = None,
+    durable: bool = False,
 ):
     tracked_calls: list[CallTracker] = []
 
@@ -93,6 +94,7 @@ def handler_factory(
         expected_params=expected_params,
         wrap_res=wrap_res,
         send_signature=send_signature,
+        durable=durable,
     )
     async def handler(*args, **kwargs):
         tracked_calls.append(CallTracker(args=args, kwargs=kwargs))
