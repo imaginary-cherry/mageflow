@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pytest
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.unit.idempotency.conftest import SwarmItemFailedSetup
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 async def assert_swarm_item_failed_state(

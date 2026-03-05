@@ -2,11 +2,11 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 import mageflow
 from mageflow.swarm.workflows import fill_running_tasks
 from tests.integration.hatchet.models import ContextMessage
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio

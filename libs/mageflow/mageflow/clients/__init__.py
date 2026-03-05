@@ -1,4 +1,4 @@
-from thirdmagic.clients.base import DefaultClientAdapter, BaseClientAdapter
+from thirdmagic.clients.base import BaseClientAdapter, DefaultClientAdapter
 
 __all__ = [
     "BaseClientAdapter",

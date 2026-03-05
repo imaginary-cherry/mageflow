@@ -7,6 +7,12 @@ import pytest
 import pytest_asyncio
 import rapyer
 from hatchet_sdk import ClientConfig, Context, Hatchet
+
+import mageflow
+from mageflow.clients.hatchet.adapter import HatchetClientAdapter
+from mageflow.clients.hatchet.workflow import MageflowWorkflow
+from mageflow.swarm.messages import SwarmResultsMessage
+from tests.integration.hatchet.models import ContextMessage
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
@@ -14,12 +20,6 @@ from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
-
-import mageflow
-from mageflow.clients.hatchet.adapter import HatchetClientAdapter
-from mageflow.clients.hatchet.workflow import MageflowWorkflow
-from mageflow.swarm.messages import SwarmResultsMessage
-from tests.integration.hatchet.models import ContextMessage
 
 pytest.register_assert_rewrite("tests.assertions")
 

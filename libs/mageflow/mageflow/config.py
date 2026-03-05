@@ -2,14 +2,13 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import Optional
 
+from mageflow.callbacks import AcceptParams
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.signature import SignatureConfig
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
-
-from mageflow.callbacks import AcceptParams
 
 
 @dataclass

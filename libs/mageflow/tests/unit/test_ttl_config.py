@@ -1,18 +1,18 @@
 import dataclasses
 
 import pytest
+
+from mageflow.config import (
+    SignatureTTLConfig,
+    TTLConfig,
+    apply_ttl_config,
+)
+from tests.unit.utils import sub_classes
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.signature import Signature
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
-
-from mageflow.config import (
-    apply_ttl_config,
-    TTLConfig,
-    SignatureTTLConfig,
-)
-from tests.unit.utils import sub_classes
 
 
 @pytest.fixture(autouse=True)

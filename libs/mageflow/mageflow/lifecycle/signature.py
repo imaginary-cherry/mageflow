@@ -1,7 +1,8 @@
 import asyncio
-from typing import Optional, Any, cast
+from typing import Any, Optional, cast
 
 import rapyer
+
 from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.signature import Signature

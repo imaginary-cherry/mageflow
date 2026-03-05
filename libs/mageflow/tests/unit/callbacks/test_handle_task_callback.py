@@ -2,18 +2,18 @@ import asyncio
 
 import pytest
 from hatchet_sdk import NonRetryableException
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.task import TaskSignature
 
 from mageflow.callbacks import AcceptParams, HatchetResult
 from tests.integration.hatchet.models import ContextMessage
-from tests.unit.assertions import assert_tasks_changed_status, assert_task_has_short_ttl
+from tests.unit.assertions import assert_task_has_short_ttl, assert_tasks_changed_status
 from tests.unit.callbacks.conftest import (
     MockContextConfig,
     create_mock_hatchet_context,
     handler_factory,
     task_signature_factory,
 )
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio

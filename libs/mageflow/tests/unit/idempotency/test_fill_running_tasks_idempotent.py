@@ -4,12 +4,12 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 import rapyer
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
-from thirdmagic.swarm.state import PublishState
-from thirdmagic.task import TaskSignature
 
 from mageflow.swarm.workflows import fill_running_tasks
 from tests.integration.hatchet.models import ContextMessage
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
+from thirdmagic.swarm.state import PublishState
+from thirdmagic.task import TaskSignature
 
 
 @pytest_asyncio.fixture()

@@ -4,16 +4,16 @@ import pytest
 
 import mageflow
 from tests.integration.hatchet.assertions import (
-    get_runs,
     assert_signature_done,
     assert_signature_not_called,
+    get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
 from tests.integration.hatchet.worker import (
-    timeout_task,
-    error_callback,
     chain_callback,
+    error_callback,
+    timeout_task,
 )
 
 
