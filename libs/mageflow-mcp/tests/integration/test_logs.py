@@ -5,7 +5,7 @@ from mageflow_mcp.adapters.hatchet import HatchetMCPAdapter
 from mageflow_mcp.models import ErrorResponse, LogsResponse
 from mageflow_mcp.tools.logs import get_logs
 from tests.integration.conftest import DispatchedTasks, mock_mcp_context
-from tests.integration.worker import config_obj, LOG_LINE_1, LOG_LINE_2
+from tests.integration.worker import LOG_LINE_1, LOG_LINE_2, config_obj
 
 
 @pytest.fixture(scope="session")

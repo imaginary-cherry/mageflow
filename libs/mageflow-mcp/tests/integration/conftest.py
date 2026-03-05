@@ -10,9 +10,8 @@ from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
 from threading import Thread
-from typing import Generator, Callable, AsyncGenerator
+from typing import AsyncGenerator, Callable, Generator
 
-import mageflow
 import psutil
 import pytest_asyncio
 import rapyer
@@ -20,23 +19,24 @@ import requests
 from dynaconf import Dynaconf
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from redis.asyncio.client import Redis
+
+import mageflow
 from mageflow import Mageflow
 from mageflow.client import HatchetMageflow
 from mageflow.startup import init_mageflow
-from redis.asyncio.client import Redis
-from thirdmagic.signature import Signature
-from thirdmagic.task_def import MageflowTaskDefinition
-
 from tests.integration.models import ContextMessage
 from tests.integration.worker import (
+    chain_callback,
     config_obj,
+    fail_task,
+    logging_task,
     task1,
     task2,
     task3,
-    chain_callback,
-    fail_task,
-    logging_task,
 )
+from thirdmagic.signature import Signature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 STATIC_REDIS_PREFIX_KEYS = [MageflowTaskDefinition.__name__]
 

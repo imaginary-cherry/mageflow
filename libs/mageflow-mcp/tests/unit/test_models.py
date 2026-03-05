@@ -1,8 +1,6 @@
 import json
 from datetime import datetime, timezone
 
-from thirdmagic.signature.status import SignatureStatus
-
 from mageflow_mcp.models import (
     ContainerSummary,
     ErrorResponse,
@@ -11,6 +9,7 @@ from mageflow_mcp.models import (
     SubTaskInfo,
     TaskDefinitionInfo,
 )
+from thirdmagic.signature.status import SignatureStatus
 
 
 def test__error_response__serializes_to_valid_json() -> None:

@@ -1,7 +1,6 @@
 import math
 
 from rapyer.errors import RapyerError
-from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow_mcp.models import (
     ErrorResponse,
@@ -9,6 +8,7 @@ from mageflow_mcp.models import (
     TaskDefinitionInfo,
 )
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 async def list_registered_tasks(
