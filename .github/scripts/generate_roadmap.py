@@ -76,7 +76,9 @@ def generate_roadmap_markdown(milestones_data, future_issues):
         lines.append("*Issues not yet assigned to a milestone*")
         lines.append("")
 
-        for issue in sorted(future_issues, key=lambda x: (x["state"] == "closed", x["number"])):
+        for issue in sorted(
+            future_issues, key=lambda x: (x["state"] == "closed", x["number"])
+        ):
             checkbox = "[x]" if issue["state"] == "closed" else "[ ]"
             title = issue["title"]
             url = issue["html_url"]
