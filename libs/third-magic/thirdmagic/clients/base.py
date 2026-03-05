@@ -9,10 +9,10 @@ from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.task_def import MageflowTaskDefinition
 
 if TYPE_CHECKING:
-    from thirdmagic.task import TaskSignature
-    from thirdmagic.signature import Signature
     from thirdmagic.chain.model import ChainTaskSignature
+    from thirdmagic.signature import Signature
     from thirdmagic.swarm.model import SwarmTaskSignature
+    from thirdmagic.task import TaskSignature
     from thirdmagic.utils import HatchetTaskType
 
 

@@ -1,7 +1,7 @@
 import pytest
 
 import thirdmagic
-from tests.unit.assertions import assert_task_reloaded_as_type, assert_callback_contains
+from tests.unit.assertions import assert_callback_contains, assert_task_reloaded_as_type
 from tests.unit.messages import ContextMessage
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.swarm import SwarmTaskSignature

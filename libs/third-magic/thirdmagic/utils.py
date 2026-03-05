@@ -1,9 +1,9 @@
 import dataclasses
-from typing import TypeVar, get_type_hints, Optional, Callable, Any
+from typing import Any, Callable, Optional, TypeVar, get_type_hints
 
 from pydantic import BaseModel
 
-from thirdmagic.message import ReturnValueAnnotation, DEFAULT_RESULT_NAME
+from thirdmagic.message import DEFAULT_RESULT_NAME, ReturnValueAnnotation
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
 

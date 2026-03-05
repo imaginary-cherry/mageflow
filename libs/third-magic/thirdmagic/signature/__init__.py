@@ -1,5 +1,5 @@
 from thirdmagic.signature.model import Signature, SignatureConfig
-from thirdmagic.signature.status import SignatureStatus, PauseActionTypes, TaskStatus
+from thirdmagic.signature.status import PauseActionTypes, SignatureStatus, TaskStatus
 
 __all__ = [
     "Signature",
