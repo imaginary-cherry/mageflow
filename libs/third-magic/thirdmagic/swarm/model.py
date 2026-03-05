@@ -100,8 +100,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
             tasks = task if isinstance(task, list) else [task]
-            sub_tasks = await self.add_tasks(tasks, close_on_max_task)
             async with self.apipeline():
+                sub_tasks = await self.add_tasks(tasks, close_on_max_task)
                 for sub_task in sub_tasks:
                     sub_task.kwargs.update(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(
@@ -115,8 +115,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
-            sub_tasks = await self.add_tasks(tasks, close_on_max_task)
             async with self.apipeline():
+                sub_tasks = await self.add_tasks(tasks, close_on_max_task)
                 for sub_task, msg in zip(sub_tasks, msgs):
                     sub_task.kwargs.update(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(self, options=options)
@@ -148,7 +148,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         tasks = await resolve_signatures(tasks)
         task_keys = [task.key for task in tasks]
 
-        async with self.apipeline():
+        async with self.apipeline(use_existing_pipe=True):
             for task in tasks:
                 task.signature_container_id = self.key
             self.tasks.extend(task_keys)
