@@ -9,6 +9,8 @@
   [![PyPI version](https://badge.fury.io/py/mageflow.svg)](https://badge.fury.io/py/mageflow)
   [![Downloads](https://static.pepy.tech/badge/mageflow)](https://pepy.tech/project/mageflow)
   [![Documentation](https://img.shields.io/badge/docs-github.io-blue)](https://imaginary-cherry.github.io/mageflow/)
+  [![CodeRabbit](https://img.shields.io/coderabbit/prs/github/imaginary-cherry/mageflow?logo=coderabbit)](https://coderabbit.ai)
+
 
   
   📚 **[Full Documentation](https://imaginary-cherry.github.io/mageflow/)** | [Installation](https://imaginary-cherry.github.io/mageflow/setup/) | [API Reference](https://imaginary-cherry.github.io/mageflow/api/)
