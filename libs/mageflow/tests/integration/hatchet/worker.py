@@ -62,9 +62,15 @@ MAX_DONE_TTL = max(TASK_DONE_TTL, CHAIN_DONE_TTL, SWARM_DONE_TTL)
 
 TEST_MAGEFLOW_CONFIG = MageflowConfig(
     ttl=TTLConfig(
-        task=SignatureTTLConfig(active_ttl=TASK_ACTIVE_TTL, ttl_when_sign_done=TASK_DONE_TTL),
-        chain=SignatureTTLConfig(active_ttl=CHAIN_ACTIVE_TTL, ttl_when_sign_done=CHAIN_DONE_TTL),
-        swarm=SignatureTTLConfig(active_ttl=SWARM_ACTIVE_TTL, ttl_when_sign_done=SWARM_DONE_TTL),
+        task=SignatureTTLConfig(
+            active_ttl=TASK_ACTIVE_TTL, ttl_when_sign_done=TASK_DONE_TTL
+        ),
+        chain=SignatureTTLConfig(
+            active_ttl=CHAIN_ACTIVE_TTL, ttl_when_sign_done=CHAIN_DONE_TTL
+        ),
+        swarm=SignatureTTLConfig(
+            active_ttl=SWARM_ACTIVE_TTL, ttl_when_sign_done=SWARM_DONE_TTL
+        ),
     )
 )
 
@@ -192,7 +198,9 @@ async def cancel_retry(msg):
     raise NonRetryableException("Test exception")
 
 
-@hatchet.durable_task(name="create_signatures_for_ttl_test", input_validator=ContextMessage)
+@hatchet.durable_task(
+    name="create_signatures_for_ttl_test", input_validator=ContextMessage
+)
 async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysResult:
     # Standalone task signature
     task_sig = await hatchet.asign(task1)
@@ -205,9 +213,7 @@ async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysRe
     # Swarm with pre-created sub-tasks
     swarm_sub1 = await hatchet.asign(task1)
     swarm_sub2 = await hatchet.asign(task2)
-    swarm_sig = await hatchet.aswarm(
-        [swarm_sub1, swarm_sub2], is_swarm_closed=True
-    )
+    swarm_sig = await hatchet.aswarm([swarm_sub1, swarm_sub2], is_swarm_closed=True)
 
     return SignatureKeysResult(
         task_keys=[task_sig.key],

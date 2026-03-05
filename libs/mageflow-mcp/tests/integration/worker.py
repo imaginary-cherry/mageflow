@@ -56,7 +56,9 @@ def task3(msg):
     return 2
 
 
-@hatchet.durable_task(name="mcp-chain-callback", input_validator=CommandMessageWithResult)
+@hatchet.durable_task(
+    name="mcp-chain-callback", input_validator=CommandMessageWithResult
+)
 def chain_callback(msg):
     return msg
 

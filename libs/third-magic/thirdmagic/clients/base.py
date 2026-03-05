@@ -79,7 +79,10 @@ class BaseClientAdapter(ABC):
 
     @abc.abstractmethod
     def should_task_retry(
-        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: BaseException
+        self,
+        task_definition: MageflowTaskDefinition,
+        attempt_num: int,
+        e: BaseException,
     ) -> bool:
         pass
 
@@ -136,7 +139,10 @@ class DefaultClientAdapter(BaseClientAdapter):
         raise NotImplementedError("Set a client before we start")
 
     def should_task_retry(
-        self, task_definition: MageflowTaskDefinition, attempt_num: int, e: BaseException
+        self,
+        task_definition: MageflowTaskDefinition,
+        attempt_num: int,
+        e: BaseException,
     ) -> bool:
         raise NotImplementedError("Set a client before we start")
 
