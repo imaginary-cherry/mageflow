@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from logging import Logger
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fakeredis
 import pytest
 import pytest_asyncio
 import rapyer
-from hatchet_sdk import Hatchet, ClientConfig, Context
+from hatchet_sdk import ClientConfig, Context, Hatchet
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.signature import Signature
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 
