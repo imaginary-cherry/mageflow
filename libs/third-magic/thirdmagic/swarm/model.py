@@ -155,7 +155,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
             self.tasks_left_to_run.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
-            await self.close_swarm()
+            # We dont activate check for finish the swarm, this check is done by the tasks that were added.
+            await self.close_swarm(should_check_swarm=False)
 
         return tasks
 
@@ -202,13 +203,16 @@ class SwarmTaskSignature(ContainerTaskSignature):
         )
         await super().change_status(self.task_status.last_status)
 
-    async def close_swarm(self) -> Self:
+    async def close_swarm(self, should_check_swarm: bool = True) -> Self:
         """
+        should_check_swarm - If true, we would check if the swarm should be done and activate callback. This parameter should be True,
+                            If you set it to false, you might cause a race condition, so be sure you know what you are doing!
         We close the swarm when no more tasks are going to be added, the success callback wont be activated untile the swarm is closed.
         It is user responsibility to ensure no tasks are added after the task is closed. There is no gate for adding more tasks after the task is closed.
         """
         await self.aupdate(is_swarm_closed=True)
-        await self.ClientAdapter.afill_swarm(self, max_tasks=0)
+        if should_check_swarm:
+            await self.ClientAdapter.afill_swarm(self, max_tasks=0)
         return self
 
     def has_swarm_failed(self):
