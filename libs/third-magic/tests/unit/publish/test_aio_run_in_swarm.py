@@ -25,7 +25,7 @@ async def test_aio_run_tasks_in_swarm_creates_tasks_in_swarm(
 
     reloaded = await SwarmTaskSignature.aget(swarm.key)
     assert len(reloaded.tasks) == 2
-    mock_close_swarm.assert_awaited_once()
+    mock_close_swarm.assert_not_called()
 
 
 @pytest.mark.asyncio
