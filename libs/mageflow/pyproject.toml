@@ -57,6 +57,7 @@ dev = [
     "coverage[toml]>=7.0.0,<8.0.0",
     "fakeredis[json,lua]>=2.34.0,<3.0.0",
     "black>=26.1.0",
+    "ruff>=0.15.5",
 ]
 
 [project.urls]
