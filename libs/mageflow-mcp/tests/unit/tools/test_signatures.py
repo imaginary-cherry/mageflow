@@ -1,12 +1,12 @@
 import asyncio
 
 import pytest
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.task.model import TaskSignature
 
 from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX, get_signature, list_signatures
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task.model import TaskSignature
 
 # ---------------------------------------------------------------------------
 # get_signature tests
@@ -179,3 +179,196 @@ async def test__list_signatures__empty_result__returns_valid_paginated_list():
     assert result.items == []
     assert result.total_pages == 1
     assert result.page == 1
+
+
+# ── Additional edge case and boundary tests ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__created_after_filter() -> None:
+    """list_signatures with created_after filter returns only matching signatures."""
+    from datetime import datetime, timezone
+
+    sig1 = TaskSignature(task_name="old_task")
+    await sig1.asave()
+    await asyncio.sleep(0.01)
+
+    cutoff_time = datetime.now(timezone.utc)
+    await asyncio.sleep(0.01)
+
+    sig2 = TaskSignature(task_name="new_task")
+    await sig2.asave()
+
+    result = await list_signatures(created_after=cutoff_time)
+
+    assert isinstance(result, PaginatedSignatureList)
+    assert result.total_count == 1
+    assert result.items[0].task_name == "new_task"
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__created_before_filter() -> None:
+    """list_signatures with created_before filter returns only matching signatures."""
+    from datetime import datetime, timezone
+
+    sig1 = TaskSignature(task_name="old_task")
+    await sig1.asave()
+    await asyncio.sleep(0.01)
+
+    cutoff_time = datetime.now(timezone.utc)
+    await asyncio.sleep(0.01)
+
+    sig2 = TaskSignature(task_name="new_task")
+    await sig2.asave()
+
+    result = await list_signatures(created_before=cutoff_time)
+
+    assert isinstance(result, PaginatedSignatureList)
+    assert result.total_count == 1
+    assert result.items[0].task_name == "old_task"
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__created_after_and_before_combined() -> None:
+    """list_signatures with both date filters should return signatures in range."""
+    from datetime import datetime, timezone
+
+    sig1 = TaskSignature(task_name="before")
+    await sig1.asave()
+    await asyncio.sleep(0.01)
+
+    start_time = datetime.now(timezone.utc)
+    await asyncio.sleep(0.01)
+
+    sig2 = TaskSignature(task_name="in_range")
+    await sig2.asave()
+    await asyncio.sleep(0.01)
+
+    end_time = datetime.now(timezone.utc)
+    await asyncio.sleep(0.01)
+
+    sig3 = TaskSignature(task_name="after")
+    await sig3.asave()
+
+    result = await list_signatures(created_after=start_time, created_before=end_time)
+
+    assert isinstance(result, PaginatedSignatureList)
+    assert result.total_count == 1
+    assert result.items[0].task_name == "in_range"
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__multiple_filters_combined() -> None:
+    """list_signatures should correctly apply status and task_name filters together."""
+    sig1 = TaskSignature(task_name="target_task")
+    await sig1.asave()
+    await sig1.change_status(SignatureStatus.DONE)
+
+    sig2 = TaskSignature(task_name="target_task")
+    await sig2.asave()
+    # sig2 stays PENDING
+
+    sig3 = TaskSignature(task_name="other_task")
+    await sig3.asave()
+    await sig3.change_status(SignatureStatus.DONE)
+
+    result = await list_signatures(
+        status=SignatureStatus.DONE, task_name="target_task"
+    )
+
+    assert result.total_count == 1
+    assert result.items[0].task_name == "target_task"
+    assert result.items[0].status == SignatureStatus.DONE
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__all_signature_types_returned() -> None:
+    """list_signatures should return TaskSignature, ChainTaskSignature, and SwarmTaskSignature."""
+    task = TaskSignature(task_name="plain_task")
+    await task.asave()
+
+    chain = ChainTaskSignature(task_name="chain_task")
+    await chain.asave()
+
+    from thirdmagic.swarm.model import SwarmTaskSignature
+
+    swarm = SwarmTaskSignature(
+        task_name="swarm_task", tasks=[], publishing_state_id="state:123"
+    )
+    await swarm.asave()
+
+    result = await list_signatures()
+
+    assert result.total_count == 3
+    sig_types = {item.signature_type for item in result.items}
+    assert "TaskSignature" in sig_types
+    assert "ChainTaskSignature" in sig_types
+    assert "SwarmTaskSignature" in sig_types
+
+
+@pytest.mark.asyncio
+async def test__get_signature__swarm_signature_returns_correct_type() -> None:
+    """get_signature with SwarmTaskSignature returns correct type."""
+    from thirdmagic.swarm.model import SwarmTaskSignature
+
+    swarm = SwarmTaskSignature(
+        task_name="test_swarm", tasks=[], publishing_state_id="state:456"
+    )
+    await swarm.asave()
+
+    result = await get_signature(swarm.key)
+
+    assert isinstance(result, SignatureInfo)
+    assert result.signature_type == "SwarmTaskSignature"
+    assert result.task_name == "test_swarm"
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__filter_no_matches_all_filters() -> None:
+    """list_signatures with filters that match nothing returns empty list."""
+    sig = TaskSignature(task_name="existing_task")
+    await sig.asave()
+
+    result = await list_signatures(task_name="nonexistent_task_name")
+
+    assert isinstance(result, PaginatedSignatureList)
+    assert result.total_count == 0
+    assert result.items == []
+    assert result.total_pages == 1
+
+
+@pytest.mark.asyncio
+async def test__list_signatures__page_beyond_available_returns_empty() -> None:
+    """list_signatures with page beyond total pages returns empty items."""
+    for i in range(3):
+        sig = TaskSignature(task_name=f"task_{i}")
+        await sig.asave()
+
+    result = await list_signatures(page=999, page_size=10)
+
+    assert isinstance(result, PaginatedSignatureList)
+    assert len(result.items) == 0
+    assert result.total_count == 3
+
+
+@pytest.mark.asyncio
+async def test__get_signature__all_status_types() -> None:
+    """get_signature should correctly return all signature status types."""
+    statuses = [
+        SignatureStatus.PENDING,
+        SignatureStatus.ACTIVE,
+        SignatureStatus.DONE,
+        SignatureStatus.FAILED,
+        SignatureStatus.SUSPENDED,
+        SignatureStatus.CANCELED,
+    ]
+
+    for status in statuses:
+        sig = TaskSignature(task_name=f"task_{status.value}")
+        await sig.asave()
+        await sig.change_status(status)
+
+        result = await get_signature(sig.key)
+
+        assert isinstance(result, SignatureInfo)
+        assert result.status == status

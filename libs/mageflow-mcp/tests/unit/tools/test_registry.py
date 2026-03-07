@@ -1,9 +1,9 @@
 import pytest
-from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow_mcp.models import PaginatedTaskDefinitionList
 from mageflow_mcp.tools.registry import list_registered_tasks
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.mark.asyncio
@@ -79,3 +79,108 @@ async def test__list_registered_tasks__page_size_capped():
     result = await list_registered_tasks(page_size=100)
 
     assert result.page_size == PAGE_SIZE_MAX
+
+
+# ── Additional edge case and boundary tests ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__page_beyond_total_returns_empty():
+    """list_registered_tasks with page beyond total pages returns empty items."""
+    for i in range(3):
+        d = MageflowTaskDefinition(
+            mageflow_task_name=f"task_{i}",
+            task_name=f"Task{i}",
+        )
+        await d.asave()
+
+    result = await list_registered_tasks(page=999, page_size=10)
+
+    assert isinstance(result, PaginatedTaskDefinitionList)
+    assert len(result.items) == 0
+    assert result.total_count == 3
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__single_page_exact_fit():
+    """list_registered_tasks with exactly page_size items returns correct pagination."""
+    for i in range(20):  # Exactly PAGE_SIZE_DEFAULT
+        d = MageflowTaskDefinition(
+            mageflow_task_name=f"task_{i}",
+            task_name=f"Task{i}",
+        )
+        await d.asave()
+
+    result = await list_registered_tasks(page=1, page_size=20)
+
+    assert result.total_count == 20
+    assert len(result.items) == 20
+    assert result.total_pages == 1
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__last_page_partial():
+    """list_registered_tasks last page should have fewer items than page_size."""
+    for i in range(7):
+        d = MageflowTaskDefinition(
+            mageflow_task_name=f"task_{i}",
+            task_name=f"Task{i}",
+        )
+        await d.asave()
+
+    # Page 2 with page_size=5 should have 2 items (7 total: 5+2)
+    result = await list_registered_tasks(page=2, page_size=5)
+
+    assert len(result.items) == 2
+    assert result.total_count == 7
+    assert result.total_pages == 2
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__task_with_special_characters():
+    """list_registered_tasks should handle task names with special characters."""
+    d = MageflowTaskDefinition(
+        mageflow_task_name="task-with-dashes_and_underscores.dots",
+        task_name="TaskWith$pecial!Chars@123",
+        retries=5,
+    )
+    await d.asave()
+
+    result = await list_registered_tasks()
+
+    assert result.total_count == 1
+    item = result.items[0]
+    assert item.mageflow_task_name == "task-with-dashes_and_underscores.dots"
+    assert item.task_name == "TaskWith$pecial!Chars@123"
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__very_high_retry_count():
+    """list_registered_tasks should handle very high retry counts."""
+    d = MageflowTaskDefinition(
+        mageflow_task_name="high_retry_task",
+        task_name="HighRetryTask",
+        retries=999999,
+    )
+    await d.asave()
+
+    result = await list_registered_tasks()
+
+    assert result.total_count == 1
+    assert result.items[0].retries == 999999
+
+
+@pytest.mark.asyncio
+async def test__list_registered_tasks__negative_retries():
+    """list_registered_tasks should handle negative retry values."""
+    d = MageflowTaskDefinition(
+        mageflow_task_name="negative_retry_task",
+        task_name="NegativeRetryTask",
+        retries=-1,
+    )
+    await d.asave()
+
+    result = await list_registered_tasks()
+
+    assert result.total_count == 1
+    assert result.items[0].retries == -1
