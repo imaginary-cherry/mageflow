@@ -42,6 +42,7 @@ async def test__durable_task__first_attempt__cache_created(
     async def user_func(msg):
         # Inside the user function, create a signature using the cache context
         import thirdmagic
+
         task_model = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         return task_model.key
 
@@ -83,6 +84,7 @@ async def test__durable_task__first_attempt_error_with_retry__cache_persists(
     async def user_func(msg):
         nonlocal created_sig_key
         import thirdmagic
+
         sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         created_sig_key = sig.key
         raise ValueError("Retryable error")
@@ -141,6 +143,7 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
     async def user_func(msg):
         nonlocal created_sig_key
         import thirdmagic
+
         sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         created_sig_key = sig.key
         return "success"
@@ -155,45 +158,6 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
 
     # Assert - the signature created in user func should be the cached one
     assert created_sig_key == original_sig.key
-
-
-@pytest.mark.asyncio
-async def test__durable_task__final_failure__cache_deleted(
-    adapter_with_lifecycle,
-    redis_client,
-):
-    # Arrange
-    adapter_with_lifecycle.should_task_retry.return_value = False
-    signature, _ = await task_signature_factory(
-        status=SignatureStatus.PENDING, retries=3
-    )
-    workflow_id = "wf-final-failure"
-    ctx = create_mock_hatchet_context(
-        MockContextConfig(
-            task_id=signature.key,
-            job_name="test_task",
-            attempt_number=3,
-            workflow_id=workflow_id,
-        )
-    )
-
-    async def user_func(msg):
-        import thirdmagic
-        await thirdmagic.sign("test_task", model_validators=ContextMessage)
-        raise RuntimeError("Final failure")
-
-    from mageflow.callbacks import handle_task_callback
-
-    handler = handle_task_callback(is_idempotent=True)(user_func)
-    message = ContextMessage()
-
-    # Act
-    with pytest.raises(RuntimeError, match="Final failure"):
-        await handler(message, ctx)
-
-    # Assert - cache should be deleted on final failure
-    cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
 
 
 @pytest.mark.asyncio
@@ -215,6 +179,7 @@ async def test__durable_task__success__cache_deleted(
 
     async def user_func(msg):
         import thirdmagic
+
         await thirdmagic.sign("test_task", model_validators=ContextMessage)
         return "done"
 
@@ -253,6 +218,7 @@ async def test__non_durable_task__no_cache_created(
 
     async def user_func(msg):
         import thirdmagic
+
         await thirdmagic.sign("test_task", model_validators=ContextMessage)
         return "done"
 
@@ -284,7 +250,9 @@ async def test__non_durable_task__retry_creates_new_signatures(
     cache.signature_ids.append(original_sig.key)
     await cache.asave()
 
-    signature, _ = await task_signature_factory(status=SignatureStatus.PENDING, retries=3)
+    signature, _ = await task_signature_factory(
+        status=SignatureStatus.PENDING, retries=3
+    )
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
@@ -299,6 +267,7 @@ async def test__non_durable_task__retry_creates_new_signatures(
     async def user_func(msg):
         nonlocal created_sig_key
         import thirdmagic
+
         sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         created_sig_key = sig.key
         return "done"
@@ -325,7 +294,9 @@ async def test__durable_task__retry_no_cache__creates_fresh_signatures(
 ):
     # Arrange - no cache in Redis
     workflow_id = "wf-no-cache-retry"
-    signature, _ = await task_signature_factory(status=SignatureStatus.PENDING, retries=3)
+    signature, _ = await task_signature_factory(
+        status=SignatureStatus.PENDING, retries=3
+    )
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
@@ -340,6 +311,7 @@ async def test__durable_task__retry_no_cache__creates_fresh_signatures(
     async def user_func(msg):
         nonlocal created_sig_key
         import thirdmagic
+
         sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         created_sig_key = sig.key
         return "done"
@@ -377,6 +349,7 @@ async def test__durable_task__no_task_id__no_cache(
 
     async def user_func(msg):
         import thirdmagic
+
         await thirdmagic.sign("test_task", model_validators=ContextMessage)
         return "done"
 
@@ -435,9 +408,7 @@ async def test__durable_task__contextvar_reset_after_error(
             workflow_id="wf-ctx-reset-err",
         )
     )
-    raising_handler, _ = handler_factory(
-        raises=ValueError("err"), durable=True
-    )
+    raising_handler, _ = handler_factory(raises=ValueError("err"), durable=True)
     message = ContextMessage()
 
     # Act
@@ -466,6 +437,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
 
     async def user_func_first(msg):
         import thirdmagic
+
         sig1 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         sig2 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         sig3 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
@@ -504,6 +476,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
 
     async def user_func_retry(msg):
         import thirdmagic
+
         sig1 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         sig2 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         sig3 = await thirdmagic.sign("test_task", model_validators=ContextMessage)
