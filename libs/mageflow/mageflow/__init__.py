@@ -11,7 +11,6 @@ from thirdmagic.swarm.creator import swarm as aswarm
 from thirdmagic.task import TaskSignature
 from thirdmagic.task import sign as asign
 
-resume_task = TaskSignature.resume_from_key
 lock_task = TaskSignature.alock_from_key
 resume = TaskSignature.resume_from_key
 pause = TaskSignature.pause_from_key
@@ -28,7 +27,6 @@ abounded_field = rapyer.apipeline
 
 __all__ = [
     "load_signature",
-    "resume_task",
     "lock_task",
     "resume",
     "remove",
