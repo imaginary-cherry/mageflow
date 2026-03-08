@@ -51,7 +51,7 @@ def handle_task_callback(
             # Setup retry cache for signature idempotency on retries (durable tasks only)
             cache_token = None
             cache_state = None
-            if is_idempotent and not is_normal_run:
+            if is_idempotent:
                 cache_state = await setup_retry_cache(
                     ctx.workflow_id, ctx.attempt_number
                 )
