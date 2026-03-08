@@ -45,7 +45,10 @@ async def setup_retry_cache(workflow_id: str, attempt_number: int) -> RetryCache
 
 
 async def teardown_retry_cache(state: RetryCacheState):
-    await state.cache.adelete()
+    try:
+        await state.cache.adelete()
+    except Exception:
+        pass
 
 
 async def get_cached_signature(sig_type: Type[T]) -> Optional[T]:
