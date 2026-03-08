@@ -8,7 +8,11 @@ from rapyer.fields import RapyerKey
 from rapyer.types import RedisInt, RedisList
 
 from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.errors import SwarmIsCanceledError, TooManyTasksError
+from thirdmagic.errors import (
+    SwarmIsCanceledError,
+    TaskAndMsgsDontMatchForSwarmError,
+    TooManyTasksError,
+)
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
@@ -115,6 +119,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
+            if len(tasks) != len(msgs):
+                raise TaskAndMsgsDontMatchForSwarmError(
+                    "`tasks` and `msgs` must have the same length"
+                )
             async with self.apipeline():
                 sub_tasks = await self.add_tasks(tasks, close_on_max_task)
                 for sub_task, msg in zip(sub_tasks, msgs):
