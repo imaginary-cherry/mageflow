@@ -142,58 +142,6 @@ async with mageflow.abounded_field():
     ...
 ```
 
-## Configuration Classes
+## Configuration
 
-### `MageflowConfig`
-
-Top-level configuration for MageFlow.
-
-```python
-@dataclass
-class MageflowConfig:
-    ttl: TTLConfig = TTLConfig()
-    param_config: AcceptParams = AcceptParams.NO_CTX
-```
-
-**Fields:**
-
-- `ttl` (TTLConfig): TTL settings for signatures
-- `param_config` (AcceptParams): Default parameter mode for task callbacks
-
-### `TTLConfig`
-
-Controls time-to-live for different signature types.
-
-```python
-@dataclass
-class TTLConfig:
-    active_ttl: int = 86400            # 24 hours
-    ttl_when_sign_done: int = 300      # 5 minutes
-    task: SignatureTTLConfig = SignatureTTLConfig()
-    chain: SignatureTTLConfig = SignatureTTLConfig()
-    swarm: SignatureTTLConfig = SignatureTTLConfig()
-```
-
-**Fields:**
-
-- `active_ttl` (int): General TTL in seconds for active signatures (default: 24 hours)
-- `ttl_when_sign_done` (int): TTL in seconds after a signature completes (default: 5 minutes)
-- `task` (SignatureTTLConfig): Override TTL for task signatures
-- `chain` (SignatureTTLConfig): Override TTL for chain signatures
-- `swarm` (SignatureTTLConfig): Override TTL for swarm signatures
-
-### `SignatureTTLConfig`
-
-Per-signature-type TTL overrides. When set to `None`, the general TTL from `TTLConfig` is used.
-
-```python
-@dataclass
-class SignatureTTLConfig:
-    active_ttl: Optional[int] = None
-    ttl_when_sign_done: Optional[int] = None
-```
-
-**Fields:**
-
-- `active_ttl` (int, optional): Override active TTL for this signature type
-- `ttl_when_sign_done` (int, optional): Override done TTL for this signature type
+See [Configuration API Reference](config.md) for full details on `MageflowConfig`, `TTLConfig`, `SignatureTTLConfig`, `AcceptParams`, and `SwarmConfig`.
