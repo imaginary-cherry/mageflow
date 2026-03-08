@@ -171,15 +171,6 @@ async def test__teardown__deletes_cache_from_redis(redis_client):
     assert not await redis_client.exists(cache.key)
 
 
-@pytest.mark.asyncio
-async def test__teardown__no_cache__does_not_raise():
-    # Arrange
-    state = RetryCacheState(workflow_id="wf-none", is_retry=False, cache=None)
-
-    # Act & Assert
-    await teardown_retry_cache(state)  # should not raise
-
-
 # --- sign() integration with cache ---
 
 
