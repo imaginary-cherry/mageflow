@@ -7,8 +7,6 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
-
-from mageflow.utils.pythonic import flexible_call
 from thirdmagic.signature.retry_cache import (
     retry_cache_ctx,
     setup_retry_cache,
@@ -16,6 +14,8 @@ from thirdmagic.signature.retry_cache import (
 )
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
+
+from mageflow.utils.pythonic import flexible_call
 
 
 class AcceptParams(Enum):
@@ -80,8 +80,8 @@ def handle_task_callback(
                     task_model, ctx.attempt_number, e
                 )
                 if not will_retry:
-                    await lifecycle.task_failed(msg_data, e)
                     is_task_finish = True
+                    await lifecycle.task_failed(msg_data, e)
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation
