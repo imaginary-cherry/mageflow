@@ -7,7 +7,7 @@
 - **Bulk Task Addition to Swarm**: `aio_run_in_swarm()` now accepts a list of tasks, scheduling multiple tasks in a single call with a shared message.
   - New `aio_run_tasks_in_swarm()` method for adding multiple tasks with individual messages per task.
   - Example: `await swarm.aio_run_in_swarm([t1, t2], msg)`
-- **Exposed `abounded_field`**: Exposed rapyer's `apipeline` as `abounded_field` for atomic multi-signature updates.
+- **Exposed `abounded_field`**: A new context manager that allow multi signature update with a single transaction.
 - **Lint CI Job**: Added `ruff` and `black` lint checks to the CI pipeline.
 - **CodeRabbit Configuration**: Added `.coderabbit.yaml` for automated code review on PRs.
 
