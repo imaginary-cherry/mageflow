@@ -90,7 +90,7 @@ await swarm.aio_run_no_wait(SwarmMessage(swarm_data="swarm_data"))
 await swarm.aio_run_in_swarm(new_task, NewTaskMessage(data="hello"))
 # Or send multiple tasks
 multiple_tasks = await new_task.aduplicate_many(3)
-await swarm.aio_run_in_swarm(multiple_tasks, [NewTaskMessage(data="hello")] * 3)
+await swarm.aio_run_in_swarm(multiple_tasks, NewTaskMessage(data="hello"))
 ```
 
 ### Closing a Swarm
