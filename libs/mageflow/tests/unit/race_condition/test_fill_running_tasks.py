@@ -2,20 +2,23 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 import mageflow
 from mageflow.swarm.workflows import fill_running_tasks
 from tests.integration.hatchet.models import ContextMessage
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio
 async def test_aio_run_in_swarm_kwargs_set_before_fill_running_tasks(
     empty_swarm, mock_task_def, mock_adapter
 ):
+    # Arrange
     swarm = empty_swarm
-    task = await mageflow.asign("item_task", model_validators=ContextMessage)
     msg = ContextMessage(base_data={"key": "value"}, more_context={"extra": "data"})
+    task_in_swarm = await mageflow.asign("new_task", model_validators=ContextMessage)
+    await swarm.aio_run_in_swarm(task_in_swarm, msg)
+    task = await mageflow.asign("item_task", model_validators=ContextMessage)
 
     tasks_added = asyncio.Event()
     fill_done = asyncio.Event()
@@ -33,6 +36,7 @@ async def test_aio_run_in_swarm_kwargs_set_before_fill_running_tasks(
         fill_done.set()  # Let aio_run_in_swarm continue to kwargs pipeline
         return result
 
+    # Act
     with patch.object(SwarmTaskSignature, "add_tasks", add_tasks_with_sync):
         await asyncio.gather(
             swarm.aio_run_in_swarm(task, msg),
@@ -40,5 +44,11 @@ async def test_aio_run_in_swarm_kwargs_set_before_fill_running_tasks(
         )
 
     # Assert: tasks passed to acall_signatures should have per-task kwargs
-    call_args = mock_adapter.acall_signatures.call_args
-    assert not call_args, "Swarm added tasks before tasks were filled and updated"
+    call_args = mock_adapter.acall_signatures.call_args_list
+    for call_arg in call_args:
+        tasks_called = call_arg[0][0]
+        for task in tasks_called:
+            assert (
+                msg.model_dump(mode="json", exclude_unset=True).items()
+                <= task.kwargs.items()
+            )
