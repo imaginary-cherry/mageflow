@@ -1,6 +1,6 @@
 [project]
 name = "thirdmagic"
-version = "0.0.2"
+version = "0.0.3"
 description = "Core models and signatures for mageflow task orchestration"
 authors = [
     {name = "imaginary-cherry", email = "yedidyakfir@gmail.com"}
