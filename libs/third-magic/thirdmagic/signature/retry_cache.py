@@ -1,12 +1,11 @@
 from contextvars import ContextVar
-from dataclasses import dataclass, field
-from typing import ClassVar, Optional, TypeVar, Type, cast
+from dataclasses import dataclass
+from typing import ClassVar, Optional, Type, TypeVar
 
-import rapyer
 from pydantic import Field
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
-from rapyer.fields import RapyerKey
+from rapyer.fields import Key, RapyerKey
 from rapyer.types import RedisList
 
 from thirdmagic.signature.model import Signature
@@ -15,20 +14,17 @@ T = TypeVar("T", bound=Signature)
 
 
 class SignatureRetryCache(AtomicRedisModel):
-    workflow_id: str = ""
+    workflow_id: Key[str] = ""
     signature_ids: RedisList[RapyerKey] = Field(default_factory=list)
 
-    Meta: ClassVar[RedisConfig] = RedisConfig(
-        ttl=24 * 60 * 60,
-        refresh_ttl=False,
-    )
+    Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
 
 
 @dataclass
 class RetryCacheState:
     workflow_id: str
     is_retry: bool
-    cache: Optional[SignatureRetryCache] = None
+    cache: SignatureRetryCache
     index: int = 0
 
 
@@ -37,61 +33,37 @@ retry_cache_ctx: ContextVar[Optional[RetryCacheState]] = ContextVar(
 )
 
 
-async def setup_retry_cache(
-    workflow_id: str, attempt_number: int
-) -> RetryCacheState:
+async def setup_retry_cache(workflow_id: str, attempt_number: int) -> RetryCacheState:
     is_retry = attempt_number > 1
     if is_retry:
-        try:
-            redis_key = f"SignatureRetryCache:{workflow_id}"
-            cache = await rapyer.aget(redis_key)
-        except Exception:
-            cache = None
-        if cache:
-            return RetryCacheState(
-                workflow_id=workflow_id,
-                is_retry=True,
-                cache=cast(SignatureRetryCache, cache),
-                index=0,
-            )
-    return RetryCacheState(
-        workflow_id=workflow_id,
-        is_retry=False,
-        cache=None,
-        index=0,
-    )
+        cache = await SignatureRetryCache.afind_one(workflow_id)
+    else:
+        cache = SignatureRetryCache(workflow_id=workflow_id)
+        await cache.asave()
+    return RetryCacheState(workflow_id=workflow_id, is_retry=is_retry, cache=cache)
 
 
 async def teardown_retry_cache(state: RetryCacheState):
-    try:
-        if state.cache:
-            await state.cache.adelete()
-    except Exception:
-        pass
+    await state.cache.adelete()
 
 
-async def get_cached_signature(
-    state: RetryCacheState, sig_type: Type[T]
-) -> Optional[T]:
+async def get_cached_signature(sig_type: Type[T]) -> Optional[T]:
+    state = retry_cache_ctx.get()
+    if not (state and state.is_retry):
+        return None
     cache = state.cache
-    if cache is None or state.index >= len(cache.signature_ids):
+    if state.index >= len(cache.signature_ids):
         return None
     sig_key = cache.signature_ids[state.index]
     state.index += 1
-    try:
-        sig = await rapyer.afind_one(sig_key)
-    except Exception:
-        return None
-    if sig is None:
-        return None
-    return cast(T, sig)
+    sig = await sig_type.afind_one(sig_key)
+    return sig
 
 
-async def cache_signature(state: RetryCacheState, signature: Signature):
-    if state.cache is None:
-        state.cache = SignatureRetryCache(workflow_id=state.workflow_id)
-        state.cache.pk = state.workflow_id
-        await state.cache.asave()
-    state.cache.signature_ids.append(signature.key)
-    await state.cache.asave()
+async def cache_signature(signature: Signature):
+    state = retry_cache_ctx.get()
+    if state is None:
+        return None
+    await state.cache.signature_ids.aappend(signature.key)
     state.index += 1
+    return None
