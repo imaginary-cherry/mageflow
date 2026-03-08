@@ -42,7 +42,7 @@ async def test__setup_retry_cache__first_attempt__returns_not_retry():
 
 
 @pytest.mark.asyncio
-async def test__setup_retry_cache__retry_no_cache_in_redis__returns_not_retry():
+async def test__setup_retry_cache__retry_no_cache_in_redis__returns_retry():
     # Arrange
     cache = SignatureRetryCache(workflow_id="wf-no-cache")
 
