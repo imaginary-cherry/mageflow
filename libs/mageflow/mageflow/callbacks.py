@@ -85,12 +85,12 @@ def handle_task_callback(
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation
+                is_task_finish = True
                 if is_normal_run:
                     return result
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await lifecycle.task_success(dumped_results["hatchet_results"])
-                is_task_finish = True
                 if wrap_res:
                     return task_results
                 else:
