@@ -17,6 +17,14 @@ from hatchet_sdk.runnables.types import (
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
+from thirdmagic import chain, sign
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.swarm.creator import SignatureOptions, swarm
+from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
+from thirdmagic.task_def import MageflowTaskDefinition
+from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, handle_task_callback
@@ -47,14 +55,6 @@ from mageflow.swarm.workflows import (
     swarm_item_failed,
 )
 from mageflow.utils.mageflow import does_task_wants_ctx
-from thirdmagic import chain, sign
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.swarm.creator import SignatureOptions, swarm
-from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
-from thirdmagic.task_def import MageflowTaskDefinition
-from thirdmagic.utils import HatchetTaskType
 
 Duration = timedelta | str
 
