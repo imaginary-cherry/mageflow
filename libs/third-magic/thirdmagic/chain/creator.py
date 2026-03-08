@@ -34,11 +34,11 @@ async def chain(
         tasks=tasks,
         kwargs=kwargs,
     )
-    async with first_task.apipeline():
+    async with first_task.apipeline(use_existing_pipe=True):
         for task in tasks:
             task.signature_container_id = chain_task_signature.key
         await chain_task_signature.asave()
 
-    await cache_signature(chain_task_signature)
+        await cache_signature(chain_task_signature)
 
     return chain_task_signature

@@ -89,11 +89,14 @@ async def sign(task: str | HatchetTaskType, **options: Any) -> TaskSignature:
         if field_name in options
     }
 
-    if isinstance(task, str):
-        signature = await TaskSignature.from_task_name(task, kwargs=options, **kwargs)
-    else:
-        signature = await TaskSignature.from_task(task, kwargs=options, **kwargs)
+    async with rapyer.apipeline(use_existing_pipe=True):
+        if isinstance(task, str):
+            signature = await TaskSignature.from_task_name(
+                task, kwargs=options, **kwargs
+            )
+        else:
+            signature = await TaskSignature.from_task(task, kwargs=options, **kwargs)
 
-    await cache_signature(signature)
+        await cache_signature(signature)
 
     return signature

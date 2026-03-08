@@ -56,9 +56,10 @@ async def swarm(
         publishing_state_id=publish_state.key,
         kwargs=direct_kwargs_param | options,
     )
-    await rapyer.ainsert(publish_state, swarm_signature)
-    await swarm_signature.add_tasks(tasks)
+    async with rapyer.apipeline(use_existing_pipe=True):
+        await rapyer.ainsert(publish_state, swarm_signature)
+        await swarm_signature.add_tasks(tasks)
 
-    await cache_signature(swarm_signature)
+        await cache_signature(swarm_signature)
 
     return swarm_signature
