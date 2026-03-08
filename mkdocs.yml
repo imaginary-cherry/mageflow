@@ -67,6 +67,7 @@ nav:
     - Chain: documentation/chain.md
     - Swarm: documentation/swarm.md
     - Task Lifecycle: documentation/task-lifecycle.md
+    - Transactions: documentation/transactions.md
   - API Reference:
       - Functions: api/functions.md
       - Client: api/client.md

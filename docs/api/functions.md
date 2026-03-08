@@ -132,15 +132,26 @@ signature = await mageflow.load_signature(task_key)
 
 ## Atomic Operations
 
-### `mageflow.abounded_field(model)`
+### `mageflow.abounded_field(ignore_redis_error=False)`
 
-Context manager for performing multiple signature updates as a single atomic Redis transaction. When entering the context, the model is loaded to its current state. All changes made within the context are saved together when the context exits.
+Context manager for performing multiple signature updates as a single atomic Redis transaction. All changes made within the context are batched into a single Redis pipeline and saved together when the context exits.
+
+```python
+async def abounded_field(ignore_redis_error: bool = False) -> AsyncContextManager
+```
+
+**Parameters:**
+
+- `ignore_redis_error` (bool, optional): If `True`, suppresses Redis errors during the transaction. Default is `False`.
 
 ```python
 async with mageflow.abounded_field():
-    # All updates here are batched into a single transaction
-    ...
+    signature.kwargs["field_a"] = "value_a"
+    signature.kwargs["field_b"] = "value_b"
+    # Both updates are saved together atomically
 ```
+
+For a full conceptual guide on transactions, including bulk swarm operations, see [Transactions](../documentation/transactions.md).
 
 ## Configuration
 
