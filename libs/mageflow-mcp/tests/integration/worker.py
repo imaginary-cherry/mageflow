@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 # Start coverage if COVERAGE_PROCESS_START is set
 if os.environ.get("COVERAGE_PROCESS_START"):
@@ -12,13 +12,13 @@ if os.environ.get("COVERAGE_PROCESS_START"):
 
 import redis
 from dynaconf import Dynaconf
-from hatchet_sdk import Hatchet, ClientConfig, Context
+from hatchet_sdk import ClientConfig, Context, Hatchet
 from hatchet_sdk.config import HealthcheckConfig
 
 import mageflow
 from tests.integration.models import (
-    ContextMessage,
     CommandMessageWithResult,
+    ContextMessage,
     MageflowTestError,
 )
 
@@ -56,7 +56,9 @@ def task3(msg):
     return 2
 
 
-@hatchet.durable_task(name="mcp-chain-callback", input_validator=CommandMessageWithResult)
+@hatchet.durable_task(
+    name="mcp-chain-callback", input_validator=CommandMessageWithResult
+)
 def chain_callback(msg):
     return msg
 

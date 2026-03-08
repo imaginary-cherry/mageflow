@@ -1,7 +1,8 @@
-from typing import TypeVar, Literal
+from typing import Literal, TypeVar
 
 from rapyer.fields import RapyerKey
 from redis.asyncio import Redis
+
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.task import TaskSignature
 

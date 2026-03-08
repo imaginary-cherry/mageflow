@@ -1,14 +1,18 @@
 import asyncio
-from typing import Self, Any, Optional, cast
+from typing import Any, Optional, Self, cast
 
 import rapyer
-from pydantic import Field, field_validator, BaseModel
+from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
 from rapyer.fields import RapyerKey
-from rapyer.types import RedisList, RedisInt
+from rapyer.types import RedisInt, RedisList
 
 from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.errors import TooManyTasksError, SwarmIsCanceledError
+from thirdmagic.errors import (
+    SwarmIsCanceledError,
+    TaskAndMsgsDontMatchForSwarmError,
+    TooManyTasksError,
+)
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
@@ -94,16 +98,36 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
         async def aio_run_in_swarm(
             self,
-            task: TaskSignatureConvertible,
+            task: TaskSignatureConvertible | list[TaskSignatureConvertible],
             msg: BaseModel,
             options: TriggerWorkflowOptions = None,
             close_on_max_task: bool = True,
         ) -> Optional["TaskRunRef"]:
-            sub_task = await self.add_task(task, close_on_max_task)
-            await sub_task.kwargs.aupdate(**msg.model_dump(mode="json"))
+            tasks = task if isinstance(task, list) else [task]
+            async with self.apipeline():
+                sub_tasks = await self.add_tasks(tasks, close_on_max_task)
+                for sub_task in sub_tasks:
+                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
             return await self.ClientAdapter.afill_swarm(
-                self, max_tasks=1, options=options
+                self, max_tasks=len(tasks), options=options
             )
+
+        async def aio_run_tasks_in_swarm(
+            self,
+            tasks: list[TaskSignatureConvertible],
+            msgs: list[BaseModel],
+            options: TriggerWorkflowOptions = None,
+            close_on_max_task: bool = True,
+        ) -> Optional["TaskRunRef"]:
+            if len(tasks) != len(msgs):
+                raise TaskAndMsgsDontMatchForSwarmError(
+                    "`tasks` and `msgs` must have the same length"
+                )
+            async with self.apipeline():
+                sub_tasks = await self.add_tasks(tasks, close_on_max_task)
+                for sub_task, msg in zip(sub_tasks, msgs):
+                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
+            return await self.ClientAdapter.afill_swarm(self, options=options)
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
@@ -112,6 +136,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
+    # TODO - once there is if statements in rapyer we need to use them to add tasks only if swarm is not closed
     async def add_tasks(
         self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
     ) -> list[Signature]:
@@ -131,14 +156,15 @@ class SwarmTaskSignature(ContainerTaskSignature):
         tasks = await resolve_signatures(tasks)
         task_keys = [task.key for task in tasks]
 
-        async with self.apipeline():
+        async with self.apipeline(use_existing_pipe=True):
             for task in tasks:
                 task.signature_container_id = self.key
             self.tasks.extend(task_keys)
             self.tasks_left_to_run.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
-            await self.close_swarm()
+            # We dont activate check for finish the swarm, this check is done by the tasks that were added.
+            await self.close_swarm(should_check_swarm=False)
 
         return tasks
 
@@ -185,9 +211,16 @@ class SwarmTaskSignature(ContainerTaskSignature):
         )
         await super().change_status(self.task_status.last_status)
 
-    async def close_swarm(self) -> Self:
+    async def close_swarm(self, should_check_swarm: bool = True) -> Self:
+        """
+        should_check_swarm - If true, we would check if the swarm should be done and activate callback. This parameter should be True,
+                            If you set it to false, you might cause a race condition, so be sure you know what you are doing!
+        We close the swarm when no more tasks are going to be added, the success callback wont be activated untile the swarm is closed.
+        It is user responsibility to ensure no tasks are added after the task is closed. There is no gate for adding more tasks after the task is closed.
+        """
         await self.aupdate(is_swarm_closed=True)
-        await self.ClientAdapter.afill_swarm(self, max_tasks=0)
+        if should_check_swarm:
+            await self.ClientAdapter.afill_swarm(self, max_tasks=0)
         return self
 
     def has_swarm_failed(self):

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.2]
+
+### ✨ Added
+
+- **Bulk Task Addition to Swarm**: `aio_run_in_swarm()` now accepts a list of tasks, scheduling multiple tasks in a single call with a shared message.
+  - New `aio_run_tasks_in_swarm()` method for adding multiple tasks with individual messages per task.
+  - Example: `await swarm.aio_run_in_swarm([t1, t2], msg)`
+- **Exposed `abounded_field`**: Exposed rapyer's `apipeline` as `abounded_field` for atomic multi-signature updates.
+- **Lint CI Job**: Added `ruff` and `black` lint checks to the CI pipeline.
+- **CodeRabbit Configuration**: Added `.coderabbit.yaml` for automated code review on PRs.
+
+### 🐛 Fixed
+
+- **Race Condition in Swarm Task Publishing**: Tasks are now saved to the swarm atomically alongside their parameter updates, preventing `fill_running_tasks` from publishing tasks before their kwargs are set.
+
+### 🛠️ Technical Improvements
+
+- **Rapyer version bump**: `thirdmagic` now requires `rapyer>=1.2.5` to support atomic add-task + update-params transactions.
+- **Race condition tests**: Added unit tests verifying that tasks are never published before being fully configured.
+
+
 ## [0.3.1]
 
 ### ✨ Added

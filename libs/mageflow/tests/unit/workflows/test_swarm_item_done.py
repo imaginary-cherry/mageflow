@@ -2,13 +2,13 @@ from logging import Logger
 from unittest.mock import MagicMock
 
 import pytest
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 import mageflow
 from mageflow.swarm.messages import SwarmResultsMessage
 from mageflow.swarm.workflows import swarm_item_done
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.workflows.conftest import create_swarm_item_test_setup
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio

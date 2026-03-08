@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Generic, TypeVar, Any, Annotated, TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Any, Generic, TypeAlias, TypeVar
 
 DEFAULT_RESULT_NAME = "mageflow_results"
 T = TypeVar("T")

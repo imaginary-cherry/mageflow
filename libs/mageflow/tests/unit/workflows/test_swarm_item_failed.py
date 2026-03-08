@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 from rapyer.errors import KeyNotFound
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
 
 import mageflow
 from mageflow.swarm.messages import SwarmErrorMessage
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.workflows.conftest import create_swarm_item_test_setup
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 
 
 @pytest.mark.asyncio

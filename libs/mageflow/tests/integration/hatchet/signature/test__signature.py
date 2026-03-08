@@ -2,30 +2,30 @@ import asyncio
 
 import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
-from thirdmagic.task import TaskSignature
-from thirdmagic.utils import return_value_field
 
 import mageflow
 from tests.integration.hatchet.assertions import (
     assert_redis_is_clean,
     assert_signature_done,
-    get_runs,
     assert_signature_not_called,
+    get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import MessageWithResult
 from tests.integration.hatchet.worker import (
-    task1,
-    task1_callback,
-    task2,
-    error_callback,
-    fail_task,
     CommandMessageWithResult,
     ContextMessage,
-    task1_test_reg_name,
-    return_multiple_values,
     accept_msg_results,
+    error_callback,
+    fail_task,
+    return_multiple_values,
+    task1,
+    task1_callback,
+    task1_test_reg_name,
+    task2,
 )
+from thirdmagic.task import TaskSignature
+from thirdmagic.utils import return_value_field
 
 
 @pytest.mark.asyncio(loop_scope="session")

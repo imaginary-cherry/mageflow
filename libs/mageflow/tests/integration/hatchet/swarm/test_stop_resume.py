@@ -2,20 +2,20 @@ import asyncio
 from datetime import datetime
 
 import pytest
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
-    assert_redis_is_clean,
     assert_paused,
-    assert_task_did_not_repeat,
+    assert_redis_is_clean,
     assert_swarm_task_done,
+    assert_task_did_not_repeat,
     get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
-from tests.integration.hatchet.worker import sleep_task, task3, task2, task1
+from tests.integration.hatchet.worker import sleep_task, task1, task2, task3
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

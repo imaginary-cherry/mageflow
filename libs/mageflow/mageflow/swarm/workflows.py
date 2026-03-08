@@ -1,8 +1,9 @@
 from logging import Logger
-from typing import Optional, cast, Any
+from typing import Any, Optional, cast
 
 import rapyer
 from rapyer.fields import RapyerKey
+
 from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.signature import Signature
 from thirdmagic.swarm import PublishState

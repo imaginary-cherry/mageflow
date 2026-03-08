@@ -1,6 +1,6 @@
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskInputType
-from thirdmagic.task.creator import resolve_signatures, TaskSignatureConvertible
+from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 
 
 async def chain(

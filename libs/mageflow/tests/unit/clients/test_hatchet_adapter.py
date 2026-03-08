@@ -1,12 +1,9 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from hatchet_sdk import NonRetryableException, Context
+from hatchet_sdk import Context, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
@@ -14,10 +11,13 @@ from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.swarm.messages import (
     FillSwarmMessage,
-    SwarmResultsMessage,
     SwarmErrorMessage,
+    SwarmResultsMessage,
 )
-from tests.integration.hatchet.models import ContextMessage, CommandMessageWithResult
+from tests.integration.hatchet.models import CommandMessageWithResult, ContextMessage
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.fixture

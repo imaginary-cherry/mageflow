@@ -3,6 +3,7 @@ from typing import Any
 from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel
+
 from thirdmagic.utils import deep_merge
 
 

@@ -22,5 +22,9 @@ class SwarmIsCanceledError(SwarmError, RuntimeError):
     pass
 
 
+class TaskAndMsgsDontMatchForSwarmError(SwarmError, RuntimeError):
+    pass
+
+
 class UnrecognizedTaskError(MageflowError):
     pass

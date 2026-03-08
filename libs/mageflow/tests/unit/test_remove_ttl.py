@@ -1,7 +1,7 @@
 import pytest
 
 import mageflow
-from mageflow.config import apply_ttl_config, TTLConfig, SignatureTTLConfig
+from mageflow.config import SignatureTTLConfig, TTLConfig, apply_ttl_config
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.assertions import assert_task_has_done_ttl
 

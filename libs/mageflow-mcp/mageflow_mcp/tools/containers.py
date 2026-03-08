@@ -4,9 +4,6 @@ from typing import cast
 import rapyer
 from rapyer.errors import RapyerError
 from rapyer.errors.base import KeyNotFound
-from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.signature.status import SignatureStatus
 
 from mageflow_mcp.models import (
     ContainerSummary,
@@ -15,6 +12,9 @@ from mageflow_mcp.models import (
     SubTaskInfo,
 )
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature import Signature
+from thirdmagic.signature.status import SignatureStatus
 
 
 async def get_container_summary(container_id: str) -> ContainerSummary | ErrorResponse:
