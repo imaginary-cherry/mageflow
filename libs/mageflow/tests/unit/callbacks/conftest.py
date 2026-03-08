@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest_asyncio
 from hatchet_sdk import Context
-
-import mageflow
-from mageflow.callbacks import AcceptParams, handle_task_callback
-from tests.integration.hatchet.models import ContextMessage
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
+
+import mageflow
+from mageflow.callbacks import AcceptParams, handle_task_callback
+from tests.integration.hatchet.models import ContextMessage
 
 
 @dataclass

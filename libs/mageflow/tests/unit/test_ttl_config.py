@@ -1,6 +1,11 @@
 import dataclasses
 
 import pytest
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.swarm.state import PublishState
+from thirdmagic.task import TaskSignature
 
 from mageflow.config import (
     SignatureTTLConfig,
@@ -8,11 +13,6 @@ from mageflow.config import (
     apply_ttl_config,
 )
 from tests.unit.utils import sub_classes
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.swarm.state import PublishState
-from thirdmagic.task import TaskSignature
 
 
 @pytest.fixture(autouse=True)

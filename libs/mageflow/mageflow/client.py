@@ -5,12 +5,12 @@ from typing import TypeVar, overload
 import redis
 from hatchet_sdk import Hatchet
 from redis.asyncio import Redis
+from thirdmagic.signature import Signature
 
 from mageflow.callbacks import AcceptParams
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
 from mageflow.config import MageflowConfig
-from thirdmagic.signature import Signature
 
 T = TypeVar("T")
 

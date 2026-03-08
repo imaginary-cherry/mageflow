@@ -1,6 +1,9 @@
 import asyncio
 
 import pytest
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.assertions import (
     assert_chain_done,
@@ -22,9 +25,6 @@ from tests.integration.hatchet.worker import (
     task3,
     task_with_data,
 )
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -1,7 +1,7 @@
 import pytest
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage, SignatureKeysResult
+from tests.integration.hatchet.models import ContextMessage
 from tests.integration.hatchet.worker import (
     CHAIN_ACTIVE_TTL,
     SWARM_ACTIVE_TTL,

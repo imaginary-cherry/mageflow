@@ -4,6 +4,8 @@ from datetime import datetime
 import pytest
 from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
@@ -26,8 +28,6 @@ from tests.integration.hatchet.worker import (
     task1_callback,
     timeout_task,
 )
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -3,6 +3,8 @@ from typing import cast
 
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
@@ -24,8 +26,6 @@ from tests.integration.hatchet.worker import (
     task1_callback,
     task_with_data,
 )
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

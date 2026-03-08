@@ -8,6 +8,13 @@ from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
 from rapyer.fields import RapyerKey
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.clients.base import BaseClientAdapter
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
@@ -25,13 +32,6 @@ from mageflow.swarm.messages import (
     SwarmErrorMessage,
     SwarmResultsMessage,
 )
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.clients.base import BaseClientAdapter
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.task import TaskSignature
-from thirdmagic.task_def import MageflowTaskDefinition
 
 
 class HatchetClientAdapter(BaseClientAdapter):
