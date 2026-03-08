@@ -32,7 +32,7 @@ def handle_task_callback(
     expected_params: AcceptParams = AcceptParams.NO_CTX,
     wrap_res: bool = True,
     send_signature: bool = False,
-    durable: bool = False,
+    is_idempotent: bool = False,
 ):
     def task_decorator(func):
         @functools.wraps(func)
@@ -51,7 +51,7 @@ def handle_task_callback(
             # Setup retry cache for signature idempotency on retries (durable tasks only)
             cache_token = None
             cache_state = None
-            if durable and not is_normal_run:
+            if is_idempotent and not is_normal_run:
                 cache_state = await setup_retry_cache(
                     ctx.workflow_id, ctx.attempt_number
                 )

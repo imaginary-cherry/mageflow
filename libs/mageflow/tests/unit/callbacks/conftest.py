@@ -94,7 +94,7 @@ def handler_factory(
         expected_params=expected_params,
         wrap_res=wrap_res,
         send_signature=send_signature,
-        durable=durable,
+        is_idempotent=durable,
     )
     async def handler(*args, **kwargs):
         tracked_calls.append(CallTracker(args=args, kwargs=kwargs))

@@ -3,12 +3,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 import rapyer
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.signature.retry_cache import (
-    SignatureRetryCache,
-    retry_cache_ctx,
-)
-from thirdmagic.task import TaskSignature
 
 from mageflow.callbacks import HatchetResult
 from tests.integration.hatchet.models import ContextMessage
@@ -18,7 +12,12 @@ from tests.unit.callbacks.conftest import (
     handler_factory,
     task_signature_factory,
 )
-
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.signature.retry_cache import (
+    SignatureRetryCache,
+    retry_cache_ctx,
+)
+from thirdmagic.task import TaskSignature
 
 # --- Durable task: cache is created on first attempt ---
 
@@ -48,7 +47,7 @@ async def test__durable_task__first_attempt__cache_created(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -90,7 +89,7 @@ async def test__durable_task__first_attempt_error_with_retry__cache_persists(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -148,7 +147,7 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -185,7 +184,7 @@ async def test__durable_task__final_failure__cache_deleted(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -221,7 +220,7 @@ async def test__durable_task__success__cache_deleted(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -259,7 +258,7 @@ async def test__non_durable_task__no_cache_created(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=False)(user_func)
+    handler = handle_task_callback(is_idempotent=False)(user_func)
     message = ContextMessage()
 
     # Act
@@ -306,7 +305,7 @@ async def test__non_durable_task__retry_creates_new_signatures(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=False)(user_func)
+    handler = handle_task_callback(is_idempotent=False)(user_func)
     message = ContextMessage()
 
     # Act
@@ -347,7 +346,7 @@ async def test__durable_task__retry_no_cache__creates_fresh_signatures(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -383,7 +382,7 @@ async def test__durable_task__no_task_id__no_cache(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler = handle_task_callback(durable=True)(user_func)
+    handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
     # Act
@@ -475,7 +474,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
 
     from mageflow.callbacks import handle_task_callback
 
-    handler1 = handle_task_callback(durable=True)(user_func_first)
+    handler1 = handle_task_callback(is_idempotent=True)(user_func_first)
     ctx1 = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
@@ -511,7 +510,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
         retry_keys.extend([sig1.key, sig2.key, sig3.key])
         return "success"
 
-    handler2 = handle_task_callback(durable=True)(user_func_retry)
+    handler2 = handle_task_callback(is_idempotent=True)(user_func_retry)
     ctx2 = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature2.key,

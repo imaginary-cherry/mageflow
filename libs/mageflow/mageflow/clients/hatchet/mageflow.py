@@ -125,7 +125,7 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def task_decorator(self, func: Callable, hatchet_task, durable: bool = False):
+    def task_decorator(self, func: Callable, hatchet_task, is_idempotent: bool = False):
         param_config = (
             AcceptParams.ALL
             if does_task_wants_ctx(func)
@@ -133,7 +133,7 @@ class HatchetMageflow(Hatchet):
         )
         send_signature = getattr(func, "__send_signature__", False)
         handler_dec = handle_task_callback(
-            param_config, send_signature=send_signature, durable=durable
+            param_config, send_signature=send_signature, is_idempotent=is_idempotent
         )
         func = handler_dec(func)
         wf = hatchet_task(func)
@@ -149,7 +149,7 @@ class HatchetMageflow(Hatchet):
         hatchet_task = super().task(name=name, **kwargs)
 
         decorator = functools.partial(
-            self.task_decorator, hatchet_task=hatchet_task, durable=False
+            self.task_decorator, hatchet_task=hatchet_task, is_idempotent=False
         )
         return decorator
 
@@ -161,7 +161,7 @@ class HatchetMageflow(Hatchet):
         hatchet_task = super().durable_task(name=name, **kwargs)
 
         decorator = functools.partial(
-            self.task_decorator, hatchet_task=hatchet_task, durable=True
+            self.task_decorator, hatchet_task=hatchet_task, is_idempotent=True
         )
 
         return decorator
