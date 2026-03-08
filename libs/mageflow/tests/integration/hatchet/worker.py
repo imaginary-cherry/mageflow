@@ -32,6 +32,7 @@ from tests.integration.hatchet.models import (
     MessageWithMsgResults,
     MessageWithResult,
     SignatureKeysResult,
+    SignatureKeyWithWF,
     SleepTaskMessage,
 )
 
@@ -232,7 +233,9 @@ async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysRe
     execution_timeout=timedelta(seconds=60),
 )
 @hatchet.with_ctx
-async def retry_cache_durable_task(msg: ContextMessage, ctx: Context):
+async def retry_cache_durable_task(
+    msg: ContextMessage, ctx: Context
+) -> SignatureKeyWithWF:
     # Create standalone task signatures
     sig1 = await hatchet.asign(task1)
     sig2 = await hatchet.asign(task2)
@@ -248,22 +251,26 @@ async def retry_cache_durable_task(msg: ContextMessage, ctx: Context):
     swarm_sig = await hatchet.aswarm([swarm_sub1, swarm_sub2], is_swarm_closed=True)
 
     # Collect all created signature keys
-    results = SignatureKeysResult(
+    results = SignatureKeyWithWF(
         task_keys=[sig1.key, sig2.key],
         chain_key=chain_sig.key,
         chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
         swarm_key=swarm_sig.key,
         swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
         publish_state_key=swarm_sig.publishing_state_id,
+        workflow_id=ctx.workflow_id,
     )
     all_keys = results.model_dump(mode="json")
 
     # Store keys in Redis for test verification, keyed by attempt number
     attempt_key = f"retry-cache-test:{ctx.workflow_id}:attempt-{ctx.attempt_number}"
-    await TaskSignature.Meta.redis.set(attempt_key, all_keys)
+    await TaskSignature.Meta.redis.json().set(attempt_key, "$", all_keys)  # type: ignore[misc]
 
     if ctx.attempt_number == 1:
         raise ValueError("Intentional first attempt failure for retry cache test")
+
+    new_task = await hatchet.asign(task2)
+    results.task_keys.append(new_task.key)
 
     return results
 
