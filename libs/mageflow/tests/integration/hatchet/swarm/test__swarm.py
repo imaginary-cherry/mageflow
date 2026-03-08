@@ -3,29 +3,29 @@ from typing import cast
 
 import pytest
 from hatchet_sdk.runnables.types import EmptyModel
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
-    assert_redis_is_clean,
-    assert_swarm_task_done,
-    get_runs,
-    assert_signature_done,
-    map_wf_by_id,
     assert_overlaps_leq_k_workflows,
-    find_sub_calls_by_task_ref,
+    assert_redis_is_clean,
+    assert_signature_done,
+    assert_swarm_task_done,
     find_called_task_from_run_in_swarm,
+    find_sub_calls_by_task_ref,
+    get_runs,
+    map_wf_by_id,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage
 from tests.integration.hatchet.worker import (
     callback_with_redis,
-    fail_task,
     error_callback,
+    fail_task,
     task1_callback,
     task_with_data,
 )
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

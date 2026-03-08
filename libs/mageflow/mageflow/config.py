@@ -2,6 +2,7 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import Optional
 
+from mageflow.callbacks import AcceptParams
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.signature import SignatureConfig
@@ -28,6 +29,7 @@ class TTLConfig:
 @dataclass
 class MageflowConfig:
     ttl: TTLConfig = field(default_factory=TTLConfig)
+    param_config: AcceptParams = AcceptParams.NO_CTX
 
 
 def apply_ttl_config(ttl_config: TTLConfig):

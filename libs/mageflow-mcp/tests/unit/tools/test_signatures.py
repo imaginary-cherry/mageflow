@@ -1,12 +1,12 @@
 import asyncio
 
 import pytest
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.task.model import TaskSignature
 
 from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX, get_signature, list_signatures
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task.model import TaskSignature
 
 # ---------------------------------------------------------------------------
 # get_signature tests

@@ -1,12 +1,12 @@
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature import Signature
 
 from mageflow.chain.workflows import chain_end_task, chain_error_task
 from tests.unit.workflows.conftest import create_chain_test_setup
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature import Signature
 
 
 @pytest.fixture

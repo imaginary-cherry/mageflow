@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+tone_instructions: "Be concise and focus on bugs, security issues, and design problems. Avoid trivial style suggestions already handled by linters."
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  collapse_walkthrough: true
+  poem: false
+  review_status: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+
+  path_instructions:
+    - path: "**/tests/**"
+      instructions: |
+        Focus on test coverage completeness and edge cases.
+        Verify that tests use plain functions (not classes) per project convention.
+        Check that pytest.mark.parametrize uses list-of-lists format.
+    - path: "libs/mageflow/**"
+      instructions: |
+        Focus on correctness, error handling, and async safety.
+        This is the Hatchet client adapter layer with workflows and callbacks.
+        Check that imports are at the top of the file following PEP 8 ordering.
+    - path: "libs/third-magic/**"
+      instructions: |
+        This contains core models and signatures (Signature, TaskSignature, SwarmTaskSignature, ChainTaskSignature).
+        Focus on correctness and consistency of the signature model interfaces.
+    - path: "libs/mageflow-mcp/**"
+      instructions: |
+        This is the MCP server for AI agent support.
+        Focus on correctness and proper MCP protocol adherence.
+    - path: "libs/mage-voyance/**"
+      instructions: |
+        Task visualization and monitoring package.
+        Focus on correctness and integration with the mageflow ecosystem.
+    - path: "frontend/**"
+      instructions: |
+        React/Vite frontend with Tailwind CSS for viewing running tasks.
+        Focus on component correctness, accessibility, and proper React patterns.
+        Check for proper TypeScript usage and avoid any type assertions.
+
+  auto_review:
+    enabled: true
+    base_branches:
+      - "develop"
+      - "main"
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/uv.lock"
+    - "!**/bun.lockb"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!frontend/dist/**"
+
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  jira:
+    project_keys: []
+  linear:
+    team_keys: []
+
+chat:
+  auto_reply: true

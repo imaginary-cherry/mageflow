@@ -1,4 +1,4 @@
-from typing import TypeVar, Literal, cast
+from typing import Literal, TypeVar, cast
 
 import rapyer
 from rapyer.fields import RapyerKey

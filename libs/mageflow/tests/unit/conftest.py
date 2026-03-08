@@ -1,25 +1,25 @@
 from dataclasses import dataclass
 from logging import Logger
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fakeredis
 import pytest
 import pytest_asyncio
 import rapyer
-from hatchet_sdk import Hatchet, ClientConfig, Context
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.clients import BaseClientAdapter
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature import Signature
-from thirdmagic.swarm.model import SwarmTaskSignature, SwarmConfig
-from thirdmagic.task import TaskSignature
-from thirdmagic.task_def import MageflowTaskDefinition
+from hatchet_sdk import ClientConfig, Context, Hatchet
 
 import mageflow
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
 from mageflow.swarm.messages import SwarmResultsMessage
 from tests.integration.hatchet.models import ContextMessage
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.clients import BaseClientAdapter
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature import Signature
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 pytest.register_assert_rewrite("tests.assertions")
 

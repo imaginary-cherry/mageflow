@@ -1,14 +1,14 @@
-from typing import Optional, Self, Any
+from typing import Any, Optional, Self
 
 from pydantic import BaseModel
-from rapyer.fields import SafeLoad, RapyerKey
+from rapyer.fields import RapyerKey, SafeLoad
 
 from thirdmagic.errors import UnrecognizedTaskError
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task_def import MageflowTaskDefinition
-from thirdmagic.utils import return_value_field, HAS_HATCHET, HatchetTaskType
+from thirdmagic.utils import HAS_HATCHET, HatchetTaskType, return_value_field
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions

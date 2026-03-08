@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
 
 import pytest
 from pydantic import BaseModel
@@ -8,9 +8,9 @@ from rapyer.fields import RapyerKey
 import thirdmagic
 from tests.unit.creation.conftest import extract_hatchet_validator
 from tests.unit.messages import (
+    CommandMessageWithResult,
     ContextMessage,
     MessageWithData,
-    CommandMessageWithResult,
 )
 from thirdmagic.message import DEFAULT_RESULT_NAME
 from thirdmagic.task import TaskSignature

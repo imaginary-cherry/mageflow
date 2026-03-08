@@ -9,6 +9,22 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: pip install ruff black
+
+      - name: Check import sorting
+        run: ruff check --select I .
+
+      - name: Check formatting
+        run: black --check .
+
   validate-branch-target:
     runs-on: ubuntu-22.04
     if: github.event_name == 'pull_request'
@@ -221,11 +237,15 @@ jobs:
 
   test-results:
     runs-on: ubuntu-22.04
-    needs: [thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests]
+    needs: [lint, thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests]
     if: always()
     steps:
       - name: Check test results
         run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "Lint job failed"
+            exit 1
+          fi
           if [[ "${{ needs.thirdmagic-tests.result }}" != "success" ]]; then
             echo "Thirdmagic test job failed"
             exit 1

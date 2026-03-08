@@ -2,8 +2,8 @@ import pytest
 
 from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from mageflow_mcp.tools.signatures import get_signature, list_signatures
-from thirdmagic.signature.status import SignatureStatus
 from tests.integration.conftest import DispatchedTasks
+from thirdmagic.signature.status import SignatureStatus
 
 
 @pytest.mark.asyncio(loop_scope="session")

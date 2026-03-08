@@ -1,8 +1,8 @@
 import pytest
 
 import thirdmagic
-from tests.unit.assertions import assert_redis_keys_do_not_contain_sub_task_ids
 from tests.unit.assertions import (
+    assert_redis_keys_do_not_contain_sub_task_ids,
     assert_tasks_changed_status,
     assert_tasks_not_exists,
 )
@@ -13,7 +13,7 @@ from tests.unit.change_status.conftest import (
 )
 from tests.unit.messages import ContextMessage
 from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.task import TaskSignature, SignatureStatus
+from thirdmagic.task import SignatureStatus, TaskSignature
 
 
 @pytest.mark.asyncio

@@ -4,30 +4,30 @@ from datetime import datetime
 import pytest
 from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
-    get_runs,
     assert_signature_done,
-    assert_signature_not_called,
     assert_signature_failed,
-    map_wf_by_id,
+    assert_signature_not_called,
     assert_task_was_paused,
+    get_runs,
+    map_wf_by_id,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage, MageflowTestError
 from tests.integration.hatchet.worker import (
-    timeout_task,
+    cancel_retry,
     error_callback,
+    fail_task,
+    normal_retry_once,
     retry_once,
     retry_to_failure,
     task1_callback,
-    cancel_retry,
-    fail_task,
-    normal_retry_once,
+    timeout_task,
 )
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -1,13 +1,13 @@
 import uuid
 
 import pytest
+
+from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList
+from mageflow_mcp.tools.containers import get_container_summary, list_sub_tasks
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
-
-from mageflow_mcp.models import ContainerSummary, ErrorResponse, PaginatedSubTaskList
-from mageflow_mcp.tools.containers import get_container_summary, list_sub_tasks
 
 # ---------------------------------------------------------------------------
 # Helpers

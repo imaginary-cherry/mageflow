@@ -11,7 +11,7 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from threading import Thread
-from typing import Generator, Callable, AsyncGenerator
+from typing import AsyncGenerator, Callable, Generator
 
 import psutil
 import pytest
@@ -23,20 +23,20 @@ from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 from hatchet_sdk.clients.rest import V1TaskStatus
 from hatchet_sdk.features.runs import BulkCancelReplayOpts, RunFilter
 from redis.asyncio.client import Redis
-from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow import Mageflow
 from mageflow.client import HatchetMageflow
 from tests.integration.hatchet.worker import (
+    chain_callback,
     config_obj,
+    fail_task,
     task1,
+    task1_callback,
     task2,
     task3,
-    task1_callback,
-    fail_task,
-    chain_callback,
 )
+from thirdmagic.task_def import MageflowTaskDefinition
 
 # If redis key starts with one of these, it shouldn't be removed
 STATIC_REDIS_PREFIX_KEYS = [MageflowTaskDefinition.__name__]

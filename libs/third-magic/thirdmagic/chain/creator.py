@@ -1,5 +1,6 @@
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskInputType
+from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 from thirdmagic.signature.retry_cache import (
     retry_cache_ctx,
     get_cached_signature,

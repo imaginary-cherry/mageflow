@@ -1,9 +1,9 @@
 import dataclasses
-from typing import TypeVar, get_type_hints, Optional, Callable, Any
+from typing import Any, Callable, Optional, TypeVar, get_type_hints
 
 from pydantic import BaseModel
 
-from thirdmagic.message import ReturnValueAnnotation, DEFAULT_RESULT_NAME
+from thirdmagic.message import DEFAULT_RESULT_NAME, ReturnValueAnnotation
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
 
@@ -44,9 +44,9 @@ def deep_merge(base: dict, updates: dict) -> dict:
 HatchetTaskType = Callable
 try:
     HAS_HATCHET = True
-    from hatchet_sdk.runnables.workflow import BaseWorkflow
+    from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 
-    HatchetTaskType = HatchetTaskType | Callable
+    HatchetTaskType = HatchetTaskType | Callable | Standalone
 except ImportError:
     HAS_HATCHET = False
 

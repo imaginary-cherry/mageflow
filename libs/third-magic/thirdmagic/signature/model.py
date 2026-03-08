@@ -2,20 +2,20 @@ import abc
 import asyncio
 from abc import ABC
 from datetime import datetime
-from typing import Optional, Self, Any, TypeAlias, ClassVar, cast
+from typing import Any, ClassVar, Optional, Self, TypeAlias, cast
 
 import rapyer
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
 from rapyer.errors.base import KeyNotFound
 from rapyer.fields import RapyerKey
-from rapyer.types import RedisDict, RedisList, RedisDatetime
+from rapyer.types import RedisDatetime, RedisDict, RedisList
 
 from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.signature.status import TaskStatus, PauseActionTypes, SignatureStatus
+from thirdmagic.signature.status import PauseActionTypes, SignatureStatus, TaskStatus
 from thirdmagic.utils import HAS_HATCHET
 
 if HAS_HATCHET:

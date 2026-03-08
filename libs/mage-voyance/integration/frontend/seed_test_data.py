@@ -9,7 +9,7 @@ from redis.asyncio import Redis
 from mageflow.chain.model import ChainTaskSignature
 from mageflow.signature.model import TaskSignature
 from mageflow.signature.status import SignatureStatus, TaskStatus
-from mageflow.swarm.model import SwarmTaskSignature, SwarmConfig
+from mageflow.swarm.model import SwarmConfig, SwarmTaskSignature
 from mageflow.swarm.state import PublishState
 
 TEST_PREFIX = "test_frontend_"

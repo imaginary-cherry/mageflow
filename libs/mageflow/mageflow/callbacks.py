@@ -7,6 +7,8 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
+
+from mageflow.utils.pythonic import flexible_call
 from thirdmagic.signature.retry_cache import (
     retry_cache_ctx,
     setup_retry_cache,
@@ -14,8 +16,6 @@ from thirdmagic.signature.retry_cache import (
 )
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
-
-from mageflow.utils.pythonic import flexible_call
 
 
 class AcceptParams(Enum):

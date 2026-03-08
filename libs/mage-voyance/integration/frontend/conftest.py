@@ -7,18 +7,18 @@ import rapyer
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from testcontainers.redis import RedisContainer
-
-from mageflow.visualizer.server import register_api_routes
 from tests.integration.frontend.seed_test_data import (
+    CallbackTestData,
     ChainTestData,
     SwarmTestData,
-    CallbackTestData,
     cleanup_test_data,
     seed_basic_task,
     seed_chain_task,
     seed_swarm_task,
     seed_task_with_callbacks,
 )
+
+from mageflow.visualizer.server import register_api_routes
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

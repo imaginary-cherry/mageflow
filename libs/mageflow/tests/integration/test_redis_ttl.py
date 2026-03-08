@@ -1,14 +1,14 @@
 import pytest
 import pytest_asyncio
-from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.startup import init_mageflow
 from tests.integration.hatchet.worker import (
-    TASK_ACTIVE_TTL,
     CHAIN_ACTIVE_TTL,
     SWARM_ACTIVE_TTL,
+    TASK_ACTIVE_TTL,
 )
+from thirdmagic.task_def import MageflowTaskDefinition
 
 TASK_NAME = "dummy_ttl_test_task"
 TTL_TOLERANCE = 100  # seconds tolerance for test execution time
