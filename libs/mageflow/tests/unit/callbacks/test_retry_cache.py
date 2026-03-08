@@ -1,11 +1,13 @@
-import asyncio
-from unittest.mock import AsyncMock
-
 import pytest
 import rapyer
-
 import thirdmagic
-from mageflow.callbacks import HatchetResult, handle_task_callback
+from thirdmagic.signature.retry_cache import (
+    SignatureRetryCache,
+    retry_cache_ctx,
+)
+from thirdmagic.task import TaskSignature
+
+from mageflow.callbacks import handle_task_callback
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.callbacks.conftest import (
     MockContextConfig,
@@ -13,12 +15,14 @@ from tests.unit.callbacks.conftest import (
     handler_factory,
     task_signature_factory,
 )
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.signature.retry_cache import (
-    SignatureRetryCache,
-    retry_cache_ctx,
-)
-from thirdmagic.task import TaskSignature
+
+
+@pytest.fixture(autouse=True)
+def _restore_retry_cache_ctx():
+    token = retry_cache_ctx.set(None)
+    yield
+    retry_cache_ctx.reset(token)
+
 
 # --- Durable task: cache is created on first attempt ---
 
@@ -43,7 +47,6 @@ async def test__durable_task__first_attempt__cache_created(
     async def user_func(msg):
         task_model = await thirdmagic.sign("test_task", model_validators=ContextMessage)
         return task_model.key
-
 
     handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
@@ -449,3 +452,158 @@ async def test__durable_task__multiple_signatures_cached_in_order(
 
     # Assert - same keys in same order
     assert retry_keys == first_attempt_keys
+
+
+# --- Mixed signature types in pipeline cached in order ---
+
+
+@pytest.mark.asyncio
+async def test__durable_task__mixed_signatures_in_pipeline__all_cached_in_order(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange - first attempt: create mixed signature types inside a pipeline
+    workflow_id = "wf-mixed-pipeline"
+    signature, _ = await task_signature_factory(retries=3)
+
+    first_attempt_keys = []
+
+    async def user_func_first(msg):
+        async with rapyer.apipeline():
+            sig_task = await thirdmagic.sign(
+                "test_task", model_validators=ContextMessage
+            )
+            sig_chain = await thirdmagic.chain(
+                ["test_task", "test_task"], name="test-chain"
+            )
+            sig_swarm = await thirdmagic.swarm(["test_task"], task_name="test-swarm")
+        first_attempt_keys.extend([sig_task.key, sig_chain.key, sig_swarm.key])
+        raise ValueError("Retryable error")
+
+    handler1 = handle_task_callback(is_idempotent=True)(user_func_first)
+    ctx1 = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature.key,
+            job_name="test_task",
+            attempt_number=1,
+            workflow_id=workflow_id,
+        )
+    )
+    message = ContextMessage()
+
+    with pytest.raises(ValueError):
+        await handler1(message, ctx1)
+
+    # Verify cache has 3 entries in correct order
+    cache = await SignatureRetryCache.aget(workflow_id)
+    assert len(cache.signature_ids) == 3
+    assert cache.signature_ids == first_attempt_keys
+
+    # Arrange - second attempt: signatures should come from cache in order
+    signature2, _ = await task_signature_factory(task_name="test_task_2", retries=3)
+
+    retry_keys = []
+
+    async def user_func_retry(msg):
+        async with rapyer.apipeline():
+            sig_task = await thirdmagic.sign(
+                "test_task", model_validators=ContextMessage
+            )
+            sig_chain = await thirdmagic.chain(
+                ["test_task", "test_task"], name="test-chain"
+            )
+            sig_swarm = await thirdmagic.swarm(["test_task"], task_name="test-swarm")
+        retry_keys.extend([sig_task.key, sig_chain.key, sig_swarm.key])
+        return "success"
+
+    handler2 = handle_task_callback(is_idempotent=True)(user_func_retry)
+    ctx2 = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature2.key,
+            job_name="test_task_2",
+            attempt_number=2,
+            workflow_id=workflow_id,
+        )
+    )
+
+    # Act
+    await handler2(message, ctx2)
+
+    # Assert - same keys in same order
+    assert retry_keys == first_attempt_keys
+
+
+# --- Crash mid-pipeline leaves cache unchanged ---
+
+
+@pytest.mark.asyncio
+async def test__durable_task__crash_mid_pipeline__cache_unchanged(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange - first attempt: create one signature outside any extra pipeline
+    workflow_id = "wf-crash-pipeline"
+    signature, _ = await task_signature_factory(retries=3)
+
+    pre_crash_key = None
+
+    async def user_func_first(msg):
+        nonlocal pre_crash_key
+
+        pre_sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        pre_crash_key = pre_sig.key
+
+        # Start a pipeline, create another signature, then crash
+        with pytest.raises(RuntimeError):
+            async with rapyer.apipeline():
+                await thirdmagic.sign("test_task", model_validators=ContextMessage)
+                raise RuntimeError("simulated crash")
+
+        raise ValueError("Retryable error after crash")
+
+    handler1 = handle_task_callback(is_idempotent=True)(user_func_first)
+    ctx1 = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature.key,
+            job_name="test_task",
+            attempt_number=1,
+            workflow_id=workflow_id,
+        )
+    )
+    message = ContextMessage()
+
+    with pytest.raises(ValueError, match="Retryable error after crash"):
+        await handler1(message, ctx1)
+
+    # Assert - cache should have only 1 entry (the pre-crash signature)
+    cache = await SignatureRetryCache.aget(workflow_id)
+    assert len(cache.signature_ids) == 1
+    assert cache.signature_ids[0] == pre_crash_key
+
+    # Arrange - retry: the pre-crash signature should be retrievable
+    signature2, _ = await task_signature_factory(task_name="test_task_2", retries=3)
+
+    retry_key = None
+
+    async def user_func_retry(msg):
+        nonlocal retry_key
+
+        sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        retry_key = sig.key
+        return "success"
+
+    handler2 = handle_task_callback(is_idempotent=True)(user_func_retry)
+    ctx2 = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature2.key,
+            job_name="test_task_2",
+            attempt_number=2,
+            workflow_id=workflow_id,
+        )
+    )
+
+    # Act
+    await handler2(message, ctx2)
+
+    # Assert - the pre-crash signature is returned from cache
+    assert retry_key == pre_crash_key
