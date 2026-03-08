@@ -1,4 +1,5 @@
 import pytest
+import rapyer
 
 import thirdmagic
 from tests.unit.utils import extract_hatchet_validator
@@ -428,3 +429,110 @@ async def test__sign__multiple_signatures__all_cached_and_restored(hatchet_mock)
     assert cached1.key == sig1.key
     assert cached2.key == sig2.key
     assert cached3.key == sig3.key
+
+
+# --- Mixed signature types in pipeline ---
+
+
+@pytest.mark.asyncio
+async def test__abounded_field__mixed_signatures__all_cached_in_order(hatchet_mock):
+    # Arrange
+    @hatchet_mock.task(name="task_a")
+    def task_a(msg):
+        return msg
+
+    @hatchet_mock.task(name="swarm_task")
+    def swarm_task(msg):
+        return msg
+
+    @hatchet_mock.task(name="chain_task_1")
+    def chain_task_1(msg):
+        return msg
+
+    @hatchet_mock.task(name="chain_task_2")
+    def chain_task_2(msg):
+        return msg
+
+    # Act - first attempt: create mixed signatures inside a pipeline
+    state1 = await setup_retry_cache("wf-mixed", attempt_number=1)
+    token1 = retry_cache_ctx.set(state1)
+    try:
+        async with rapyer.apipeline():
+            sig_a = await thirdmagic.sign(task_a)
+            swarm_sig = await swarm([swarm_task], task_name="test-swarm")
+            chain_sig = await chain([chain_task_1, chain_task_2])
+    finally:
+        retry_cache_ctx.reset(token1)
+
+    # Assert - all three cached in order
+    assert len(state1.cache.signature_ids) == 3
+    assert state1.cache.signature_ids[0] == sig_a.key
+    assert state1.cache.signature_ids[1] == swarm_sig.key
+    assert state1.cache.signature_ids[2] == chain_sig.key
+
+    # Act - retry: same calls should return cached signatures
+    state2 = await setup_retry_cache("wf-mixed", attempt_number=2)
+    token2 = retry_cache_ctx.set(state2)
+    try:
+        async with rapyer.apipeline():
+            cached_a = await thirdmagic.sign(task_a)
+            cached_swarm = await swarm([swarm_task], task_name="test-swarm")
+            cached_chain = await chain([chain_task_1, chain_task_2])
+    finally:
+        retry_cache_ctx.reset(token2)
+
+    # Assert - each returns the original cached signature
+    assert cached_a.key == sig_a.key
+    assert cached_swarm.key == swarm_sig.key
+    assert cached_chain.key == chain_sig.key
+
+
+# --- Crash mid-pipeline leaves cache unchanged ---
+
+
+@pytest.mark.asyncio
+async def test__abounded_field__crash_mid_pipeline__cache_unchanged(hatchet_mock):
+    # Arrange
+    @hatchet_mock.task(name="task_pre")
+    def task_pre(msg):
+        return msg
+
+    @hatchet_mock.task(name="task_crash")
+    def task_crash(msg):
+        return msg
+
+    # Act - first attempt: create one signature outside any extra pipeline
+    state = await setup_retry_cache("wf-crash", attempt_number=1)
+    token = retry_cache_ctx.set(state)
+    try:
+        pre_sig = await thirdmagic.sign(task_pre)
+    finally:
+        retry_cache_ctx.reset(token)
+
+    assert len(state.cache.signature_ids) == 1
+
+    # Act - start a pipeline, create another signature, then crash
+    token2 = retry_cache_ctx.set(state)
+    try:
+        with pytest.raises(RuntimeError):
+            async with rapyer.apipeline():
+                await thirdmagic.sign(task_crash)
+                raise RuntimeError("simulated crash")
+    finally:
+        retry_cache_ctx.reset(token2)
+
+    # Assert - reload cache from Redis; should still have only 1 entry
+    reloaded_cache = await SignatureRetryCache.afind_one("wf-crash")
+    assert reloaded_cache is not None
+    assert len(reloaded_cache.signature_ids) == 1
+    assert reloaded_cache.signature_ids[0] == pre_sig.key
+
+    # Verify the pre-crash signature is still retrievable on retry
+    state3 = await setup_retry_cache("wf-crash", attempt_number=2)
+    token3 = retry_cache_ctx.set(state3)
+    try:
+        retrieved = await thirdmagic.sign(task_pre)
+    finally:
+        retry_cache_ctx.reset(token3)
+
+    assert retrieved.key == pre_sig.key
