@@ -107,7 +107,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
             async with self.apipeline():
                 sub_tasks = await self.add_tasks(tasks, close_on_max_task)
                 for sub_task in sub_tasks:
-                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
+                    sub_task.kwargs.update(
+                        **msg.model_dump(mode="json", exclude_unset=True)
+                    )
             return await self.ClientAdapter.afill_swarm(
                 self, max_tasks=len(tasks), options=options
             )
@@ -126,7 +128,9 @@ class SwarmTaskSignature(ContainerTaskSignature):
             async with self.apipeline():
                 sub_tasks = await self.add_tasks(tasks, close_on_max_task)
                 for sub_task, msg in zip(sub_tasks, msgs):
-                    sub_task.kwargs.update(**msg.model_dump(mode="json"))
+                    sub_task.kwargs.update(
+                        **msg.model_dump(mode="json", exclude_unset=True)
+                    )
             return await self.ClientAdapter.afill_swarm(self, options=options)
 
     async def change_status(self, status: SignatureStatus):
