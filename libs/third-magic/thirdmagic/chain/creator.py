@@ -3,7 +3,6 @@ from thirdmagic.signature.model import TaskInputType
 from thirdmagic.signature.retry_cache import (
     cache_signature,
     get_cached_signature,
-    retry_cache_ctx,
 )
 from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 
@@ -15,11 +14,9 @@ async def chain(
     success: TaskInputType = None,
     **kwargs,
 ) -> ChainTaskSignature:
-    cache_state = retry_cache_ctx.get()
-    if cache_state and cache_state.is_retry and cache_state.cache:
-        cached = await get_cached_signature(cache_state, ChainTaskSignature)
-        if cached is not None:
-            return cached
+    cached = await get_cached_signature(ChainTaskSignature)
+    if cached is not None:
+        return cached
 
     if len(tasks) < 2:
         raise ValueError(
@@ -42,7 +39,6 @@ async def chain(
             task.signature_container_id = chain_task_signature.key
         await chain_task_signature.asave()
 
-    if cache_state and not cache_state.is_retry:
-        await cache_signature(cache_state, chain_task_signature)
+    await cache_signature(chain_task_signature)
 
     return chain_task_signature
