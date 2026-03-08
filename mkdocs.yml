@@ -68,6 +68,7 @@ nav:
     - Swarm: documentation/swarm.md
     - Task Lifecycle: documentation/task-lifecycle.md
     - Transactions: documentation/transactions.md
+    - Idempotency: documentation/idempotency.md
   - API Reference:
       - Functions: api/functions.md
       - Client: api/client.md
