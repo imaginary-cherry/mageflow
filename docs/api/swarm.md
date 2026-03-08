@@ -99,6 +99,26 @@ async def aio_run_in_swarm(
 - `options` (TriggerWorkflowOptions): Optional Hatchet trigger options
 - `close_on_max_task` (bool): Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
 
+#### `aio_run_tasks_in_swarm(tasks, msgs, options, close_on_max_task)`
+
+Add multiple tasks to the swarm where each task receives its own message.
+
+```python
+async def aio_run_tasks_in_swarm(
+    self,
+    tasks: list[TaskSignatureConvertible],
+    msgs: list[BaseModel],
+    options: TriggerWorkflowOptions = None,
+    close_on_max_task: bool = True,
+)
+```
+
+**Parameters:**
+- `tasks` (list): List of tasks to add and run
+- `msgs` (list[BaseModel]): List of messages, one per task — each task gets its own message
+- `options` (TriggerWorkflowOptions): Optional Hatchet trigger options
+- `close_on_max_task` (bool): Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
+
 #### `close_swarm()`
 
 Close the swarm to prevent new tasks and trigger completion callbacks.
