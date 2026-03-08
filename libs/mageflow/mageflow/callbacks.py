@@ -46,6 +46,7 @@ def handle_task_callback(
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
             is_normal_run = lifecycle.is_vanilla_run()
+            is_task_finish = False
             signature = await lifecycle.start_task()
 
             # Setup retry cache for signature idempotency on retries (durable tasks only)
@@ -80,8 +81,7 @@ def handle_task_callback(
                 )
                 if not will_retry:
                     await lifecycle.task_failed(msg_data, e)
-                    if cache_state:
-                        await teardown_retry_cache(cache_state)
+                    is_task_finish = True
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation
@@ -90,8 +90,7 @@ def handle_task_callback(
                 task_results = HatchetResult(hatchet_results=result)
                 dumped_results = task_results.model_dump(mode="json")
                 await lifecycle.task_success(dumped_results["hatchet_results"])
-                if cache_state:
-                    await teardown_retry_cache(cache_state)
+                is_task_finish = True
                 if wrap_res:
                     return task_results
                 else:
@@ -99,6 +98,8 @@ def handle_task_callback(
             finally:
                 if cache_token is not None:
                     retry_cache_ctx.reset(cache_token)
+                if is_task_finish and cache_state:
+                    await teardown_retry_cache(cache_state)
 
         wrapper.__signature__ = inspect.signature(func)
         return wrapper
