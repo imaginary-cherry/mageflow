@@ -35,9 +35,10 @@ retry_cache_ctx: ContextVar[Optional[RetryCacheState]] = ContextVar(
 
 async def setup_retry_cache(workflow_id: str, attempt_number: int) -> RetryCacheState:
     is_retry = attempt_number > 1
+    cache = None
     if is_retry:
         cache = await SignatureRetryCache.afind_one(workflow_id)
-    else:
+    if cache is None:
         cache = SignatureRetryCache(workflow_id=workflow_id)
         await cache.asave()
     return RetryCacheState(workflow_id=workflow_id, is_retry=is_retry, cache=cache)
