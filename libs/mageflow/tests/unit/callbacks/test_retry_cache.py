@@ -99,11 +99,10 @@ async def test__durable_task__first_attempt_error_with_retry__cache_persists(
         await handler(message, ctx)
 
     # Assert - cache should still exist because task will be retried
-    cache_key = f"SignatureRetryCache:{workflow_id}"
     assert await redis_client.exists(cache_key)
 
     # Verify the cache contains the created signature
-    cache = await rapyer.aget(cache_key)
+    cache = await SignatureRetryCache.aget(cache_key)
     assert len(cache.signature_ids) == 1
     assert cache.signature_ids[0] == created_sig_key
 
