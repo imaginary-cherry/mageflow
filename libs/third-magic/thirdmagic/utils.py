@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Callable, Optional, TypeVar, get_type_hints
+from typing import Callable, Optional, TypeVar, get_type_hints
 
 from pydantic import BaseModel
 
