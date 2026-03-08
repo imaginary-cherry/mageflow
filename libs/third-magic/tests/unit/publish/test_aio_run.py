@@ -17,7 +17,9 @@ async def test_aio_run_calls_await_signature_with_correct_params(mock_adapter):
     await signature.aio_run(msg)
 
     # Assert
-    mock_adapter.await_signature.assert_awaited_once_with(signature, msg, set_return_field=False)
+    mock_adapter.await_signature.assert_awaited_once_with(
+        signature, msg, set_return_field=False
+    )
 
 
 @pytest.mark.asyncio
