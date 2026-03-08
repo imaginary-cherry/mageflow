@@ -233,8 +233,6 @@ async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysRe
 )
 @hatchet.with_ctx
 async def retry_cache_durable_task(msg: ContextMessage, ctx: Context):
-    """Durable task that creates signatures, chains, swarms on first attempt then fails.
-    On retry, the same cached signatures should be returned."""
     # Create standalone task signatures
     sig1 = await hatchet.asign(task1)
     sig2 = await hatchet.asign(task2)
@@ -247,21 +245,18 @@ async def retry_cache_durable_task(msg: ContextMessage, ctx: Context):
     # Create a swarm
     swarm_sub1 = await hatchet.asign(task1)
     swarm_sub2 = await hatchet.asign(task2)
-    swarm_sig = await hatchet.aswarm(
-        [swarm_sub1, swarm_sub2], is_swarm_closed=True
-    )
+    swarm_sig = await hatchet.aswarm([swarm_sub1, swarm_sub2], is_swarm_closed=True)
 
     # Collect all created signature keys
-    all_keys = json.dumps({
-        "sig1": sig1.key,
-        "sig2": sig2.key,
-        "chain_key": chain_sig.key,
-        "chain_sub1": chain_sub1.key,
-        "chain_sub2": chain_sub2.key,
-        "swarm_key": swarm_sig.key,
-        "swarm_sub1": swarm_sub1.key,
-        "swarm_sub2": swarm_sub2.key,
-    })
+    results = SignatureKeysResult(
+        task_keys=[sig1.key, sig2.key],
+        chain_key=chain_sig.key,
+        chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
+        swarm_key=swarm_sig.key,
+        swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
+        publish_state_key=swarm_sig.publishing_state_id,
+    )
+    all_keys = results.model_dump(mode="json")
 
     # Store keys in Redis for test verification, keyed by attempt number
     attempt_key = f"retry-cache-test:{ctx.workflow_id}:attempt-{ctx.attempt_number}"
@@ -270,14 +265,7 @@ async def retry_cache_durable_task(msg: ContextMessage, ctx: Context):
     if ctx.attempt_number == 1:
         raise ValueError("Intentional first attempt failure for retry cache test")
 
-    return SignatureKeysResult(
-        task_keys=[sig1.key, sig2.key],
-        chain_key=chain_sig.key,
-        chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
-        swarm_key=swarm_sig.key,
-        swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
-        publish_state_key=swarm_sig.publishing_state_id,
-    )
+    return results
 
 
 workflows = [
