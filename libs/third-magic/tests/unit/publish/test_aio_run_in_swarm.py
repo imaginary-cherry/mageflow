@@ -3,6 +3,7 @@ from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 import thirdmagic
 from tests.unit.messages import ContextMessage
+from thirdmagic.errors import TaskAndMsgsDontMatchForSwarmError
 from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
 
@@ -93,6 +94,22 @@ async def test_aio_run_tasks_in_swarm_afill_swarm_called_without_options(mock_ad
     await swarm.aio_run_tasks_in_swarm([t1], msgs)
 
     mock_adapter.afill_swarm.assert_awaited_once_with(swarm, options=None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.hatchet
+async def test_aio_run_tasks_in_swarm_raises_when_tasks_and_msgs_length_mismatch(
+    mock_adapter,
+):
+    swarm = await thirdmagic.swarm(
+        task_name="swarm_mismatch", config=SwarmConfig(max_concurrency=5)
+    )
+    t1 = await thirdmagic.sign("task_a", model_validators=ContextMessage)
+    t2 = await thirdmagic.sign("task_b", model_validators=ContextMessage)
+    msgs = [ContextMessage(base_data={"a": 1})]
+
+    with pytest.raises(TaskAndMsgsDontMatchForSwarmError):
+        await swarm.aio_run_tasks_in_swarm([t1, t2], msgs)
 
 
 # ── aio_run_in_swarm ────────────────────────────────────────────────
