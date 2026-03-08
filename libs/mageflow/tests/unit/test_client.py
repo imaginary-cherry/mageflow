@@ -1,10 +1,9 @@
 import asyncio
 from datetime import timedelta
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from hatchet_sdk import Context
-from hatchet_sdk import Hatchet
+from hatchet_sdk import Context, Hatchet
 from redis import Redis
 
 from mageflow.client import HatchetMageflow

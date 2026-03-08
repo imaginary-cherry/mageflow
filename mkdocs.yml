@@ -67,11 +67,15 @@ nav:
     - Chain: documentation/chain.md
     - Swarm: documentation/swarm.md
     - Task Lifecycle: documentation/task-lifecycle.md
+    - Transactions: documentation/transactions.md
   - API Reference:
+      - Functions: api/functions.md
       - Client: api/client.md
       - Chain: api/chain.md
       - Swarm: api/swarm.md
       - Signature: api/signature.md
+      - Configuration: api/config.md
+  - Roadmap: roadmap.md
   - Changelog: changelog.md
 
 markdown_extensions:

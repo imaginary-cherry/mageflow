@@ -1,30 +1,30 @@
 import asyncio
 
 import pytest
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.assertions import (
     assert_chain_done,
     assert_redis_is_clean,
-    get_runs,
+    assert_signature_done,
     assert_signature_not_called,
     assert_swarm_task_done,
-    assert_signature_done,
+    get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import CommandMessageWithResult
 from tests.integration.hatchet.worker import (
-    task1_callback,
-    task_with_data,
-    task2_with_result,
-    task2,
-    task3,
+    cancel_retry,
     error_callback,
     retry_once,
-    cancel_retry,
+    task1_callback,
+    task2,
+    task2_with_result,
+    task3,
+    task_with_data,
 )
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

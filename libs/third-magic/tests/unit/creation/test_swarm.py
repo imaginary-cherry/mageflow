@@ -21,7 +21,7 @@ async def test_add_task_reaches_max_and_closes_swarm(mock_close_swarm, mock_task
     await swarm_signature.add_task(task_signature_2, close_on_max_task=True)
 
     # Assert
-    mock_close_swarm.assert_called_once_with()
+    mock_close_swarm.assert_called_once_with(should_check_swarm=False)
 
 
 @pytest.mark.asyncio

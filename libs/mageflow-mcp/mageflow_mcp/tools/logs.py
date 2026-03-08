@@ -3,10 +3,10 @@ import math
 from mcp.server.fastmcp import Context
 from rapyer.errors import RapyerError
 from rapyer.errors.base import KeyNotFound
-from thirdmagic.task import TaskSignature
 
 from mageflow_mcp.models import ErrorResponse, LogsResponse
 from mageflow_mcp.tools.signatures import PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX
+from thirdmagic.task import TaskSignature
 
 _TERMINAL_STATUSES = {"COMPLETED", "CANCELLED", "FAILED"}
 _VALID_LEVELS = {"debug", "info", "warn", "error"}

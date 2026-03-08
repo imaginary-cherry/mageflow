@@ -6,8 +6,8 @@ from mageflow_mcp.models import (
     PaginatedSubTaskList,
 )
 from mageflow_mcp.tools.containers import get_container_summary, list_sub_tasks
-from thirdmagic.signature.status import SignatureStatus
 from tests.integration.conftest import DispatchedTasks
+from thirdmagic.signature.status import SignatureStatus
 
 
 @pytest.mark.asyncio(loop_scope="session")

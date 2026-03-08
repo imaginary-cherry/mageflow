@@ -10,21 +10,35 @@ The main MageFlow client that wraps your task manager (Hatchet) and provides enh
 
 ```python
 from mageflow import Mageflow, MageflowConfig
+from mageflow.callbacks import AcceptParams
 from hatchet_sdk import Hatchet
 
 client = Mageflow(
-    hatchet_client: Hatchet,
-    redis_client: Redis | str = None,
-    param_config: AcceptParams = AcceptParams.NO_CTX,
-    config: MageflowConfig = None
+    hatchet_client=Hatchet(),
+    redis_client="redis://localhost:6379",
+    config=MageflowConfig(
+        param_config=AcceptParams.NO_CTX,
+    ),
 )
 ```
 
 **Parameters:**
 - `hatchet_client` (Hatchet): The Hatchet SDK client instance
 - `redis_client` (Redis | str): Redis client instance or connection string for state management
-- `param_config` (AcceptParams): Parameter configuration for context handling (NO_CTX, ALL, CTX_ONLY)
-- `config` (MageflowConfig): Optional configuration for TTL and other settings. See [TTL](../documentation/task-lifecycle.md#ttl-time-to-live)
+- `config` (MageflowConfig): Configuration for param handling, TTL, and other settings. See [TTL](../documentation/task-lifecycle.md#ttl-time-to-live)
+
+### MageflowConfig
+
+```python
+@dataclass
+class MageflowConfig:
+    ttl: TTLConfig
+    param_config: AcceptParams = AcceptParams.NO_CTX
+```
+
+**Fields:**
+- `ttl` (TTLConfig): TTL settings for signatures. See [TTL](../documentation/task-lifecycle.md#ttl-time-to-live)
+- `param_config` (AcceptParams): Parameter configuration for context handling (`NO_CTX`, `ALL`, `CTX_ONLY`)
 
 ### Client Methods
 

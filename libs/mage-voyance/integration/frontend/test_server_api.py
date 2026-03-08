@@ -1,5 +1,4 @@
 import pytest
-
 from tests.integration.frontend.seed_test_data import TEST_PREFIX
 
 
@@ -68,7 +67,14 @@ async def test_batch_fetch_tasks_returns_requested_tasks(test_client):
         assert "children_ids" in task
         assert "metadata" in task
         assert "status" in task
-        valid_statuses = ["pending", "running", "completed", "failed", "cancelled", "paused"]
+        valid_statuses = [
+            "pending",
+            "running",
+            "completed",
+            "failed",
+            "cancelled",
+            "paused",
+        ]
         assert task["status"] in valid_statuses
 
     # Verify specific status values for seeded tasks
@@ -244,7 +250,9 @@ async def test_get_callbacks_for_nonexistent_task_returns_none(test_client):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+@pytest.mark.skip(
+    reason="Control endpoints require Hatchet infrastructure not available in lightweight tests"
+)
 async def test_cancel_task_returns_202_accepted(test_client):
     # Arrange
     client, seeded_data = test_client
@@ -257,7 +265,9 @@ async def test_cancel_task_returns_202_accepted(test_client):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+@pytest.mark.skip(
+    reason="Control endpoints require Hatchet infrastructure not available in lightweight tests"
+)
 async def test_pause_task_returns_202_accepted(test_client):
     # Arrange
     client, seeded_data = test_client
@@ -270,7 +280,9 @@ async def test_pause_task_returns_202_accepted(test_client):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-@pytest.mark.skip(reason="Control endpoints require Hatchet infrastructure not available in lightweight tests")
+@pytest.mark.skip(
+    reason="Control endpoints require Hatchet infrastructure not available in lightweight tests"
+)
 async def test_retry_task_returns_202_accepted(test_client):
     # Arrange
     client, seeded_data = test_client

@@ -30,9 +30,9 @@ def main(port: int):
 
     try:
         print("Starting Redis container on port 6379...", file=sys.stderr)
-        _redis_container = RedisContainer("redis/redis-stack-server:7.2.0-v10").with_bind_ports(
-            6379, 6379
-        )
+        _redis_container = RedisContainer(
+            "redis/redis-stack-server:7.2.0-v10"
+        ).with_bind_ports(6379, 6379)
         _redis_container.start()
         print(f"Redis container started at localhost:6379", file=sys.stderr)
 

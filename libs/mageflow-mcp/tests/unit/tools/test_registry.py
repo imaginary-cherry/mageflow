@@ -1,9 +1,9 @@
 import pytest
-from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow_mcp.models import PaginatedTaskDefinitionList
 from mageflow_mcp.tools.registry import list_registered_tasks
 from mageflow_mcp.tools.signatures import PAGE_SIZE_MAX
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.mark.asyncio

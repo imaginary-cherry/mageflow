@@ -1,10 +1,10 @@
 import asyncio
 
 import pytest
-from thirdmagic.task_def import MageflowTaskDefinition
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage, CommandMessageWithResult
+from tests.integration.hatchet.models import CommandMessageWithResult, ContextMessage
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.mark.asyncio(loop_scope="session")

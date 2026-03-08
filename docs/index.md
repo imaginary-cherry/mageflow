@@ -1,12 +1,15 @@
 <div align="center">
   <img src="logo.png" alt="MageFlow Logo" width="200"/>
-
- [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-  [![codecov](https://codecov.io/gh/imaginary-cherry/mageflow/branch/main/graph/badge.svg)](https://codecov.io/gh/imaginary-cherry/mageflow)
-  [![PyPI version](https://badge.fury.io/py/mageflow.svg)](https://badge.fury.io/py/mageflow)
-  [![Downloads](https://static.pepy.tech/badge/mageflow)](https://pepy.tech/project/mageflow)
-
+  <p>
+    <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg&#63;style=for-the-badge" alt="Python 3.10+" height="28"/></a>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg&#63;style=for-the-badge" alt="License: MIT" height="28"/></a>
+    <a href="https://codecov.io/gh/imaginary-cherry/mageflow&#63;flags&#91;0&#93;=mageflow-unit"><img src="https://img.shields.io/codecov/c/gh/imaginary-cherry/mageflow&#63;style=for-the-badge&#38;flag=mageflow-unit" alt="mageflow unit coverage" height="28"/></a>
+    <a href="https://codecov.io/gh/imaginary-cherry/mageflow&#63;flags&#91;0&#93;=mageflow-integration"><img src="https://img.shields.io/codecov/c/gh/imaginary-cherry/mageflow&#63;style=for-the-badge&#38;flag=mageflow-integration" alt="mageflow integration coverage" height="28"/></a>
+    <a href="https://codecov.io/gh/imaginary-cherry/mageflow&#63;flags&#91;0&#93;=thirdmagic"><img src="https://img.shields.io/codecov/c/gh/imaginary-cherry/mageflow&#63;style=for-the-badge&#38;flag=thirdmagic" alt="thirdmagic coverage" height="28"/></a>
+    <a href="https://badge.fury.io/py/mageflow"><img src="https://img.shields.io/pypi/v/mageflow&#63;style=for-the-badge" alt="PyPI version" height="28"/></a>
+    <a href="https://pepy.tech/project/mageflow"><img src="https://img.shields.io/pepy/dt/mageflow&#63;style=for-the-badge" alt="Downloads" height="28"/></a>
+    <a href="https://imaginary-cherry.github.io/mageflow/"><img src="https://img.shields.io/badge/docs-github.io-blue&#63;style=for-the-badge" alt="Documentation" height="28"/></a>
+  </p>
 </div>
 
 # MageFlow

@@ -7,10 +7,10 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
-from thirdmagic.task.model import TaskSignature
-from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.utils.pythonic import flexible_call
+from thirdmagic.task.model import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 
 class AcceptParams(Enum):

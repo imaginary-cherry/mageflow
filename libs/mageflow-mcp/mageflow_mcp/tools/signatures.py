@@ -4,13 +4,13 @@ from typing import cast
 
 import rapyer
 from rapyer.errors.base import KeyNotFound, RapyerError
+
+from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
-
-from mageflow_mcp.models import ErrorResponse, PaginatedSignatureList, SignatureInfo
 
 PAGE_SIZE_DEFAULT = 20
 PAGE_SIZE_MAX = 50

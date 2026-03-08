@@ -3,44 +3,36 @@ import functools
 import inspect
 import random
 from datetime import timedelta
-from typing import Any, Unpack, Callable, TypedDict
+from typing import Any, Callable, TypedDict, Unpack
 
-from hatchet_sdk import Hatchet, Worker, Context
+from hatchet_sdk import Context, Hatchet, Worker
 from hatchet_sdk.labels import DesiredWorkerLabel
 from hatchet_sdk.rate_limit import RateLimit
 from hatchet_sdk.runnables.types import (
-    StickyStrategy,
     ConcurrencyExpression,
-    DefaultFilter,
     ConcurrencyLimitStrategy,
+    DefaultFilter,
+    StickyStrategy,
 )
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
-from thirdmagic import sign, chain
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.swarm.creator import SignatureOptions, swarm
-from thirdmagic.task import TaskSignatureConvertible, TaskSignature, TaskInputType
-from thirdmagic.task_def import MageflowTaskDefinition
-from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
 from mageflow.clients.inner_task_names import (
-    ON_CHAIN_ERROR,
     ON_CHAIN_END,
-    SWARM_FILL_TASK,
-    ON_SWARM_ITEM_ERROR,
+    ON_CHAIN_ERROR,
     ON_SWARM_ITEM_DONE,
+    ON_SWARM_ITEM_ERROR,
+    SWARM_FILL_TASK,
 )
 from mageflow.config import MageflowConfig
 from mageflow.startup import (
-    lifespan_initialize,
     init_mageflow,
+    lifespan_initialize,
     teardown_mageflow,
 )
 from mageflow.swarm.consts import SWARM_TASK_ID_PARAM_NAME
@@ -51,10 +43,18 @@ from mageflow.swarm.messages import (
 )
 from mageflow.swarm.workflows import (
     fill_swarm_running_tasks,
-    swarm_item_failed,
     swarm_item_done,
+    swarm_item_failed,
 )
 from mageflow.utils.mageflow import does_task_wants_ctx
+from thirdmagic import chain, sign
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.swarm.creator import SignatureOptions, swarm
+from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
+from thirdmagic.task_def import MageflowTaskDefinition
+from thirdmagic.utils import HatchetTaskType
 
 Duration = timedelta | str
 
@@ -103,13 +103,11 @@ class HatchetMageflow(Hatchet):
         self,
         hatchet: Hatchet,
         redis_client: Redis,
-        param_config: AcceptParams = AcceptParams.NO_CTX,
         config: MageflowConfig = None,
     ):
         super().__init__(client=hatchet._client)
         self.hatchet = hatchet
         self.redis = redis_client
-        self.param_config = param_config
         self.mageflow_config = config or MageflowConfig()
         self._task_defs: list[MageflowTaskDefinition] = []
 
@@ -129,7 +127,9 @@ class HatchetMageflow(Hatchet):
 
     def task_decorator(self, func: Callable, hatchet_task):
         param_config = (
-            AcceptParams.ALL if does_task_wants_ctx(func) else self.param_config
+            AcceptParams.ALL
+            if does_task_wants_ctx(func)
+            else self.mageflow_config.param_config
         )
         send_signature = getattr(func, "__send_signature__", False)
         handler_dec = handle_task_callback(param_config, send_signature=send_signature)

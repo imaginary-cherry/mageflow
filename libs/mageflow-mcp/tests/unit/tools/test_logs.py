@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from thirdmagic.task.model import TaskSignature
 
 from mageflow_mcp.models import ErrorResponse, LogEntry, LogsResponse
 from mageflow_mcp.tools.logs import get_logs
+from thirdmagic.task.model import TaskSignature
 
 # ---------------------------------------------------------------------------
 # Helpers

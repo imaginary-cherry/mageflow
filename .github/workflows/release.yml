@@ -1,31 +1,38 @@
 name: New Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types:
+      - completed
 
 jobs:
   create-github-release:
-    if: github.ref_type == 'tag' && github.event.base_ref == 'refs/heads/main'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-22.04
     permissions:
       contents: write  # Required for creating releases
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Extract version from pyproject.toml
+      with:
+        fetch-depth: 0  # Required to fetch all tags
+
+    - name: Extract version from latest tag
       id: version
       run: |
-        VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+        if [ -z "$TAG" ]; then
+          echo "Error: No v* tags found"
+          exit 1
+        fi
+        VERSION=${TAG#v}
         RELEASE_DATE=$(date +%Y-%m-%d)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
-        echo "Extracted version: $VERSION from pyproject.toml"
-        echo "Git tag: $TAG"
+        echo "Latest tag: $TAG"
+        echo "Extracted version: $VERSION"
         echo "Release date: $RELEASE_DATE"
 
     - name: Extract release notes
@@ -61,9 +68,12 @@ jobs:
         } >> $GITHUB_OUTPUT
     
     - name: Create GitHub Release
-      run: |
-        gh release create ${{ steps.version.outputs.tag }} \
-          --title "${{ steps.version.outputs.version }} - ${{ steps.version.outputs.release_date }}" \
-          --notes "${{ steps.release_notes.outputs.notes }}"
+      uses: actions/create-release@v1
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        release_name: ${{ steps.version.outputs.version }} - ${{ steps.version.outputs.release_date }}
+        body: ${{ steps.release_notes.outputs.notes }}
+        draft: false
+        prerelease: false

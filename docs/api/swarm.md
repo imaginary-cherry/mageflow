@@ -81,20 +81,42 @@ async def aio_run_no_wait(self, msg: BaseModel)
 
 #### `aio_run_in_swarm(task, msg, close_on_max_task)`
 
-Add a task to the swarm and immediately schedule it for execution.
+Add one or more tasks to the swarm and immediately schedule them. All tasks receive the same message.
 
 ```python
 async def aio_run_in_swarm(
     self,
-    task: TaskSignatureConvertible,
+    task: TaskSignatureConvertible | list[TaskSignatureConvertible],
     msg: BaseModel,
+    options: TriggerWorkflowOptions = None,
     close_on_max_task: bool = True,
 )
 ```
 
 **Parameters:**
-- `task`: Task signature, function, or task name to add and run
-- `msg` (BaseModel): Message object with data specific to this task
+- `task`: A single task or a list of tasks to add and run
+- `msg` (BaseModel): Message object shared across all tasks
+- `options` (TriggerWorkflowOptions): Optional Hatchet trigger options
+- `close_on_max_task` (bool): Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
+
+#### `aio_run_tasks_in_swarm(tasks, msgs, options, close_on_max_task)`
+
+Add multiple tasks to the swarm where each task receives its own message.
+
+```python
+async def aio_run_tasks_in_swarm(
+    self,
+    tasks: list[TaskSignatureConvertible],
+    msgs: list[BaseModel],
+    options: TriggerWorkflowOptions = None,
+    close_on_max_task: bool = True,
+)
+```
+
+**Parameters:**
+- `tasks` (list): List of tasks to add and run
+- `msgs` (list[BaseModel]): List of messages, one per task — each task gets its own message
+- `options` (TriggerWorkflowOptions): Optional Hatchet trigger options
 - `close_on_max_task` (bool): Automatically close the swarm when `max_task_allowed` is reached (default: `True`)
 
 #### `close_swarm()`
