@@ -7,10 +7,15 @@ from typing import Any
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.types import EmptyModel
 from pydantic import BaseModel
-
-from mageflow.utils.pythonic import flexible_call
+from thirdmagic.signature.retry_cache import (
+    retry_cache_ctx,
+    setup_retry_cache,
+    teardown_retry_cache,
+)
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
+
+from mageflow.utils.pythonic import flexible_call
 
 
 class AcceptParams(Enum):
@@ -27,6 +32,7 @@ def handle_task_callback(
     expected_params: AcceptParams = AcceptParams.NO_CTX,
     wrap_res: bool = True,
     send_signature: bool = False,
+    is_idempotent: bool = False,
 ):
     def task_decorator(func):
         @functools.wraps(func)
@@ -40,7 +46,17 @@ def handle_task_callback(
                 # NOTE: This should not run, the task should cancel, but just in case
                 return {"Error": "Task should have been canceled"}
             is_normal_run = lifecycle.is_vanilla_run()
+            is_task_finish = False
             signature = await lifecycle.start_task()
+
+            # Setup retry cache for signature idempotency on retries (durable tasks only)
+            cache_token = None
+            cache_state = None
+            if is_idempotent:
+                cache_state = await setup_retry_cache(
+                    ctx.workflow_id, ctx.attempt_number
+                )
+                cache_token = retry_cache_ctx.set(cache_state)
 
             # Add params if user requires
             if send_signature:
@@ -54,19 +70,22 @@ def handle_task_callback(
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
             except asyncio.CancelledError as e:
+                is_task_finish = True
                 if not is_normal_run:
                     await lifecycle.task_failed(msg_data, e)
                 raise
             except Exception as e:
-                if is_normal_run:
-                    raise
-                if not TaskSignature.ClientAdapter.should_task_retry(
+                will_retry = TaskSignature.ClientAdapter.should_task_retry(
                     task_model, ctx.attempt_number, e
-                ):
-                    await lifecycle.task_failed(msg_data, e)
+                )
+                if not will_retry:
+                    is_task_finish = True
+                    if not is_normal_run:
+                        await lifecycle.task_failed(msg_data, e)
                 raise
             else:
                 # If this is a simple task, no signature, then we dont do any manipulation
+                is_task_finish = True
                 if is_normal_run:
                     return result
                 task_results = HatchetResult(hatchet_results=result)
@@ -76,6 +95,11 @@ def handle_task_callback(
                     return task_results
                 else:
                     return result
+            finally:
+                if cache_token is not None:
+                    retry_cache_ctx.reset(cache_token)
+                if is_task_finish and cache_state:
+                    await teardown_retry_cache(cache_state)
 
         wrapper.__signature__ = inspect.signature(func)
         return wrapper

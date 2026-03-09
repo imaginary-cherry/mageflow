@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest_asyncio
+from thirdmagic.clients.lifecycle import BaseLifecycle
+from thirdmagic.signature import Signature
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
+from thirdmagic.swarm.state import PublishState
 
 import mageflow
 from mageflow.swarm.messages import (
@@ -11,10 +15,6 @@ from mageflow.swarm.messages import (
 )
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.conftest import SwarmItemDoneSetup
-from thirdmagic.clients.lifecycle import BaseLifecycle
-from thirdmagic.signature import Signature
-from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
-from thirdmagic.swarm.state import PublishState
 
 
 @dataclass

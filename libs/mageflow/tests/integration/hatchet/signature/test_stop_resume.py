@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from tests.integration.hatchet.assertions import (
@@ -19,7 +20,6 @@ from tests.integration.hatchet.worker import (
     task1_callback,
     task2_with_result,
 )
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio(loop_scope="session")

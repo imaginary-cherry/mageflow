@@ -8,6 +8,13 @@ from hatchet_sdk.runnables.types import EmptyModel
 from hatchet_sdk.runnables.workflow import BaseWorkflow
 from pydantic import BaseModel, TypeAdapter
 from rapyer.fields import RapyerKey
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.clients.base import BaseClientAdapter
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.clients.hatchet.workflow import MageflowWorkflow
@@ -25,13 +32,6 @@ from mageflow.swarm.messages import (
     SwarmErrorMessage,
     SwarmResultsMessage,
 )
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.clients.base import BaseClientAdapter
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.task import TaskSignature
-from thirdmagic.task_def import MageflowTaskDefinition
 
 
 class HatchetClientAdapter(BaseClientAdapter):
@@ -123,6 +123,15 @@ class HatchetClientAdapter(BaseClientAdapter):
     def extract_retries(self, client_task: BaseWorkflow) -> int:
         return client_task.tasks[0].retries
 
+    def _prepare_wf(self, signature: TaskSignature, set_return_field: bool, **kwargs):
+        total_kwargs = signature.kwargs | kwargs
+        workflow = self.hatchet.workflow(
+            name=signature.task_name, input_validator=signature.model_validators
+        )
+        return_field_name = signature.return_field_name if set_return_field else None
+        mageflow_wf = MageflowWorkflow(workflow, total_kwargs, return_field_name)
+        return mageflow_wf
+
     async def acall_signature(
         self,
         signature: TaskSignature,
@@ -134,16 +143,22 @@ class HatchetClientAdapter(BaseClientAdapter):
         if msg is None:
             msg = EmptyModel()
         options = self._update_options(signature, options)
-        total_kwargs = signature.kwargs | kwargs
-        workflow = self.hatchet.workflow(
-            name=signature.task_name, input_validator=signature.model_validators
-        )
-        mageflow_wf = MageflowWorkflow(
-            workflow,
-            total_kwargs,
-            signature.return_field_name if set_return_field else None,
-        )
+        mageflow_wf = self._prepare_wf(signature, set_return_field, **kwargs)
         return await mageflow_wf.aio_run_no_wait(msg, options)
+
+    async def await_signature(
+        self,
+        signature: "TaskSignature",
+        msg: Any,
+        set_return_field: bool,
+        options: TriggerWorkflowOptions = None,
+        **kwargs,
+    ):
+        if msg is None:
+            msg = EmptyModel()
+        options = self._update_options(signature, options)
+        mageflow_wf = self._prepare_wf(signature, set_return_field, **kwargs)
+        return await mageflow_wf.aio_run(msg, options)
 
     def should_task_retry(
         self,

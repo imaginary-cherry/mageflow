@@ -1,10 +1,10 @@
 import base64
 
 import pytest
+from thirdmagic.task import TaskSignature
 
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 from tests.unit.workflows.conftest import CompletedSwarmWithSuccessCallback
-from thirdmagic.task import TaskSignature
 
 
 async def corrupt_model_validators_in_redis(signature_key: str, redis_client):

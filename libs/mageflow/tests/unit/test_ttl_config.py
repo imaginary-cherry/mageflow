@@ -1,6 +1,12 @@
 import dataclasses
 
 import pytest
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.swarm.state import PublishState
+from thirdmagic.task import TaskSignature
 
 from mageflow.config import (
     SignatureTTLConfig,
@@ -8,11 +14,6 @@ from mageflow.config import (
     apply_ttl_config,
 )
 from tests.unit.utils import sub_classes
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.swarm.state import PublishState
-from thirdmagic.task import TaskSignature
 
 
 @pytest.fixture(autouse=True)
@@ -26,27 +27,29 @@ def _restore_signature_class_vars():
 
 
 def test_per_type_overrides_propagate():
+    done_ttl = REMOVED_TASK_TTL + 100
     apply_ttl_config(
         TTLConfig(
-            task=SignatureTTLConfig(active_ttl=100, ttl_when_sign_done=50),
+            task=SignatureTTLConfig(active_ttl=100, ttl_when_sign_done=done_ttl),
         )
     )
     assert TaskSignature.Meta.ttl == 100
-    assert TaskSignature.SignatureSettings.ttl_when_sign_done == 50
+    assert TaskSignature.SignatureSettings.ttl_when_sign_done == done_ttl
 
 
 def test_each_type_independent():
+    swarm_done_ttl = REMOVED_TASK_TTL + 200
     apply_ttl_config(
         TTLConfig(
-            swarm=SignatureTTLConfig(active_ttl=200, ttl_when_sign_done=80),
+            swarm=SignatureTTLConfig(active_ttl=200, ttl_when_sign_done=swarm_done_ttl),
         )
     )
     assert SwarmTaskSignature.Meta.ttl == 200
-    assert SwarmTaskSignature.SignatureSettings.ttl_when_sign_done == 80
+    assert SwarmTaskSignature.SignatureSettings.ttl_when_sign_done == swarm_done_ttl
 
     # Chain gets the default SignatureTTLConfig values (None), not the swarm overrides
     assert ChainTaskSignature.Meta.ttl != 200
-    assert ChainTaskSignature.SignatureSettings.ttl_when_sign_done != 80
+    assert ChainTaskSignature.SignatureSettings.ttl_when_sign_done != swarm_done_ttl
 
 
 def test_publish_state_follows_swarm_config():

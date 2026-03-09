@@ -74,6 +74,12 @@ class TaskSignature(Signature):
             params = dict(options=options) if options else {}
             return await self.acall(msg, set_return_field=False, **params)
 
+        async def aio_run(self, msg: BaseModel, options: TriggerWorkflowOptions = None):
+            params = dict(options=options) if options else {}
+            return await self.ClientAdapter.await_signature(
+                self, msg, set_return_field=False, **params
+            )
+
     async def resume(self):
         last_status = self.task_status.last_status
         if last_status == SignatureStatus.ACTIVE:

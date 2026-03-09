@@ -17,6 +17,14 @@ from hatchet_sdk.runnables.types import (
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
+from thirdmagic import chain, sign
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import Signature
+from thirdmagic.swarm import SwarmTaskSignature
+from thirdmagic.swarm.creator import SignatureOptions, swarm
+from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
+from thirdmagic.task_def import MageflowTaskDefinition
+from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
 
 from mageflow.callbacks import AcceptParams, handle_task_callback
@@ -47,14 +55,6 @@ from mageflow.swarm.workflows import (
     swarm_item_failed,
 )
 from mageflow.utils.mageflow import does_task_wants_ctx
-from thirdmagic import chain, sign
-from thirdmagic.chain import ChainTaskSignature
-from thirdmagic.signature import Signature
-from thirdmagic.swarm import SwarmTaskSignature
-from thirdmagic.swarm.creator import SignatureOptions, swarm
-from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
-from thirdmagic.task_def import MageflowTaskDefinition
-from thirdmagic.utils import HatchetTaskType
 
 Duration = timedelta | str
 
@@ -125,14 +125,16 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def task_decorator(self, func: Callable, hatchet_task):
+    def task_decorator(self, func: Callable, hatchet_task, is_idempotent: bool = False):
         param_config = (
             AcceptParams.ALL
             if does_task_wants_ctx(func)
             else self.mageflow_config.param_config
         )
         send_signature = getattr(func, "__send_signature__", False)
-        handler_dec = handle_task_callback(param_config, send_signature=send_signature)
+        handler_dec = handle_task_callback(
+            param_config, send_signature=send_signature, is_idempotent=is_idempotent
+        )
         func = handler_dec(func)
         wf = hatchet_task(func)
         self._add_task_def(wf)
@@ -146,7 +148,9 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().task(name=name, **kwargs)
 
-        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
+        decorator = functools.partial(
+            self.task_decorator, hatchet_task=hatchet_task, is_idempotent=False
+        )
         return decorator
 
     @override
@@ -156,7 +160,9 @@ class HatchetMageflow(Hatchet):
         """
         hatchet_task = super().durable_task(name=name, **kwargs)
 
-        decorator = functools.partial(self.task_decorator, hatchet_task=hatchet_task)
+        decorator = functools.partial(
+            self.task_decorator, hatchet_task=hatchet_task, is_idempotent=True
+        )
 
         return decorator
 

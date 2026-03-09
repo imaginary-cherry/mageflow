@@ -1,8 +1,8 @@
 import rapyer
 from redis.asyncio import Redis
+from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.config import MageflowConfig, apply_ttl_config
-from thirdmagic.task_def import MageflowTaskDefinition
 
 
 async def start_mageflow(redis: Redis, config: MageflowConfig = None):

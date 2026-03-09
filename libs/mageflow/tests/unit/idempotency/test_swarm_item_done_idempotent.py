@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pytest
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.workflows import swarm_item_done
 from tests.unit.conftest import SwarmItemDoneSetup
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 async def assert_swarm_item_done_state(

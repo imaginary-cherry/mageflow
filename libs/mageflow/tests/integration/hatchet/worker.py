@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.consts import REMOVED_TASK_TTL, TASK_ID_PARAM_NAME
 from thirdmagic.task import TaskSignature
 
 # Start coverage if COVERAGE_PROCESS_START is set
@@ -32,6 +32,7 @@ from tests.integration.hatchet.models import (
     MessageWithMsgResults,
     MessageWithResult,
     SignatureKeysResult,
+    SignatureKeyWithWF,
     SleepTaskMessage,
 )
 
@@ -53,11 +54,11 @@ hatchet = Hatchet(debug=True, config=config_obj)
 
 # Per-type TTL configuration for tests
 TASK_ACTIVE_TTL = 600  # 10 minutes
-TASK_DONE_TTL = 60  # 1 minute
+TASK_DONE_TTL = REMOVED_TASK_TTL + 60  # 1 minute
 CHAIN_ACTIVE_TTL = 900  # 15 minutes
-CHAIN_DONE_TTL = 90  # 1.5 minutes
+CHAIN_DONE_TTL = REMOVED_TASK_TTL + 90  # 1.5 minutes
 SWARM_ACTIVE_TTL = 1200  # 20 minutes
-SWARM_DONE_TTL = 120  # 2 minutes
+SWARM_DONE_TTL = REMOVED_TASK_TTL + 120  # 2 minutes
 MAX_DONE_TTL = max(TASK_DONE_TTL, CHAIN_DONE_TTL, SWARM_DONE_TTL)
 
 TEST_MAGEFLOW_CONFIG = MageflowConfig(
@@ -225,6 +226,55 @@ async def create_signatures_for_ttl_test(msg: ContextMessage) -> SignatureKeysRe
     )
 
 
+@hatchet.durable_task(
+    name="retry_cache_durable_task",
+    input_validator=ContextMessage,
+    retries=3,
+    execution_timeout=timedelta(seconds=60),
+)
+@hatchet.with_ctx
+async def retry_cache_durable_task(
+    msg: ContextMessage, ctx: Context
+) -> SignatureKeyWithWF:
+    # Create standalone task signatures
+    sig1 = await hatchet.asign(task1)
+    sig2 = await hatchet.asign(task2)
+
+    # Create a chain
+    chain_sub1 = await hatchet.asign(task1)
+    chain_sub2 = await hatchet.asign(task2)
+    chain_sig = await hatchet.achain([chain_sub1, chain_sub2])
+
+    # Create a swarm
+    swarm_sub1 = await hatchet.asign(task1)
+    swarm_sub2 = await hatchet.asign(task2)
+    swarm_sig = await hatchet.aswarm([swarm_sub1, swarm_sub2], is_swarm_closed=True)
+
+    # Collect all created signature keys
+    results = SignatureKeyWithWF(
+        task_keys=[sig1.key, sig2.key],
+        chain_key=chain_sig.key,
+        chain_sub_task_keys=[chain_sub1.key, chain_sub2.key],
+        swarm_key=swarm_sig.key,
+        swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
+        publish_state_key=swarm_sig.publishing_state_id,
+        workflow_id=ctx.workflow_id,
+    )
+    all_keys = results.model_dump(mode="json")
+
+    # Store keys in Redis for test verification, keyed by attempt number
+    attempt_key = f"retry-cache-test:{ctx.workflow_id}:attempt-{ctx.attempt_number}"
+    await TaskSignature.Meta.redis.json().set(attempt_key, "$", all_keys)  # type: ignore[misc]
+
+    if ctx.attempt_number == 1:
+        raise ValueError("Intentional first attempt failure for retry cache test")
+
+    new_task = await hatchet.asign(task2)
+    results.task_keys.append(new_task.key)
+
+    return results
+
+
 workflows = [
     task1,
     task2,
@@ -245,6 +295,7 @@ workflows = [
     cancel_retry,
     accept_msg_results,
     create_signatures_for_ttl_test,
+    retry_cache_durable_task,
 ]
 
 

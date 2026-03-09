@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 from rapyer.errors import KeyNotFound
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 
 import mageflow
 from mageflow.swarm.messages import SwarmErrorMessage
 from mageflow.swarm.workflows import swarm_item_failed
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.workflows.conftest import create_swarm_item_test_setup
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
 
 
 @pytest.mark.asyncio
@@ -20,10 +20,7 @@ async def test_swarm_item_failed_sanity_continue_after_failure(
 ):
     # Arrange
     setup = await create_swarm_item_test_setup(
-        num_tasks=3,
-        stop_after_n_failures=2,
-        tasks_left_indices=[1, 2],
-        logger=mock_logger,
+        tasks_left_indices=[1, 2], logger=mock_logger
     )
     msg = SwarmErrorMessage(
         swarm_task_id=setup.swarm_task.key,
@@ -55,12 +52,7 @@ async def test_swarm_item_failed_sanity_stop_after_threshold(
     mock_logger,
 ):
     # Arrange
-    setup = await create_swarm_item_test_setup(
-        num_tasks=3,
-        stop_after_n_failures=2,
-        failed_indices=[0],
-        logger=mock_logger,
-    )
+    setup = await create_swarm_item_test_setup(failed_indices=[0], logger=mock_logger)
     msg = SwarmErrorMessage(
         swarm_task_id=setup.swarm_task.key,
         swarm_item_id=setup.tasks[1].key,
@@ -84,10 +76,7 @@ async def test_swarm_item_failed_stop_after_n_failures_none_edge_case(
 ):
     # Arrange
     setup = await create_swarm_item_test_setup(
-        num_tasks=3,
-        stop_after_n_failures=None,
-        failed_indices=[0, 1],
-        logger=mock_logger,
+        stop_after_n_failures=None, failed_indices=[0, 1], logger=mock_logger
     )
     msg = SwarmErrorMessage(
         swarm_task_id=setup.swarm_task.key,

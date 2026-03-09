@@ -1,13 +1,13 @@
 from unittest.mock import patch
 
 import pytest
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 
 from mageflow.swarm.workflows import fill_swarm_running_tasks
 from tests.unit.assertions import assert_task_has_short_ttl
 from tests.unit.idempotency.conftest import CompletedSwarmSetup, FailedSwarmSetup
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmTaskSignature
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio

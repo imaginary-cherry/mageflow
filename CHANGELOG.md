@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.3]
+
+### ✨ Added
+
+- **Signature Retry Cache**: Durable tasks are now idempotent for creating signatures, i.e. they won't create duplicate signatures on retry, they will use the one created in the original run.
+
 ## [0.3.2]
 
 ### ✨ Added

@@ -2,14 +2,13 @@ import abc
 import asyncio
 from abc import ABC
 from datetime import datetime
-from typing import Any, ClassVar, Optional, Self, TypeAlias, cast
+from typing import Any, ClassVar, Optional, TypeAlias, cast
 
 import rapyer
 from pydantic import BaseModel, Field, field_validator
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from rapyer import AtomicRedisModel
 from rapyer.config import RedisConfig
-from rapyer.errors.base import KeyNotFound
 from rapyer.fields import RapyerKey
 from rapyer.types import RedisDatetime, RedisDict, RedisList
 
@@ -24,7 +23,7 @@ if HAS_HATCHET:
 
 @pydantic_dataclass
 class SignatureConfig:
-    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, gt=0)
+    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, ge=REMOVED_TASK_TTL)
 
 
 class Signature(AtomicRedisModel, ABC):

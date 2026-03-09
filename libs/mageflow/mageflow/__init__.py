@@ -1,15 +1,15 @@
 import rapyer
 from rapyer.fields import RapyerKey
-
-from mageflow.callbacks import handle_task_callback
-from mageflow.client import Mageflow
-from mageflow.config import MageflowConfig, SignatureTTLConfig, TTLConfig
-from mageflow.startup import start_mageflow
 from thirdmagic.chain.creator import chain as achain
 from thirdmagic.signature import Signature
 from thirdmagic.swarm.creator import swarm as aswarm
 from thirdmagic.task import TaskSignature
 from thirdmagic.task import sign as asign
+
+from mageflow.callbacks import handle_task_callback
+from mageflow.client import Mageflow
+from mageflow.config import MageflowConfig, SignatureTTLConfig, TTLConfig
+from mageflow.startup import start_mageflow
 
 lock_task = TaskSignature.alock_from_key
 resume = TaskSignature.resume_from_key

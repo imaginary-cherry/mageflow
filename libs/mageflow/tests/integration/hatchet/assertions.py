@@ -5,9 +5,6 @@ from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1LogLineList, V1TaskStatus, V1TaskSummary
 from hatchet_sdk.runnables.workflow import TaskRunRef
 from pydantic import BaseModel
-
-from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
-from tests.integration.hatchet.worker import MAX_DONE_TTL
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.consts import (
     MAGEFLOW_TASK_INITIALS,
@@ -17,6 +14,9 @@ from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
+
+from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
+from tests.integration.hatchet.worker import MAX_DONE_TTL
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
 WF_MAPPING_BY_WF_ID_TYPE = dict[str, V1TaskSummary]
