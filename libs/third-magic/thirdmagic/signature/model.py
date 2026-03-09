@@ -23,7 +23,7 @@ if HAS_HATCHET:
 
 @pydantic_dataclass
 class SignatureConfig:
-    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, gt=0)
+    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, ge=REMOVED_TASK_TTL)
 
 
 class Signature(AtomicRedisModel, ABC):
