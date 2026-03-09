@@ -1,6 +1,6 @@
 [project]
 name = "mageflow"
-version = "0.3.2"
+version = "0.3.3"
 description = "Manage Graph Execution Flow - A unified interface for task orchestration across different task managers"
 authors = [
     {name = "imaginary-cherry", email = "yedidyakfir@gmail.com"}
@@ -41,7 +41,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "thirdmagic>=0.0.3, <0.1.0",
+    "thirdmagic>=0.0.4, <0.1.0",
 ]
 
 [project.optional-dependencies]
