@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.consts import REMOVED_TASK_TTL, TASK_ID_PARAM_NAME
 from thirdmagic.task import TaskSignature
 
 # Start coverage if COVERAGE_PROCESS_START is set
@@ -54,11 +54,11 @@ hatchet = Hatchet(debug=True, config=config_obj)
 
 # Per-type TTL configuration for tests
 TASK_ACTIVE_TTL = 600  # 10 minutes
-TASK_DONE_TTL = 60  # 1 minute
+TASK_DONE_TTL = REMOVED_TASK_TTL + 60  # 1 minute
 CHAIN_ACTIVE_TTL = 900  # 15 minutes
-CHAIN_DONE_TTL = 90  # 1.5 minutes
+CHAIN_DONE_TTL = REMOVED_TASK_TTL + 90  # 1.5 minutes
 SWARM_ACTIVE_TTL = 1200  # 20 minutes
-SWARM_DONE_TTL = 120  # 2 minutes
+SWARM_DONE_TTL = REMOVED_TASK_TTL + 120  # 2 minutes
 MAX_DONE_TTL = max(TASK_DONE_TTL, CHAIN_DONE_TTL, SWARM_DONE_TTL)
 
 TEST_MAGEFLOW_CONFIG = MageflowConfig(
