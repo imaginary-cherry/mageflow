@@ -244,7 +244,8 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
 
     # Act - CancelledError should propagate even when cache.adelete() fails
     with patch.object(
-        SignatureRetryCache, "adelete",
+        SignatureRetryCache,
+        "adelete",
         new_callable=AsyncMock,
         side_effect=ConnectionError("Redis unavailable"),
     ):
