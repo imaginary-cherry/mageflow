@@ -1,10 +1,14 @@
+import dataclasses
+
 import pytest
 from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.signature import Signature
 
 import mageflow
 from mageflow.config import SignatureTTLConfig, TTLConfig, apply_ttl_config
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.assertions import assert_task_has_done_ttl
+from tests.unit.utils import sub_classes
 
 TASK_DONE_TTL = REMOVED_TASK_TTL + 50
 CHAIN_DONE_TTL = REMOVED_TASK_TTL + 80
@@ -13,6 +17,8 @@ SWARM_DONE_TTL = REMOVED_TASK_TTL + 120
 
 @pytest.fixture(autouse=True)
 def _apply_ttl():
+    classes = sub_classes(Signature)
+    originals = [(cls, cls.Meta.ttl, cls.SignatureSettings) for cls in classes]
     apply_ttl_config(
         TTLConfig(
             task=SignatureTTLConfig(ttl_when_sign_done=TASK_DONE_TTL),
@@ -20,6 +26,10 @@ def _apply_ttl():
             swarm=SignatureTTLConfig(ttl_when_sign_done=SWARM_DONE_TTL),
         )
     )
+    yield
+    for cls, orig_ttl, orig_settings in originals:
+        cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
+        cls.SignatureSettings = orig_settings
 
 
 @pytest.mark.asyncio
