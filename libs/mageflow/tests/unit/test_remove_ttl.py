@@ -3,6 +3,7 @@ import dataclasses
 import pytest
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.signature import Signature
+from thirdmagic.swarm import PublishState
 
 import mageflow
 from mageflow.config import SignatureTTLConfig, TTLConfig, apply_ttl_config
@@ -19,6 +20,7 @@ SWARM_DONE_TTL = REMOVED_TASK_TTL + 120
 def _apply_ttl():
     classes = sub_classes(Signature)
     originals = [(cls, cls.Meta.ttl, cls.SignatureSettings) for cls in classes]
+    original_publish_ttl = PublishState.Meta.ttl
     apply_ttl_config(
         TTLConfig(
             task=SignatureTTLConfig(ttl_when_sign_done=TASK_DONE_TTL),
@@ -27,6 +29,7 @@ def _apply_ttl():
         )
     )
     yield
+    PublishState.Meta = dataclasses.replace(PublishState.Meta, ttl=original_publish_ttl)
     for cls, orig_ttl, orig_settings in originals:
         cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
         cls.SignatureSettings = orig_settings
