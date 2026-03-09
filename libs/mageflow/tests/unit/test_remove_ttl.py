@@ -1,13 +1,14 @@
 import pytest
+from thirdmagic.consts import REMOVED_TASK_TTL
 
 import mageflow
 from mageflow.config import SignatureTTLConfig, TTLConfig, apply_ttl_config
 from tests.integration.hatchet.models import ContextMessage
 from tests.unit.assertions import assert_task_has_done_ttl
 
-TASK_DONE_TTL = 50
-CHAIN_DONE_TTL = 80
-SWARM_DONE_TTL = 120
+TASK_DONE_TTL = REMOVED_TASK_TTL + 50
+CHAIN_DONE_TTL = REMOVED_TASK_TTL + 80
+SWARM_DONE_TTL = REMOVED_TASK_TTL + 120
 
 
 @pytest.fixture(autouse=True)
