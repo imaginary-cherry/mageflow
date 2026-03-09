@@ -333,6 +333,38 @@ async def test__vanilla_task__error_no_retry__cache_deleted(
 
 
 @pytest.mark.asyncio
+async def test__vanilla_task__cancel_error__cache_deleted(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange
+    await task_signature_factory(retries=3)
+    workflow_id = "wf-vanilla-cancel"
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=None,
+            job_name="test_task",
+            workflow_id=workflow_id,
+        )
+    )
+
+    async def user_func(msg):
+        await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        raise asyncio.CancelledError()
+
+    handler = handle_task_callback(is_idempotent=True)(user_func)
+    message = ContextMessage()
+
+    # Act - CancelledError should propagate
+    with pytest.raises(asyncio.CancelledError):
+        await handler(message, ctx)
+
+    # Assert - cache should be deleted even though retries are configured
+    cache_key = f"SignatureRetryCache:{workflow_id}"
+    assert not await redis_client.exists(cache_key)
+
+
+@pytest.mark.asyncio
 async def test__vanilla_task__error_with_retry__cache_persists(
     adapter_with_lifecycle,
     redis_client,
