@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 import rapyer
 import thirdmagic
@@ -182,6 +184,39 @@ async def test__durable_task__success__cache_deleted(
     assert not await redis_client.exists(cache_key)
 
 
+@pytest.mark.asyncio
+async def test__durable_task__cancel_error__cache_deleted(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange
+    signature, _ = await task_signature_factory(retries=3)
+    workflow_id = "wf-cancel-cleanup"
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature.key,
+            job_name="test_task",
+            attempt_number=1,
+            workflow_id=workflow_id,
+        )
+    )
+
+    async def user_func(msg):
+        await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        raise asyncio.CancelledError()
+
+    handler = handle_task_callback(is_idempotent=True)(user_func)
+    message = ContextMessage()
+
+    # Act - CancelledError should propagate
+    with pytest.raises(asyncio.CancelledError):
+        await handler(message, ctx)
+
+    # Assert - cache should be deleted even though retries are configured
+    cache_key = f"SignatureRetryCache:{workflow_id}"
+    assert not await redis_client.exists(cache_key)
+
+
 # --- Non-durable task: cache is NOT created ---
 
 
@@ -259,6 +294,82 @@ async def test__non_durable_task__retry_creates_new_signatures(
 
     # Assert - non-durable task creates NEW signature, not cached one
     assert created_sig_key != original_sig.key
+
+
+# --- Vanilla task (task_id=None) error scenarios ---
+
+
+@pytest.mark.asyncio
+async def test__vanilla_task__error_no_retry__cache_deleted(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange - no retries, so should_task_retry returns False
+    await task_signature_factory(retries=0)
+    workflow_id = "wf-vanilla-error-no-retry"
+    adapter_with_lifecycle.should_task_retry.return_value = False
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=None,
+            job_name="test_task",
+            workflow_id=workflow_id,
+        )
+    )
+
+    async def user_func(msg):
+        await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        raise ValueError("Fatal error")
+
+    handler = handle_task_callback(is_idempotent=True)(user_func)
+    message = ContextMessage()
+
+    # Act
+    with pytest.raises(ValueError, match="Fatal error"):
+        await handler(message, ctx)
+
+    # Assert - cache should be deleted since no retry will happen
+    cache_key = f"SignatureRetryCache:{workflow_id}"
+    assert not await redis_client.exists(cache_key)
+
+
+@pytest.mark.asyncio
+async def test__vanilla_task__error_with_retry__cache_persists(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange - retries available, so should_task_retry returns True
+    await task_signature_factory(retries=3)
+    workflow_id = "wf-vanilla-error-with-retry"
+    adapter_with_lifecycle.should_task_retry.return_value = True
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=None,
+            job_name="test_task",
+            attempt_number=1,
+            workflow_id=workflow_id,
+        )
+    )
+
+    created_sig_key = None
+
+    async def user_func(msg):
+        nonlocal created_sig_key
+
+        sig = await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        created_sig_key = sig.key
+        raise ValueError("Retryable error")
+
+    handler = handle_task_callback(is_idempotent=True)(user_func)
+    message = ContextMessage()
+
+    # Act
+    with pytest.raises(ValueError, match="Retryable error"):
+        await handler(message, ctx)
+
+    # Assert - cache should persist for retry
+    cache = await SignatureRetryCache.aget(workflow_id)
+    assert len(cache.signature_ids) == 1
+    assert cache.signature_ids[0] == created_sig_key
 
 
 # --- Edge case: no cache exists on retry (durable) ---
