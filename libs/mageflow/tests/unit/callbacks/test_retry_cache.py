@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import rapyer
@@ -215,6 +216,40 @@ async def test__durable_task__cancel_error__cache_deleted(
     # Assert - cache should be deleted even though retries are configured
     cache_key = f"SignatureRetryCache:{workflow_id}"
     assert not await redis_client.exists(cache_key)
+
+
+@pytest.mark.asyncio
+async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_error(
+    adapter_with_lifecycle,
+    redis_client,
+):
+    # Arrange
+    signature, _ = await task_signature_factory(retries=3)
+    workflow_id = "wf-cancel-delete-fail"
+    ctx = create_mock_hatchet_context(
+        MockContextConfig(
+            task_id=signature.key,
+            job_name="test_task",
+            attempt_number=1,
+            workflow_id=workflow_id,
+        )
+    )
+
+    async def user_func(msg):
+        await thirdmagic.sign("test_task", model_validators=ContextMessage)
+        raise asyncio.CancelledError()
+
+    handler = handle_task_callback(is_idempotent=True)(user_func)
+    message = ContextMessage()
+
+    # Act - CancelledError should propagate even when cache.adelete() fails
+    with patch.object(
+        SignatureRetryCache, "adelete",
+        new_callable=AsyncMock,
+        side_effect=ConnectionError("Redis unavailable"),
+    ):
+        with pytest.raises(asyncio.CancelledError):
+            await handler(message, ctx)
 
 
 # --- Non-durable task: cache is NOT created ---
