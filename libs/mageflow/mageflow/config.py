@@ -6,7 +6,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.signature import SignatureConfig
+from thirdmagic.signature import Signature, SignatureConfig
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
@@ -47,4 +47,5 @@ def apply_ttl_config(ttl_config: TTLConfig):
         done_ttl = sig_config.ttl_when_sign_done or ttl_config.ttl_when_sign_done
 
         sig_type.Meta = dataclasses.replace(sig_type.Meta, ttl=active_ttl)
-        sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)
+        if issubclass(sig_type, Signature):
+            sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)
