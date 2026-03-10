@@ -94,14 +94,25 @@ async def test__abounded_field__chain_from_signature_keys__created_correctly(
     def chain_key_2(msg):
         return msg
 
+    @hatchet_mock.task(name="inner_chain_a")
+    def inner_chain_a(msg):
+        return msg
+
+    @hatchet_mock.task(name="inner_chain_b")
+    def inner_chain_b(msg):
+        return msg
+
     task1 = await thirdmagic.sign(chain_key_1)
     task2 = await thirdmagic.sign(chain_key_2)
 
     async with thirdmagic.abounded_field():
-        chain_sig = await thirdmagic.chain([task1.key, task2.key])
+        inner_chain = await thirdmagic.chain([inner_chain_a, inner_chain_b])
+        chain_sig = await thirdmagic.chain([task1.key, inner_chain.key, task2.key])
 
     await assert_container_created_with_ordered_tasks(
-        chain_sig.key, ChainTaskSignature, [task1.key, task2.key]
+        chain_sig.key,
+        ChainTaskSignature,
+        [task1.key, inner_chain.key, task2.key],
     )
 
 
@@ -155,24 +166,52 @@ async def test__abounded_field__chain_from_mixed_inputs__created_correctly(
     def ht_mix_chain(msg):
         return msg
 
+    @hatchet_mock.task(name="nested_swarm_a")
+    def nested_swarm_a(msg):
+        return msg
+
+    @hatchet_mock.task(name="nested_swarm_b")
+    def nested_swarm_b(msg):
+        return msg
+
     async with thirdmagic.abounded_field():
         pre_created = await thirdmagic.sign("pre_created_task")
+        nested_swarm = await thirdmagic.swarm(
+            [nested_swarm_a, nested_swarm_b], task_name="nested-swarm"
+        )
         chain_sig = await thirdmagic.chain(
-            [pre_created, ht_mix_chain, "named_chain_task"]
+            [pre_created, ht_mix_chain, nested_swarm, "named_chain_task"]
         )
 
     reloaded = await assert_task_reloaded_as_type(chain_sig.key, ChainTaskSignature)
-    assert len(reloaded.tasks) == 3
+    assert len(reloaded.tasks) == 4
 
     task1 = await assert_task_reloaded_as_type(reloaded.tasks[0], TaskSignature)
     task2 = await assert_task_reloaded_as_type(reloaded.tasks[1], TaskSignature)
-    task3 = await assert_task_reloaded_as_type(reloaded.tasks[2], TaskSignature)
+    reloaded_nested = await assert_task_reloaded_as_type(
+        reloaded.tasks[2], SwarmTaskSignature
+    )
+    task4 = await assert_task_reloaded_as_type(reloaded.tasks[3], TaskSignature)
     assert task1.key == pre_created.key
     assert task2.task_name == "ht_mix_chain"
-    assert task3.task_name == "named_chain_task"
+    assert reloaded_nested.key == nested_swarm.key
+    assert task4.task_name == "named_chain_task"
     assert task1.signature_container_id == chain_sig.key
     assert task2.signature_container_id == chain_sig.key
-    assert task3.signature_container_id == chain_sig.key
+    assert reloaded_nested.signature_container_id == chain_sig.key
+    assert task4.signature_container_id == chain_sig.key
+
+    assert len(reloaded_nested.tasks) == 2
+    swarm_t1 = await assert_task_reloaded_as_type(
+        reloaded_nested.tasks[0], TaskSignature
+    )
+    swarm_t2 = await assert_task_reloaded_as_type(
+        reloaded_nested.tasks[1], TaskSignature
+    )
+    assert swarm_t1.task_name == "nested_swarm_a"
+    assert swarm_t2.task_name == "nested_swarm_b"
+    assert swarm_t1.signature_container_id == nested_swarm.key
+    assert swarm_t2.signature_container_id == nested_swarm.key
 
 
 # --- Swarms Inside abounded_field ---
@@ -190,16 +229,28 @@ async def test__abounded_field__swarm_from_signature_keys__created_correctly(
     def swarm_key_2(msg):
         return msg
 
+    @hatchet_mock.task(name="inner_chain_x")
+    def inner_chain_x(msg):
+        return msg
+
+    @hatchet_mock.task(name="inner_chain_y")
+    def inner_chain_y(msg):
+        return msg
+
     task1 = await thirdmagic.sign(swarm_key_1)
-    task2 = await thirdmagic.sign(swarm_key_2)
 
     async with thirdmagic.abounded_field():
+        task2 = await thirdmagic.sign(swarm_key_2)
+        inner_chain = await thirdmagic.chain([inner_chain_x, inner_chain_y])
+
         swarm_sig = await thirdmagic.swarm(
-            [task1.key, task2.key], task_name="test-swarm-keys"
+            [task1.key, inner_chain.key, task2.key], task_name="test-swarm-keys"
         )
 
     await assert_container_created_with_ordered_tasks(
-        swarm_sig.key, SwarmTaskSignature, [task1.key, task2.key]
+        swarm_sig.key,
+        SwarmTaskSignature,
+        [task1.key, inner_chain.key, task2.key],
     )
 
 
@@ -257,26 +308,52 @@ async def test__abounded_field__swarm_from_mixed_inputs__created_correctly(
     def ht_swarm_mix(msg):
         return msg
 
+    @hatchet_mock.task(name="nested_chain_a")
+    def nested_chain_a(msg):
+        return msg
+
+    @hatchet_mock.task(name="nested_chain_b")
+    def nested_chain_b(msg):
+        return msg
+
     pre_created = await thirdmagic.sign("pre_swarm_task")
 
     async with thirdmagic.abounded_field():
+        nested_chain = await thirdmagic.chain([nested_chain_a, nested_chain_b])
         swarm_sig = await thirdmagic.swarm(
-            [pre_created.key, ht_swarm_mix, "named_swarm_task"],
+            [pre_created.key, ht_swarm_mix, nested_chain, "named_swarm_task"],
             task_name="test-swarm-mix",
         )
 
     reloaded = await assert_task_reloaded_as_type(swarm_sig.key, SwarmTaskSignature)
-    assert len(reloaded.tasks) == 3
+    assert len(reloaded.tasks) == 4
 
     task1 = await assert_task_reloaded_as_type(reloaded.tasks[0], TaskSignature)
     task2 = await assert_task_reloaded_as_type(reloaded.tasks[1], TaskSignature)
-    task3 = await assert_task_reloaded_as_type(reloaded.tasks[2], TaskSignature)
+    reloaded_nested = await assert_task_reloaded_as_type(
+        reloaded.tasks[2], ChainTaskSignature
+    )
+    task4 = await assert_task_reloaded_as_type(reloaded.tasks[3], TaskSignature)
     assert task1.key == pre_created.key
     assert task2.task_name == "ht_swarm_mix"
-    assert task3.task_name == "named_swarm_task"
+    assert reloaded_nested.key == nested_chain.key
+    assert task4.task_name == "named_swarm_task"
     assert task1.signature_container_id == swarm_sig.key
     assert task2.signature_container_id == swarm_sig.key
-    assert task3.signature_container_id == swarm_sig.key
+    assert reloaded_nested.signature_container_id == swarm_sig.key
+    assert task4.signature_container_id == swarm_sig.key
+
+    assert len(reloaded_nested.tasks) == 2
+    chain_t1 = await assert_task_reloaded_as_type(
+        reloaded_nested.tasks[0], TaskSignature
+    )
+    chain_t2 = await assert_task_reloaded_as_type(
+        reloaded_nested.tasks[1], TaskSignature
+    )
+    assert chain_t1.task_name == "nested_chain_a"
+    assert chain_t2.task_name == "nested_chain_b"
+    assert chain_t1.signature_container_id == nested_chain.key
+    assert chain_t2.signature_container_id == nested_chain.key
 
 
 # --- Combinations Inside abounded_field ---
