@@ -3,13 +3,15 @@ import asyncio
 from abc import ABC
 from typing import Any
 
+from rapyer.fields import RapyerKey
+
 from thirdmagic.signature import Signature
 
 
 class ContainerTaskSignature(Signature, ABC):
     @property
     @abc.abstractmethod
-    def task_ids(self):
+    def task_ids(self) -> list[RapyerKey]:
         pass
 
     @abc.abstractmethod
