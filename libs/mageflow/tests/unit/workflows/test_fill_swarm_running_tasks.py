@@ -1,11 +1,11 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from thirdmagic.clients.lifecycle import BaseLifecycle
+from thirdmagic.swarm.model import SwarmTaskSignature
 
 from mageflow.swarm.messages import FillSwarmMessage
 from mageflow.swarm.workflows import fill_swarm_running_tasks
-from thirdmagic.clients.lifecycle import BaseLifecycle
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 @pytest.mark.asyncio

@@ -63,6 +63,12 @@ class BaseClientAdapter(ABC):
     ):
         pass
 
+    @abc.abstractmethod
+    async def await_signature(
+        self, signature: "TaskSignature", msg: Any, set_return_field: bool, **kwargs
+    ):
+        pass
+
     async def acall_signatures(
         self,
         signatures: list["Signature"],
@@ -135,6 +141,11 @@ class DefaultClientAdapter(BaseClientAdapter):
 
     async def acall_signature(
         self, signature: "Signature", set_return_field: bool, **kwargs
+    ):
+        raise NotImplementedError("Set a client before we start")
+
+    async def await_signature(
+        self, signature: "TaskSignature", msg: Any, set_return_field: bool, **kwargs
     ):
         raise NotImplementedError("Set a client before we start")
 

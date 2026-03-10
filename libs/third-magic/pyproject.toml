@@ -1,6 +1,6 @@
 [project]
 name = "thirdmagic"
-version = "0.0.3"
+version = "0.0.4"
 description = "Core models and signatures for mageflow task orchestration"
 authors = [
     {name = "imaginary-cherry", email = "yedidyakfir@gmail.com"}
@@ -33,6 +33,9 @@ packages = ["thirdmagic"]
 markers = [
     "hatchet: tests that require hatchet SDK fixtures",
 ]
+
+[tool.ruff.lint]
+select = ["F401", "I"]
 
 [tool.coverage.run]
 source = ["thirdmagic"]

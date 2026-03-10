@@ -2,7 +2,6 @@ from logging import Logger
 from typing import Any
 
 from rapyer.fields import RapyerKey
-
 from thirdmagic.clients.lifecycle import BaseLifecycle
 
 

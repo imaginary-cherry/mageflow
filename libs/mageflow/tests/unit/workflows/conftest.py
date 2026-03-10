@@ -3,15 +3,15 @@ from logging import Logger
 from unittest.mock import MagicMock
 
 import pytest_asyncio
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.clients.lifecycle import BaseLifecycle
+from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.swarm.messages import FillSwarmMessage
 from tests.integration.hatchet.models import ContextMessage, MessageWithResult
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.clients.lifecycle import BaseLifecycle
-from thirdmagic.swarm.model import SwarmConfig, SwarmTaskSignature
-from thirdmagic.task import TaskSignature
 
 
 @dataclass

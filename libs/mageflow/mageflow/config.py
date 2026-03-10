@@ -1,26 +1,29 @@
 import dataclasses
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Optional
 
-from mageflow.callbacks import AcceptParams
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.consts import REMOVED_TASK_TTL
-from thirdmagic.signature import SignatureConfig
+from thirdmagic.signature import Signature, SignatureConfig
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task import TaskSignature
+
+from mageflow.callbacks import AcceptParams
 
 
 @dataclass
 class SignatureTTLConfig:
     active_ttl: Optional[int] = None  # seconds, None = use general
-    ttl_when_sign_done: Optional[int] = None
+    ttl_when_sign_done: Optional[int] = Field(default=None, ge=REMOVED_TASK_TTL)
 
 
 @dataclass
 class TTLConfig:
     active_ttl: int = 24 * 60 * 60  # general active TTL (default 24h)
-    ttl_when_sign_done: int = REMOVED_TASK_TTL  # general done TTL (default 5min)
+    ttl_when_sign_done: int = Field(default=REMOVED_TASK_TTL, ge=REMOVED_TASK_TTL)
     task: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
     chain: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
     swarm: SignatureTTLConfig = field(default_factory=SignatureTTLConfig)
@@ -44,4 +47,5 @@ def apply_ttl_config(ttl_config: TTLConfig):
         done_ttl = sig_config.ttl_when_sign_done or ttl_config.ttl_when_sign_done
 
         sig_type.Meta = dataclasses.replace(sig_type.Meta, ttl=active_ttl)
-        sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)
+        if issubclass(sig_type, Signature):
+            sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)

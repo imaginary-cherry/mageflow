@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 from hatchet_sdk import NonRetryableException
+from thirdmagic.signature import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 from mageflow.callbacks import AcceptParams, HatchetResult
 from tests.integration.hatchet.models import ContextMessage
@@ -12,8 +14,6 @@ from tests.unit.callbacks.conftest import (
     handler_factory,
     task_signature_factory,
 )
-from thirdmagic.signature import SignatureStatus
-from thirdmagic.task import TaskSignature
 
 
 @pytest.mark.asyncio
@@ -21,7 +21,7 @@ async def test__pending_signature__success__returns_wrapped_result(
     adapter_with_lifecycle,
 ):
     # Arrange
-    signature, _ = await task_signature_factory(status=SignatureStatus.PENDING)
+    signature, _ = await task_signature_factory()
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
@@ -66,9 +66,7 @@ async def test__pending_signature__error_with_retry__raises_without_failing(
     adapter_with_lifecycle,
 ):
     # Arrange
-    signature, _ = await task_signature_factory(
-        status=SignatureStatus.PENDING, retries=3
-    )
+    signature, _ = await task_signature_factory(retries=3)
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
     )
@@ -92,9 +90,7 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
     # Arrange
     adapter_with_lifecycle.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
-        status=SignatureStatus.PENDING,
-        retries=3,
-        error_callbacks=[error_callback_signature],
+        retries=3, error_callbacks=[error_callback_signature]
     )
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=3)
@@ -121,9 +117,7 @@ async def test__pending_signature__cancel_error__marks_failed_and_reraises(
 ):
     # Arrange
     signature, _ = await task_signature_factory(
-        status=SignatureStatus.PENDING,
-        retries=3,
-        error_callbacks=[error_callback_signature],
+        retries=3, error_callbacks=[error_callback_signature]
     )
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
@@ -411,7 +405,7 @@ async def test__no_retries__error__marks_failed(
     # Arrange
     adapter_with_lifecycle.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
-        retries=None, error_callbacks=[error_callback_signature]
+        error_callbacks=[error_callback_signature]
     )
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
@@ -563,7 +557,7 @@ async def test__with_error_callbacks__on_error_no_retry__triggered(
     # Arrange
     adapter_with_lifecycle.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
-        retries=None, error_callbacks=[error_callback_signature]
+        error_callbacks=[error_callback_signature]
     )
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
@@ -640,7 +634,6 @@ async def test__with_both_callbacks__on_error__only_error_triggered(
     # Arrange
     adapter_with_lifecycle.should_task_retry.return_value = False
     signature, _ = await task_signature_factory(
-        retries=None,
         success_callbacks=[callback_signature],
         error_callbacks=[error_callback_signature],
     )
@@ -693,7 +686,7 @@ async def test__no_ctx__func_receives_message_and_kwargs(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    no_ctx_handler, tracked_calls = handler_factory(expected_params=AcceptParams.NO_CTX)
+    no_ctx_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act
@@ -756,7 +749,7 @@ async def test__send_signature_false__not_in_kwargs(
     ctx = create_mock_hatchet_context(
         MockContextConfig(task_id=signature.key, job_name="test_task")
     )
-    no_signature_handler, tracked_calls = handler_factory(send_signature=False)
+    no_signature_handler, tracked_calls = handler_factory()
     message = ContextMessage()
 
     # Act

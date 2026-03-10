@@ -4,6 +4,9 @@ import pytest
 import pytest_asyncio
 from hatchet_sdk import Context, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from thirdmagic.consts import TASK_ID_PARAM_NAME
+from thirdmagic.swarm.model import SwarmConfig
+from thirdmagic.task_def import MageflowTaskDefinition
 
 import mageflow
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
@@ -15,9 +18,6 @@ from mageflow.swarm.messages import (
     SwarmResultsMessage,
 )
 from tests.integration.hatchet.models import CommandMessageWithResult, ContextMessage
-from thirdmagic.consts import TASK_ID_PARAM_NAME
-from thirdmagic.swarm.model import SwarmConfig
-from thirdmagic.task_def import MageflowTaskDefinition
 
 
 @pytest.fixture
@@ -134,6 +134,82 @@ async def test_acall_signature_msg_none_replaced_with_empty_model(
     # Assert
     serialized = mock_run_workflow.call_args.kwargs["input"]
     assert serialized == {}
+
+
+# --- await_signature ---
+
+
+@pytest.fixture
+def mock_aio_run():
+    with patch.object(MageflowWorkflow, "aio_run", new_callable=AsyncMock) as mock:
+        yield mock
+
+
+@pytest.mark.asyncio
+async def test_await_signature_workflow_has_correct_params(
+    adapter, captured_workflows, mock_aio_run, mock_task_def
+):
+    # Arrange
+    sig = await mageflow.asign("test_task", model_validators=ContextMessage)
+
+    # Act
+    await adapter.await_signature(
+        sig, ContextMessage(), set_return_field=True, extra_k="extra_v"
+    )
+
+    # Assert
+    wf = captured_workflows[0]
+    assert wf._mageflow_workflow_params == {"extra_k": "extra_v"}
+
+
+@pytest.mark.asyncio
+async def test_await_signature_set_return_field_true(
+    adapter, captured_workflows, mock_aio_run, mock_task_def
+):
+    # Arrange
+    sig = await mageflow.asign("test_task", model_validators=CommandMessageWithResult)
+
+    # Act
+    await adapter.await_signature(sig, ContextMessage(), set_return_field=True)
+
+    # Assert
+    wf = captured_workflows[0]
+    assert wf._return_value_field == "task_result"
+
+
+@pytest.mark.asyncio
+async def test_await_signature_called_with_msg_and_options(
+    adapter, mock_aio_run, mock_task_def
+):
+    # Arrange
+    sig = await mageflow.asign("test_task", model_validators=ContextMessage)
+    msg = ContextMessage(base_data={"x": 1})
+
+    # Act
+    await adapter.await_signature(sig, msg, set_return_field=False)
+
+    # Assert
+    call_args, call_kwargs = mock_aio_run.call_args
+    serialized_msg = call_args[0]
+    options = call_args[1]
+    assert serialized_msg.base_data == {"x": 1}
+    assert TASK_ID_PARAM_NAME in options.additional_metadata
+
+
+@pytest.mark.asyncio
+async def test_await_signature_msg_none_replaced_with_empty_model(
+    adapter, mock_aio_run, mock_task_def
+):
+    # Arrange
+    sig = await mageflow.asign("test_task", model_validators=ContextMessage)
+
+    # Act
+    await adapter.await_signature(sig, None, set_return_field=False)
+
+    # Assert
+    call_args, _ = mock_aio_run.call_args
+    serialized_msg = call_args[0]
+    assert serialized_msg.__class__.__name__ == "EmptyModel"
 
 
 # --- acall_chain_done ---

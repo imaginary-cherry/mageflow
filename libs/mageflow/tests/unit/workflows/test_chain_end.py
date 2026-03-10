@@ -10,10 +10,7 @@ async def test_chain_end_task_sanity(redis_client, adapter_with_lifecycle, mock_
     # Arrange
     results = {"status": "success", "value": 42}
     setup = await create_chain_test_setup(
-        num_chain_tasks=3,
-        results=results,
-        adapter=adapter_with_lifecycle,
-        logger=mock_logger,
+        results=results, adapter=adapter_with_lifecycle, logger=mock_logger
     )
 
     # Act

@@ -1,5 +1,9 @@
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskInputType
+from thirdmagic.signature.retry_cache import (
+    cache_signature,
+    get_cached_signature,
+)
 from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 
 
@@ -10,6 +14,10 @@ async def chain(
     success: TaskInputType = None,
     **kwargs,
 ) -> ChainTaskSignature:
+    cached = await get_cached_signature(ChainTaskSignature)
+    if cached is not None:
+        return cached
+
     if len(tasks) < 2:
         raise ValueError(
             "Chained tasks must contain at least two tasks. "
@@ -26,9 +34,11 @@ async def chain(
         tasks=tasks,
         kwargs=kwargs,
     )
-    async with first_task.apipeline():
+    async with first_task.apipeline(use_existing_pipe=True):
         for task in tasks:
             task.signature_container_id = chain_task_signature.key
         await chain_task_signature.asave()
+
+        await cache_signature(chain_task_signature)
 
     return chain_task_signature

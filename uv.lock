@@ -926,7 +926,7 @@ wheels = [
 
 [[package]]
 name = "mageflow"
-version = "0.3.2"
+version = "0.3.3"
 source = { editable = "libs/mageflow" }
 dependencies = [
     { name = "thirdmagic" },
@@ -1875,7 +1875,7 @@ wheels = [
 
 [[package]]
 name = "thirdmagic"
-version = "0.0.3"
+version = "0.0.4"
 source = { editable = "libs/third-magic" }
 dependencies = [
     { name = "pydantic" },
