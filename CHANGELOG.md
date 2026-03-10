@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.4]
+
+### 🐛 Fixed
+
+- **Chain Creation Inside `abounded_field`**: Fixed a bug where creating a chain inside an `abounded_field` context failed due to a nested pipeline conflict. The chain creator now correctly reuses the existing Redis pipeline instead of creating a conflicting one.
+
+### 🔄 Changed
+
+- **`abounded_field` Moved to `thirdmagic`**: `abounded_field` is now exported from `thirdmagic` instead of being an alias in `mageflow`. This makes it available to `thirdmagic`-only consumers without requiring a `mageflow` dependency.
+
+### 🛠️ Technical Improvements
+
+- **`abounded_field` Test Suite**: Added comprehensive tests covering signatures, chains, swarms, and mixed combinations inside `abounded_field`.
+
+
 ## [0.3.3]
 
 ### ✨ Added
