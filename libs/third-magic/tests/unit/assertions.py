@@ -10,7 +10,7 @@ from thirdmagic.signature import Signature
 from thirdmagic.task import TaskSignature
 
 T = TypeVar("T", bound=Signature)
-ContainerT = TypeVar("ContainerT", bound=ContainerTaskSignature)
+CT = TypeVar("CT", bound=ContainerTaskSignature)
 SwarmListName = Literal["finished_tasks", "failed_tasks", "tasks_results", "tasks"]
 
 
@@ -84,13 +84,15 @@ async def assert_task_has_short_ttl(redis_client: Redis, task_key: str):
 
 async def assert_container_created_with_ordered_tasks(
     container_key: RapyerKey,
-    container_type: type[ContainerT],
+    container_type: type[CT],
     expected_task_keys: list[RapyerKey],
-) -> T:
+) -> CT:
     reloaded = await assert_task_reloaded_as_type(container_key, container_type)
-    assert len(reloaded.tasks) == len(expected_task_keys)
+    assert isinstance(reloaded, ContainerTaskSignature)
+    task_ids = reloaded.task_ids
+    assert len(task_ids) == len(expected_task_keys)
     for i, expected_key in enumerate(expected_task_keys):
-        assert reloaded.tasks[i] == expected_key
+        assert task_ids[i] == expected_key
 
     for task_key in expected_task_keys:
         reloaded_task = await assert_task_reloaded_as_type(task_key, TaskSignature)
