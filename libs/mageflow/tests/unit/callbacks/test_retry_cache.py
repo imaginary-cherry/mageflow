@@ -248,9 +248,10 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
         "adelete",
         new_callable=AsyncMock,
         side_effect=ConnectionError("Redis unavailable"),
-    ):
+    ) as mock_adelete:
         with pytest.raises(asyncio.CancelledError):
             await handler(message, ctx)
+        mock_adelete.assert_awaited_once()
 
 
 # --- Non-durable task: cache is NOT created ---
