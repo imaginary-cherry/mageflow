@@ -1,7 +1,10 @@
 import pytest
 
 import thirdmagic
-from tests.unit.assertions import assert_task_reloaded_as_type
+from tests.unit.assertions import (
+    assert_container_created_with_ordered_tasks,
+    assert_task_reloaded_as_type,
+)
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
@@ -97,15 +100,9 @@ async def test__abounded_field__chain_from_signature_keys__created_correctly(
     async with thirdmagic.abounded_field():
         chain_sig = await thirdmagic.chain([task1.key, task2.key])
 
-    reloaded = await assert_task_reloaded_as_type(chain_sig.key, ChainTaskSignature)
-    assert len(reloaded.tasks) == 2
-    assert reloaded.tasks[0] == task1.key
-    assert reloaded.tasks[1] == task2.key
-
-    reloaded_task1 = await assert_task_reloaded_as_type(task1.key, TaskSignature)
-    reloaded_task2 = await assert_task_reloaded_as_type(task2.key, TaskSignature)
-    assert reloaded_task1.signature_container_id == chain_sig.key
-    assert reloaded_task2.signature_container_id == chain_sig.key
+    await assert_container_created_with_ordered_tasks(
+        chain_sig.key, ChainTaskSignature, [task1.key, task2.key]
+    )
 
 
 @pytest.mark.asyncio
@@ -201,15 +198,9 @@ async def test__abounded_field__swarm_from_signature_keys__created_correctly(
             [task1.key, task2.key], task_name="test-swarm-keys"
         )
 
-    reloaded = await assert_task_reloaded_as_type(swarm_sig.key, SwarmTaskSignature)
-    assert len(reloaded.tasks) == 2
-    assert reloaded.tasks[0] == task1.key
-    assert reloaded.tasks[1] == task2.key
-
-    reloaded_task1 = await assert_task_reloaded_as_type(task1.key, TaskSignature)
-    reloaded_task2 = await assert_task_reloaded_as_type(task2.key, TaskSignature)
-    assert reloaded_task1.signature_container_id == swarm_sig.key
-    assert reloaded_task2.signature_container_id == swarm_sig.key
+    await assert_container_created_with_ordered_tasks(
+        swarm_sig.key, SwarmTaskSignature, [task1.key, task2.key]
+    )
 
 
 @pytest.mark.asyncio

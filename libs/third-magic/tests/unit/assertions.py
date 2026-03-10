@@ -5,10 +5,12 @@ from rapyer.fields import RapyerKey
 from redis.asyncio import Redis
 
 from thirdmagic.consts import REMOVED_TASK_TTL
+from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.signature import Signature
 from thirdmagic.task import TaskSignature
 
 T = TypeVar("T", bound=Signature)
+ContainerT = TypeVar("ContainerT", bound=ContainerTaskSignature)
 SwarmListName = Literal["finished_tasks", "failed_tasks", "tasks_results", "tasks"]
 
 
@@ -78,3 +80,20 @@ async def assert_redis_keys_do_not_contain_sub_task_ids(redis_client, sub_task_i
 async def assert_task_has_short_ttl(redis_client: Redis, task_key: str):
     ttl = await redis_client.ttl(task_key)
     assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"
+
+
+async def assert_container_created_with_ordered_tasks(
+    container_key: RapyerKey,
+    container_type: type[ContainerT],
+    expected_task_keys: list[RapyerKey],
+) -> T:
+    reloaded = await assert_task_reloaded_as_type(container_key, container_type)
+    assert len(reloaded.tasks) == len(expected_task_keys)
+    for i, expected_key in enumerate(expected_task_keys):
+        assert reloaded.tasks[i] == expected_key
+
+    for task_key in expected_task_keys:
+        reloaded_task = await assert_task_reloaded_as_type(task_key, TaskSignature)
+        assert reloaded_task.signature_container_id == container_key
+
+    return reloaded
