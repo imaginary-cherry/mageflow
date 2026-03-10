@@ -1,5 +1,6 @@
 import rapyer
 from rapyer.fields import RapyerKey
+from thirdmagic import abounded_field
 from thirdmagic.chain.creator import chain as achain
 from thirdmagic.signature import Signature
 from thirdmagic.swarm.creator import swarm as aswarm
@@ -22,7 +23,6 @@ async def load_sign(key: RapyerKey) -> Signature:
 
 
 load_signature = rapyer.afind_one
-abounded_field = rapyer.apipeline
 
 
 __all__ = [
