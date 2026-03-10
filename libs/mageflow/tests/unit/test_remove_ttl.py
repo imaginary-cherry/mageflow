@@ -21,6 +21,7 @@ def _apply_ttl():
     classes = sub_classes(Signature)
     originals = [(cls, cls.Meta.ttl, cls.SignatureSettings) for cls in classes]
     original_publish_ttl = PublishState.Meta.ttl
+    original_publish_settings = PublishState.SignatureSettings
     apply_ttl_config(
         TTLConfig(
             task=SignatureTTLConfig(ttl_when_sign_done=TASK_DONE_TTL),
@@ -30,6 +31,7 @@ def _apply_ttl():
     )
     yield
     PublishState.Meta = dataclasses.replace(PublishState.Meta, ttl=original_publish_ttl)
+    PublishState.SignatureSettings = original_publish_settings
     for cls, orig_ttl, orig_settings in originals:
         cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
         cls.SignatureSettings = orig_settings
