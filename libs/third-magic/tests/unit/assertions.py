@@ -88,6 +88,7 @@ async def assert_container_created_with_ordered_tasks(
     expected_task_keys: list[RapyerKey],
 ) -> CT:
     reloaded = await assert_task_reloaded_as_type(container_key, container_type)
+    # This assert is for type checker only
     assert isinstance(reloaded, ContainerTaskSignature)
     task_ids = reloaded.task_ids
     assert len(task_ids) == len(expected_task_keys)
