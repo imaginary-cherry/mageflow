@@ -82,6 +82,22 @@ async def assert_task_has_short_ttl(redis_client: Redis, task_key: str):
     assert 0 < ttl <= REMOVED_TASK_TTL, f"Expected TTL <= {REMOVED_TASK_TTL}, got {ttl}"
 
 
+async def assert_container_subtasks(
+    container: ContainerTaskSignature,
+    expected_names: list[str],
+) -> list[Signature]:
+    """Assert container has subtasks with expected names and correct container_id."""
+    task_ids = container.task_ids
+    assert len(task_ids) == len(expected_names)
+    reloaded_tasks = []
+    for task_key, expected_name in zip(task_ids, expected_names):
+        reloaded = await assert_task_reloaded_as_type(task_key, Signature)
+        assert reloaded.task_name == expected_name
+        assert reloaded.signature_container_id == container.key
+        reloaded_tasks.append(reloaded)
+    return reloaded_tasks
+
+
 async def assert_container_created_with_ordered_tasks(
     container_key: RapyerKey,
     container_type: type[CT],
