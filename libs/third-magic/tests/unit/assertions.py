@@ -96,7 +96,7 @@ async def assert_container_created_with_ordered_tasks(
         assert task_ids[i] == expected_key
 
     for task_key in expected_task_keys:
-        reloaded_task = await assert_task_reloaded_as_type(task_key, TaskSignature)
+        reloaded_task = await assert_task_reloaded_as_type(task_key, Signature)
         assert reloaded_task.signature_container_id == container_key
 
     return reloaded
