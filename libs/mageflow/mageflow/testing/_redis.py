@@ -6,7 +6,7 @@ from testcontainers.redis import AsyncRedisContainer
 
 @pytest.fixture(scope="session")
 def _mageflow_redis_container():
-    with AsyncRedisContainer(image="redis:7-alpine") as container:
+    with AsyncRedisContainer(image="redis/redis-stack-server:7.2.0-v13") as container:
         yield container
 
 
