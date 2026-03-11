@@ -185,9 +185,10 @@ async def normal_retry_once(msg, ctx: Context):
     retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
 @hatchet.with_signature
-async def retry_to_failure(msg, signature: TaskSignature):
+@hatchet.with_ctx
+async def retry_to_failure(msg, ctx: Context, signature: TaskSignature):
     await TaskSignature.Meta.redis.set(
-        f"finish-{signature.key}", datetime.now().isoformat()
+        f"finish-{signature.key}-{ctx.attempt_number}", datetime.now().isoformat()
     )
     raise ValueError("Test exception")
 

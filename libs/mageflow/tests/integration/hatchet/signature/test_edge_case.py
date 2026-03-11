@@ -117,11 +117,11 @@ async def test__retry_to_failure_with_error_callback__error_callback_called_once
     assert_signature_done(runs, error_callback_sign, base_data=test_ctx)
 
     # Verify error callback was called only once after all retries
-    finish_retry_time = await redis_client.get(f"finish-{retry_to_failure_sign.key}")
+    finish_retry_time = await redis_client.get(f"finish-{retry_to_failure_sign.key}-4")
     finish_retry_time = datetime.fromisoformat(finish_retry_time)
     wf_by_task_id = map_wf_by_id(runs, also_not_done=True)
     error_callback_run = wf_by_task_id[error_callback_sign.key]
-    callback_start_time = error_callback_run.started_at
+    callback_start_time = error_callback_run.task_inserted_at
     finish_retry_time = finish_retry_time.astimezone(callback_start_time.tzinfo)
     assert (
         callback_start_time > finish_retry_time
