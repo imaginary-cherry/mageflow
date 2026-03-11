@@ -69,12 +69,7 @@ def handle_task_callback(
                     result = await flexible_call(func, message, *args, **kwargs)
                 else:
                     result = await flexible_call(func, message, ctx, *args, **kwargs)
-            except asyncio.CancelledError as e:
-                is_task_finish = True
-                if not is_normal_run:
-                    await lifecycle.task_failed(msg_data, e)
-                raise
-            except Exception as e:
+            except (Exception, asyncio.CancelledError) as e:
                 will_retry = TaskSignature.ClientAdapter.should_task_retry(
                     task_model, ctx.attempt_number, e
                 )
