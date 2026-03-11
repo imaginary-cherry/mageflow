@@ -161,7 +161,9 @@ async def timeout_task(msg: ContextMessage):
     await asyncio.sleep(10)
 
 
-@hatchet.task(execution_timeout=timedelta(seconds=3), input_validator=ContextMessage)
+@hatchet.task(
+    execution_timeout=timedelta(seconds=3), input_validator=ContextMessage, retries=2
+)
 @hatchet.with_ctx
 @hatchet.with_signature
 async def retry_timeout_task(
