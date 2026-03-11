@@ -1,17 +1,38 @@
+from pathlib import Path
+
 import pytest
 import pytest_asyncio
 import rapyer
-from testcontainers.redis import AsyncRedisContainer
+
+from mageflow.testing._config import _read_testing_config
+
+
+def _get_backend() -> str:
+    """Return the configured Redis backend: 'testcontainers' (default) or 'fakeredis'."""
+    config = _read_testing_config(Path.cwd())
+    return config.get("backend", "testcontainers")
 
 
 @pytest.fixture(scope="session")
 def _mageflow_redis_container():
+    if _get_backend() == "fakeredis":
+        yield None
+        return
+    from testcontainers.redis import AsyncRedisContainer
+
     with AsyncRedisContainer(image="redis/redis-stack-server:7.2.0-v13") as container:
         yield container
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def _mageflow_redis_client(_mageflow_redis_container):
+    if _mageflow_redis_container is None:
+        import fakeredis
+
+        client = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        yield client
+        await client.aclose()
+        return
     client = await _mageflow_redis_container.get_async_client(decode_responses=True)
     yield client
     await client.aclose()
