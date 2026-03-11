@@ -2,6 +2,18 @@
 
 ## [0.3.4]
 
+### ✨ Added
+
+- **Testing Client (`mageflow.testing`)**: New pytest plugin providing a `TestClientAdapter` for testing mageflow workflows without a live Hatchet or Redis backend.
+  - `mageflow_client` fixture with automatic setup/teardown
+  - Typed dispatch records: `TaskDispatchRecord`, `SwarmDispatchRecord`, `ChainDispatchRecord`
+  - Assertion API: `assert_task_dispatched`, `assert_swarm_dispatched`, `assert_chain_dispatched` with subset and exact matching
+  - Local execution mode for running task handlers in-process
+  - `fakeredis` backend support for dual-backend testing (real Redis vs in-memory)
+  - Configurable via `pyproject.toml` `[tool.mageflow.testing]` section
+- **Integration Tests for Testing Plugin**: User-workflow integration tests covering task, swarm, and chain dispatch scenarios.
+
+
 ### 🐛 Fixed
 
 - **Chain Creation Inside `abounded_field`**: Fixed a bug where creating a chain inside an `abounded_field` context failed due to a nested pipeline conflict. The chain creator now correctly reuses the existing Redis pipeline instead of creating a conflicting one.
