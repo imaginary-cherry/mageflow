@@ -36,6 +36,7 @@ async def mageflow_client(
     overrides = marker.kwargs if marker else {}
 
     client_path = overrides.get("client") or _mageflow_testing_config.get("client")
+    local_execution = overrides.get("local_execution") or _mageflow_testing_config.get("local_execution", False)
     task_defs = {}
     if client_path:
         real_client = _load_client(client_path)
@@ -43,7 +44,7 @@ async def mageflow_client(
             await MageflowTaskDefinition.ainsert(task_def)
             task_defs[task_def.task_name] = task_def
 
-    adapter = TestClientAdapter(task_defs=task_defs)
+    adapter = TestClientAdapter(task_defs=task_defs, local_execution=local_execution)
 
     original_adapter = Signature.ClientAdapter
     Signature.ClientAdapter = adapter

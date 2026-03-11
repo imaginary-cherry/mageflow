@@ -115,12 +115,19 @@ class _StubRunRef:
 
 
 class TestClientAdapter(BaseClientAdapter):
-    def __init__(self, task_defs: dict[str, MageflowTaskDefinition] | None = None):
+    def __init__(
+        self,
+        task_defs: dict[str, MageflowTaskDefinition] | None = None,
+        local_execution: bool = False,
+        hatchet_tasks: dict[str, Any] | None = None,
+    ):
         self._dispatches: list[RecordedDispatch] = []
         self._typed_dispatches: list[
             TaskDispatchRecord | SwarmDispatchRecord | ChainDispatchRecord
         ] = []
         self._task_defs: dict[str, MageflowTaskDefinition] = task_defs or {}
+        self._local_execution: bool = local_execution
+        self._hatchet_tasks: dict[str, Any] = hatchet_tasks or {}
 
     # ------------------------------------------------------------------
     # Helper: input validation
@@ -178,6 +185,9 @@ class TestClientAdapter(BaseClientAdapter):
                 kwargs=kwargs,
             )
         )
+        if self._local_execution and signature.task_name in self._hatchet_tasks:
+            task = self._hatchet_tasks[signature.task_name]
+            return await task.aio_mock_run(msg)
         return _StubRunRef()
 
     async def await_signature(
@@ -203,6 +213,9 @@ class TestClientAdapter(BaseClientAdapter):
                 kwargs=kwargs,
             )
         )
+        if self._local_execution and signature.task_name in self._hatchet_tasks:
+            task = self._hatchet_tasks[signature.task_name]
+            return await task.aio_mock_run(msg)
         return {}
 
     async def acall_chain_done(self, results: Any, chain: "ChainTaskSignature"):
