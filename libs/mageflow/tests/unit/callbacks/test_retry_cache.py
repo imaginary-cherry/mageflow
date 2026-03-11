@@ -186,7 +186,7 @@ async def test__durable_task__success__cache_deleted(
 
 
 @pytest.mark.asyncio
-async def test__durable_task__cancel_error__cache_deleted(
+async def test__durable_task__cancel_error_not_yet_finished__cache_not_deleted(
     adapter_with_lifecycle,
     redis_client,
 ):
@@ -197,10 +197,11 @@ async def test__durable_task__cancel_error__cache_deleted(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
-            attempt_number=1,
+            attempt_number=4,
             workflow_id=workflow_id,
         )
     )
+    adapter_with_lifecycle.should_task_retry.return_value = True
 
     async def user_func(msg):
         await thirdmagic.sign("test_task", model_validators=ContextMessage)
@@ -215,7 +216,7 @@ async def test__durable_task__cancel_error__cache_deleted(
 
     # Assert - cache should be deleted even though retries are configured
     cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
+    assert await redis_client.exists(cache_key)
 
 
 @pytest.mark.asyncio
@@ -224,16 +225,17 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
     redis_client,
 ):
     # Arrange
-    signature, _ = await task_signature_factory(retries=3)
+    signature, _ = await task_signature_factory(retries=1)
     workflow_id = "wf-cancel-delete-fail"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
-            attempt_number=1,
+            attempt_number=2,
             workflow_id=workflow_id,
         )
     )
+    adapter_with_lifecycle.should_task_retry.return_value = False
 
     async def user_func(msg):
         await thirdmagic.sign("test_task", model_validators=ContextMessage)
@@ -370,7 +372,7 @@ async def test__vanilla_task__error_no_retry__cache_deleted(
 
 
 @pytest.mark.asyncio
-async def test__vanilla_task__cancel_error__cache_deleted(
+async def test__vanilla_task__cancel_error_with_retries__cache_not_deleted(
     adapter_with_lifecycle,
     redis_client,
 ):
@@ -398,7 +400,7 @@ async def test__vanilla_task__cancel_error__cache_deleted(
 
     # Assert - cache should be deleted even though retries are configured
     cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
+    assert await redis_client.exists(cache_key)
 
 
 @pytest.mark.asyncio
