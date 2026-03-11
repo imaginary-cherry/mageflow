@@ -26,6 +26,7 @@ from tests.integration.hatchet.worker import (
     normal_retry_once,
     retry_once,
     retry_timeout_task,
+    retry_to_failure,
     task1_callback,
     timeout_task,
 )
