@@ -161,6 +161,18 @@ async def timeout_task(msg: ContextMessage):
     await asyncio.sleep(10)
 
 
+@hatchet.task(execution_timeout=timedelta(seconds=3), input_validator=ContextMessage)
+@hatchet.with_ctx
+@hatchet.with_signature
+async def retry_timeout_task(
+    msg: ContextMessage, ctx: Context, signature: TaskSignature
+):
+    await TaskSignature.Meta.redis.set(
+        f"finish-{signature.key}-{ctx.attempt_number}", datetime.now().isoformat()
+    )
+    await asyncio.sleep(10)
+
+
 @hatchet.task(
     retries=3, execution_timeout=timedelta(seconds=60), input_validator=ContextMessage
 )
@@ -290,6 +302,7 @@ workflows = [
     callback_with_redis,
     return_multiple_values,
     timeout_task,
+    retry_timeout_task,
     retry_once,
     normal_retry_once,
     retry_to_failure,
