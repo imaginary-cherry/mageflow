@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,13 @@ from mageflow.testing._config import _read_testing_config
 
 
 def _get_backend() -> str:
-    """Return the configured Redis backend: 'testcontainers' (default) or 'fakeredis'."""
+    """Return the configured Redis backend: 'testcontainers' (default) or 'fakeredis'.
+
+    Checks MAGEFLOW_TESTING_BACKEND env var first, then falls back to pyproject.toml config.
+    """
+    env_backend = os.environ.get("MAGEFLOW_TESTING_BACKEND")
+    if env_backend:
+        return env_backend
     config = _read_testing_config(Path.cwd())
     return config.get("backend", "testcontainers")
 
