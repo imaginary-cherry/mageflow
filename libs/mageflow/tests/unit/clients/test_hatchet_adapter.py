@@ -396,7 +396,7 @@ def test_extract_retries_returns_task_retries(adapter, hatchet_task):
         (3, 4, ValueError, False),
         (3, 1, NonRetryableException, False),
         (None, 1, ValueError, False),
-        (0, 0, ValueError, False),
+        (0, 1, ValueError, False),
     ],
     ids=[
         "normal-retry",
