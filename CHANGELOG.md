@@ -5,6 +5,8 @@
 ### 🐛 Fixed
 
 - **Chain Creation Inside `abounded_field`**: Fixed a bug where creating a chain inside an `abounded_field` context failed due to a nested pipeline conflict. The chain creator now correctly reuses the existing Redis pipeline instead of creating a conflicting one.
+- **Fix retry counter**: We now retry total of 4 times for setting retries=3 (like hatchet does by default)
+- **Timeout/Cancellation Retry**: We now retry for timeout as well.
 
 ### 🔄 Changed
 
@@ -13,6 +15,7 @@
 ### 🛠️ Technical Improvements
 
 - **`abounded_field` Test Suite**: Added comprehensive tests covering signatures, chains, swarms, and mixed combinations inside `abounded_field`.
+- **Retry Integration Tests**: Added `retry_timeout_task` worker and test cases verifying retry behavior for both timeout and error scenarios.
 
 
 ## [0.3.3]
