@@ -4,6 +4,7 @@ from datetime import datetime
 import pytest
 from hatchet_sdk import NonRetryableException
 from hatchet_sdk.clients.rest import V1TaskStatus
+from hatchet_sdk.runnables.workflow import Standalone
 from thirdmagic.signature import SignatureStatus
 from thirdmagic.task import TaskSignature
 
@@ -24,6 +25,7 @@ from tests.integration.hatchet.worker import (
     fail_task,
     normal_retry_once,
     retry_once,
+    retry_timeout_task,
     retry_to_failure,
     task1_callback,
     timeout_task,
@@ -91,8 +93,13 @@ async def test__retry_once_with_callbacks__success_callback_called_error_callbac
 
 
 @pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize(["retry_task"], [[retry_to_failure], [retry_timeout_task]])
 async def test__retry_to_failure_with_error_callback__error_callback_called_once_after_retries_edge_case(
-    hatchet_client_init: HatchetInitData, test_ctx, ctx_metadata, trigger_options
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+    retry_task: Standalone,
 ):
     # Arrange
     redis_client, hatchet = (
@@ -103,7 +110,7 @@ async def test__retry_to_failure_with_error_callback__error_callback_called_once
     message = ContextMessage(base_data=test_ctx)
     error_callback_sign = await mageflow.asign(error_callback)
     retry_to_failure_sign = await mageflow.asign(
-        retry_to_failure, error_callbacks=[error_callback_sign]
+        retry_task, error_callbacks=[error_callback_sign]
     )
 
     # Act
