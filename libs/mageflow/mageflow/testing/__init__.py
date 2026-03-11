@@ -1,1 +1,3 @@
-# mageflow.testing - pytest plugin for mageflow test infrastructure
+from mageflow.testing._adapter import RecordedDispatch, TestClientAdapter
+
+__all__ = ["TestClientAdapter", "RecordedDispatch"]
