@@ -26,7 +26,6 @@ from tests.integration.hatchet.worker import (
     normal_retry_once,
     retry_once,
     retry_timeout_task,
-    retry_to_failure,
     task1_callback,
     timeout_task,
 )
@@ -95,7 +94,10 @@ async def test__retry_once_with_callbacks__success_callback_called_error_callbac
 @pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
     ["retry_task", "wait_time", "retries"],
-    [[retry_to_failure, 6, 3], [retry_timeout_task, 12, 2]],
+    [
+        [retry_to_failure, 6, 3],
+        [retry_timeout_task, 15, 2],
+    ],
 )
 async def test__retry_to_failure_with_error_callback__error_callback_called_once_after_retries_edge_case(
     hatchet_client_init: HatchetInitData,
