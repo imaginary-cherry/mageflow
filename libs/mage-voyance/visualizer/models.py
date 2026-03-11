@@ -3,8 +3,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature.model import TaskSignature
 from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.task import TaskSignature
 
 TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
 

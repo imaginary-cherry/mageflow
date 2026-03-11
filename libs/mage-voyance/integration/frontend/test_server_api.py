@@ -1,5 +1,6 @@
 import pytest
-from tests.integration.frontend.seed_test_data import TEST_PREFIX
+
+from integration.frontend.seed_test_data import TEST_PREFIX
 
 
 @pytest.mark.asyncio(loop_scope="session")

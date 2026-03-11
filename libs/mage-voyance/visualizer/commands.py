@@ -1,7 +1,7 @@
 import click
 import uvicorn
 
-from mageflow.visualizer.server import get_static_dir
+from visualizer.server import get_static_dir
 
 
 def validate_static_files_exist() -> bool:
