@@ -40,14 +40,17 @@ Plans:
 - [ ] 01-07-PLAN.md — Gap closure: wire tray Settings menu item to frontend SettingsDialog
 
 ### Phase 2: CI Pipeline + Installers
-**Goal**: Every tagged release automatically produces signed, notarized single-file installers for macOS (Universal), Windows x64, and Linux x64 via GitHub Actions.
+**Goal**: Every tagged release automatically produces signed, notarized single-file installers for macOS (arm64 + x86_64), Windows x64, and Linux x64 via GitHub Actions.
 **Depends on**: Phase 1
 **Requirements**: DIST-01
 **Success Criteria** (what must be TRUE):
-  1. Pushing a version tag triggers a GitHub Actions workflow that produces a .dmg (macOS Universal), .msi (Windows x64), and .deb/.AppImage (Linux x64) without manual intervention.
+  1. Pushing a version tag triggers a GitHub Actions workflow that produces a .dmg (macOS arm64 + x86_64), .msi (Windows x64), and .deb/.AppImage (Linux x64) without manual intervention.
   2. The macOS installer passes Gatekeeper (notarized and signed); the Windows installer is signed and does not trigger Defender quarantine; the Linux package installs cleanly.
   3. A fresh machine with no Python, Rust, or Node installed can install the app from the produced artifact and connect to Hatchet/Redis successfully.
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Release workflow + tauri.conf.json signing config
+- [ ] 02-02-PLAN.md — Secret configuration + test tag push verification
 
 ### Phase 3: Distribution
 **Goal**: Users can install the app via their platform's package manager and receive in-app update notifications when new releases are available.
@@ -67,5 +70,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Working App | 8/8 | Complete   | 2026-03-12 |
-| 2. CI Pipeline + Installers | 0/TBD | Not started | - |
+| 2. CI Pipeline + Installers | 0/2 | Planning complete | - |
 | 3. Distribution | 0/TBD | Not started | - |

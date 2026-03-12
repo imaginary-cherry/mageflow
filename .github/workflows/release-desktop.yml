@@ -1,0 +1,200 @@
+# Source: https://v2.tauri.app/distribute/pipelines/github/
+# Combined with Nuitka sidecar pre-build and macOS codesign pattern
+# Triggers on v* tag push and produces signed installers for all platforms.
+# Windows ships unsigned initially — add Azure Trusted Signing (signCommand) in v1.1.
+# TODO(windows-signing): Configure AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET secrets
+#   and add bundle.windows.signCommand to tauri.conf.json once Azure Trusted Signing is set up.
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Linux requires additional system libraries for WebKit and system tray support.
+      # Pin to ubuntu-22.04 (not ubuntu-latest) to ensure libwebkit2gtk-4.1-dev is available
+      # and to avoid glibc 2.34+ ABI issues on older target systems.
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Install both macOS targets so the same runner handles both arm64 and x86_64 jobs.
+      # The empty string for Linux/Windows is intentional — those runners only need the host target.
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './frontend/src-tauri -> target'
+
+      # --- PYTHON SIDECAR PRE-BUILD ---
+      # The sidecar must be compiled natively on each platform runner and placed in
+      # frontend/src-tauri/binaries/ with the target-triple suffix BEFORE tauri-action runs.
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python sidecar dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e "./libs/mage-voyance[server]"
+
+      # Pin nuitka-version to 4.0.4 to match Phase 1's tested version.
+      # Nuitka-Action@main defaults to latest which may break gRPC/protobuf compatibility.
+      # Upgrade intentionally after verifying hatchet-sdk compatibility.
+      # Note on Windows mode: Using onefile for all platforms initially (simplest path).
+      # If Windows Defender flags the onefile binary (self-extraction to %TEMP%), switch to
+      # standalone mode. Standalone produces a .dist/ directory which requires Tauri bundler
+      # changes to handle a directory rather than a single file — see research Open Question 2.
+      - name: Compile Python sidecar with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: '4.0.4'
+          script-name: libs/mage-voyance/visualizer/__main__.py
+          mode: onefile
+          working-directory: .
+          output-dir: frontend/src-tauri/binaries/
+          output-file: mageflow-server-temp
+          include-package: >-
+            uvicorn,
+            fastapi,
+            anyio,
+            starlette,
+            rapyer,
+            redis,
+            thirdmagic,
+            visualizer,
+            pydantic,
+            grpc,
+            google.protobuf
+          include-package-data: 'hatchet_sdk,rapyer'
+          follow-imports: true
+
+      # Rename the Nuitka output to the target-triple format that Tauri externalBin expects.
+      # Tauri appends the target triple automatically at runtime; the file must be named accordingly.
+      # Windows fallback: if standalone mode is used later, the .exe may be inside a .dist/ directory.
+      - name: Rename sidecar to target-triple format
+        shell: bash
+        run: |
+          TARGET=$(rustc --print host-tuple)
+          BIN_DIR="frontend/src-tauri/binaries"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            if [[ -f "${BIN_DIR}/mageflow-server-temp.exe" ]]; then
+              mv "${BIN_DIR}/mageflow-server-temp.exe" "${BIN_DIR}/mageflow-server-${TARGET}.exe"
+            elif [[ -d "${BIN_DIR}/mageflow-server-temp.dist" ]]; then
+              # Standalone mode fallback: binary is inside the .dist directory
+              mv "${BIN_DIR}/mageflow-server-temp.dist/mageflow-server-temp.exe" \
+                 "${BIN_DIR}/mageflow-server-${TARGET}.exe"
+            else
+              echo "ERROR: Could not find Nuitka output binary for Windows"
+              exit 1
+            fi
+          else
+            mv "${BIN_DIR}/mageflow-server-temp" "${BIN_DIR}/mageflow-server-${TARGET}"
+            chmod +x "${BIN_DIR}/mageflow-server-${TARGET}"
+          fi
+
+      # --- macOS CODE SIGNING ---
+      # The sidecar binary MUST be individually codesigned before tauri-action bundles it.
+      # Apple's notarization rejects apps containing unsigned nested executables.
+      # We use an ephemeral keychain (not the system keychain) to avoid "Always Trust" issues
+      # that can cause notarization failures for nested binaries (Tauri issue #11992).
+
+      - name: Import Apple Developer certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/apple_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          # CRITICAL: set partition list so codesign can access the key without GUI prompt
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+      - name: Codesign sidecar binary individually (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          TARGET=$(rustc --print host-tuple)
+          SIDECAR="frontend/src-tauri/binaries/mageflow-server-${TARGET}"
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          codesign --force --timestamp --options runtime \
+            --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" \
+            --keychain "$KEYCHAIN_PATH" \
+            "$SIDECAR"
+
+      # --- FRONTEND BUILD + TAURI RELEASE ---
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build and release with tauri-action
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing and notarization (6 secrets)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows Azure Trusted Signing (3 secrets — unused until signCommand is configured)
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        with:
+          projectPath: ./frontend
+          tagName: v__VERSION__
+          releaseName: 'Mageflow Viewer v__VERSION__'
+          releaseBody: 'Download the installer for your platform from the assets below.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
