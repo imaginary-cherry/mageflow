@@ -12,6 +12,16 @@ from mageflow.testing._redis import (
     _mageflow_redis_container,
 )
 
+# Re-export redis fixtures so pytest discovers them via the pytest11 plugin entry point.
+# Without this, external packages using mageflow_client fixture cannot resolve the
+# _mageflow_redis_client / _mageflow_init_rapyer dependencies.
+__all__ = [
+    "_mageflow_redis_container",
+    "_mageflow_redis_client",
+    "_mageflow_flush_redis",
+    "_mageflow_init_rapyer",
+]
+
 
 def pytest_configure(config):
     config.addinivalue_line(
@@ -36,7 +46,9 @@ async def mageflow_client(
     overrides = marker.kwargs if marker else {}
 
     client_path = overrides.get("client") or _mageflow_testing_config.get("client")
-    local_execution = overrides.get("local_execution") or _mageflow_testing_config.get("local_execution", False)
+    local_execution = overrides.get("local_execution") or _mageflow_testing_config.get(
+        "local_execution", False
+    )
     task_defs = {}
     if client_path:
         real_client = _load_client(client_path)
