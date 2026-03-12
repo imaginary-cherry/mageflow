@@ -13,7 +13,7 @@ Two phases deliver the complete project. Phase 1 creates the standalone `libs/ma
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Package and Tests** - Standalone e2e package with all dispatch and verification test scenarios (gap closure in progress) (completed 2026-03-12)
-- [ ] **Phase 2: CI Integration** - Dual-backend CI jobs running the full test suite
+- [x] **Phase 2: CI Integration** - Dual-backend CI jobs running the full test suite (completed 2026-03-12)
 
 ## Phase Details
 
@@ -42,7 +42,9 @@ Plans:
   1. CI runs a `e2e-fakeredis` job that executes `libs/mageflow-e2e/` tests with `MAGEFLOW_TESTING_BACKEND=fakeredis` and passes without Docker
   2. CI runs a `e2e-testcontainers` job that executes `libs/mageflow-e2e/` tests against a real `redis/redis-stack-server:7.2.0-v13` container and passes
   3. Both jobs are required checks — a failure in either blocks merge
-**Plans**: TBD
+**Plans:** 1/1 plans complete
+Plans:
+- [ ] 02-01-PLAN.md — Add e2e-tests matrix job and test-results fan-in gate
 
 ## Progress
 
@@ -52,4 +54,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Package and Tests | 4/4 | Complete   | 2026-03-12 |
-| 2. CI Integration | 0/TBD | Not started | - |
+| 2. CI Integration | 1/1 | Complete   | 2026-03-12 |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-package-and-tests/01-04-PLAN.md
-last_updated: "2026-03-12T09:33:30.330Z"
+stopped_at: "Checkpoint: Task 2 human-verify in 02-ci-integration/02-01-PLAN.md"
+last_updated: "2026-03-12T11:14:31.063Z"
 last_activity: 2026-03-12 — Roadmap created
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
   percent: 0
 ---
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-package-and-tests P03 | 2 | 2 tasks | 2 files |
 | Phase 01-package-and-tests P02 | 7 | 2 tasks | 4 files |
 | Phase 01-package-and-tests P04 | 3 | 2 tasks | 2 files |
+| Phase 02-ci-integration P01 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 01-package-and-tests]: aswarm uses task_name= not name= parameter; plan docs had wrong kwarg
 - [Phase 01-package-and-tests]: plugin.py must re-export redis fixtures from _redis.py so external pytest11 consumers work without conftest.py
 - [Phase 01-package-and-tests]: asyncio_default_test_loop_scope=session required alongside asyncio_default_fixture_loop_scope=session to ensure test coroutines share the session event loop with redis fixtures
+- [Phase 02-ci-integration]: Use MAGEFLOW_TESTING_BACKEND env var (not file copy) for backend selection — already supported by plugin, avoids file mutation in CI
+- [Phase 02-ci-integration]: Install testcontainers[redis] unconditionally in both matrix variants — simpler, no-op for fakeredis
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:33:30.328Z
-Stopped at: Completed 01-package-and-tests/01-04-PLAN.md
+Last session: 2026-03-12T11:14:31.061Z
+Stopped at: Checkpoint: Task 2 human-verify in 02-ci-integration/02-01-PLAN.md
 Resume file: None
