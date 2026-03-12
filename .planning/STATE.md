@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-ci-pipeline-installers-01-PLAN.md
-last_updated: "2026-03-12T15:10:23.446Z"
+stopped_at: Completed 02-ci-pipeline-installers-02-PLAN.md
+last_updated: "2026-03-12T18:48:06.652Z"
 last_activity: 2026-03-12 — Roadmap created (3 phases, 13/13 requirements mapped)
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-working-app P06 | 45 | 2 tasks | 7 files |
 | Phase 01-working-app P07 | 5 | 1 tasks | 1 files |
 | Phase 02-ci-pipeline-installers P01 | 5 | 2 tasks | 2 files |
+| Phase 02-ci-pipeline-installers P02 | 75 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 02-ci-pipeline-installers]: Nuitka 4.0.4 pinned in CI to match Phase 1 tested version for gRPC/protobuf compatibility
 - [Phase 02-ci-pipeline-installers]: Windows ships unsigned initially; Azure Trusted Signing deferred to v1.1 (AZURE_* secrets wired, signCommand not yet added)
 - [Phase 02-ci-pipeline-installers]: Separate arm64 + x86_64 DMGs instead of universal-apple-darwin — avoids Tauri bug #3355 sidecar runtime resolution failure
+- [Phase 02-ci-pipeline-installers]: No Apple Developer account — macOS .dmg ships unsigned for v1.0; signed builds deferred until Apple Developer Program enrollment
+- [Phase 02-ci-pipeline-installers]: GitHub Actions workflow permissions must be set to Read and write before first tag push
 
 ### Critical Pitfalls (from research — address in Phase 1)
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T15:10:23.444Z
-Stopped at: Completed 02-ci-pipeline-installers-01-PLAN.md
+Last session: 2026-03-12T18:48:06.651Z
+Stopped at: Completed 02-ci-pipeline-installers-02-PLAN.md
 Resume file: None

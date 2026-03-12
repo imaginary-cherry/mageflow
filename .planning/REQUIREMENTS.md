@@ -16,7 +16,7 @@
 
 ### Distribution
 
-- [ ] **DIST-01**: Single-file installer produced for macOS (universal), Windows x64, Linux x64
+- [x] **DIST-01**: Single-file installer produced for macOS (universal), Windows x64, Linux x64
 - [ ] **DIST-02**: Built-in auto-updater checks for and applies new releases
 - [ ] **DIST-03**: App distributed via Homebrew tap (macOS), Chocolatey (Windows), and apt/snap (Linux)
 
@@ -59,7 +59,7 @@
 | PKG-04 | Phase 1 | Complete |
 | PKG-05 | Phase 1 | Complete |
 | PKG-06 | Phase 1 | Complete |
-| DIST-01 | Phase 2 | Pending |
+| DIST-01 | Phase 2 | Complete |
 | DIST-02 | Phase 3 | Pending |
 | DIST-03 | Phase 3 | Pending |
 | UX-01 | Phase 1 | Complete |

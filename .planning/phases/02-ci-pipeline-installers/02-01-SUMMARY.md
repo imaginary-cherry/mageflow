@@ -123,6 +123,13 @@ Before the workflow can run, the following GitHub Actions secrets must be config
 - Windows unsigned initially — users will see SmartScreen warning on first install. Add Azure Trusted Signing for v1.1.
 - Phase 3 (auto-updater) can build on the `releaseDraft: true` + `tagName: v__VERSION__` pattern established here.
 
+## Self-Check: PASSED
+
+- FOUND: .github/workflows/release-desktop.yml
+- FOUND: .planning/phases/02-ci-pipeline-installers/02-01-SUMMARY.md
+- FOUND: commit dfd6e9f (Task 1 — release-desktop.yml)
+- FOUND: commit 383b9f3 (Task 2 — tauri.conf.json)
+
 ---
 *Phase: 02-ci-pipeline-installers*
 *Completed: 2026-03-12*
