@@ -1000,7 +1000,7 @@ version = "0.1.0"
 source = { editable = "libs/mageflow-e2e" }
 dependencies = [
     { name = "fakeredis", extra = ["json", "lua"] },
-    { name = "mageflow" },
+    { name = "mageflow", extra = ["hatchet"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -1008,7 +1008,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fakeredis", extras = ["json", "lua"], specifier = ">=2.34.0,<3.0.0" },
-    { name = "mageflow", editable = "libs/mageflow" },
+    { name = "mageflow", extras = ["hatchet"], editable = "libs/mageflow" },
     { name = "pytest", specifier = ">=9.0.2,<10.0.0" },
     { name = "pytest-asyncio", specifier = ">=1.2.0,<2.0.0" },
 ]
