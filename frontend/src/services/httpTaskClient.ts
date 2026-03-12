@@ -1,6 +1,7 @@
 import { Task, TaskType, PaginatedChildren } from '@/types/task';
 import { TaskClient } from './types';
 import { NetworkError, NotFoundError, ServerError } from './errors';
+import { isTauriEnvironment } from '@/stores/settingsStore';
 
 interface TaskFromServer {
   id: string;
@@ -18,7 +19,15 @@ export class HttpTaskClient implements TaskClient {
   private readonly baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? import.meta.env.VITE_API_URL ?? '';
+    if (baseUrl !== undefined) {
+      this.baseUrl = baseUrl;
+    } else if (!isTauriEnvironment()) {
+      // Browser dev mode: fall back to VITE_API_URL
+      this.baseUrl = import.meta.env.VITE_API_URL ?? '';
+    } else {
+      // Tauri mode: baseUrl must be supplied by the startup hook
+      this.baseUrl = '';
+    }
   }
 
   private handleResponse(response: Response, context: string): void {
