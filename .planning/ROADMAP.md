@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User quits the app and no orphaned Python server process remains (verified by process list).
   4. When the sidecar crashes or external services are unreachable, user sees a meaningful error message — not a blank screen.
   5. System tray icon shows connection status; user can show, hide, or quit the app from the tray.
-**Plans:** 1/7 plans executed
+**Plans:** 2/7 plans executed
 Plans:
 - [ ] 01-00-PLAN.md — Wave 0 test stubs for Nyquist compliance
 - [ ] 01-01-PLAN.md — Scaffold Tauri v2 project, Vite config, Python entry point
@@ -65,6 +65,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Working App | 1/7 | In Progress|  |
+| 1. Working App | 2/7 | In Progress|  |
 | 2. CI Pipeline + Installers | 0/TBD | Not started | - |
 | 3. Distribution | 0/TBD | Not started | - |
