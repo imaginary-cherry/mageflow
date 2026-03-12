@@ -15,7 +15,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/mageflow-server",
+          "name": "mageflow-server",
           "sidecar": true,
           "args": [
             "--port",

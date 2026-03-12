@@ -83,7 +83,7 @@ async fn spawn_sidecar(app: &AppHandle) {
     // Build and launch the sidecar command.
     let shell = app.shell();
     match shell
-        .sidecar("binaries/mageflow-server")
+        .sidecar("mageflow-server")
         .expect("Failed to create sidecar command")
         .args([
             "--port",

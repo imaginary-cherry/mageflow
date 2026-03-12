@@ -5,14 +5,20 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+/// Decode a PNG from embedded bytes into a Tauri `Image`.
+fn png_to_image(png_bytes: &[u8]) -> tauri::Result<Image<'static>> {
+    let img = image::load_from_memory_with_format(png_bytes, image::ImageFormat::Png)
+        .map_err(|e| tauri::Error::Anyhow(e.into()))?;
+    let rgba = img.to_rgba8();
+    let (w, h) = rgba.dimensions();
+    Ok(Image::new_owned(rgba.into_raw(), w, h))
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /// Create the system tray icon and context menu.
-/// Returns the TrayIcon handle (Tauri keeps the icon alive as long as the
-/// handle is held, so it should be stored in app state or kept alive by the
-/// builder internally — Tauri v2 stores it internally via `id`).
 pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings...", true, None::<&str>)?;
@@ -21,14 +27,13 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
 
     // Start with yellow icon (starting state).
-    let icon = Image::from_bytes(include_bytes!("../icons/tray-yellow.png"))?;
+    let icon = png_to_image(include_bytes!("../icons/tray-yellow.png"))?;
 
     let tray = TrayIconBuilder::with_id("main")
         .icon(icon)
         .menu(&menu)
         .tooltip("Mageflow Viewer - starting")
-        // Left click should toggle the window, NOT open the menu.
-        .menu_on_left_click(false)
+        .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -58,11 +63,9 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
                 }
             }
             "settings" => {
-                // The React frontend listens for this event and opens SettingsDialog.
                 let _ = app.emit("open-settings", ());
             }
             "quit" => {
-                // app.exit(0) triggers RunEvent::Exit which kills the sidecar.
                 app.exit(0);
             }
             _ => {}
@@ -73,12 +76,6 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
 }
 
 /// Update the tray icon to reflect the given connection status.
-/// Called from the `set_tray_status` Tauri command.
-///
-/// Recognised status values:
-///   "connected"              -> green icon
-///   "starting" | "partial"  -> yellow icon
-///   "disconnected" | *       -> red icon
 pub fn update_tray_icon(app: &AppHandle, status: &str) {
     let icon_bytes: &[u8] = match status {
         "connected" => include_bytes!("../icons/tray-green.png"),
@@ -89,7 +86,7 @@ pub fn update_tray_icon(app: &AppHandle, status: &str) {
     let tooltip = format!("Mageflow Viewer - {}", status);
 
     if let Some(tray) = app.tray_by_id("main") {
-        if let Ok(icon) = Image::from_bytes(icon_bytes) {
+        if let Ok(icon) = png_to_image(icon_bytes) {
             let _ = tray.set_icon(Some(icon));
         }
         let _ = tray.set_tooltip(Some(&tooltip));

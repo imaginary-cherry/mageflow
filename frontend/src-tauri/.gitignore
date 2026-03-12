@@ -4,6 +4,7 @@
 /gen/schemas
 
 # Nuitka-compiled Python sidecar binaries (platform-specific, large)
+/mageflow-server-*
 /binaries/mageflow-server-*
 !/binaries/.gitkeep
 /binaries/__main__.build/
