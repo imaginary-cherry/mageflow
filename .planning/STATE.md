@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-working-app-02-PLAN.md
-last_updated: "2026-03-12T09:22:44.772Z"
+stopped_at: Completed 01-working-app-04-PLAN.md
+last_updated: "2026-03-12T09:27:00.804Z"
 last_activity: 2026-03-12 — Roadmap created (3 phases, 13/13 requirements mapped)
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-working-app P01 | 20 | 2 tasks | 11 files |
 | Phase 01-working-app P03 | 2 | 2 tasks | 3 files |
 | Phase 01-working-app P02 | 15 | 1 tasks | 2 files |
+| Phase 01-working-app P04 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 01-working-app]: Deferred sidecar spawn on first launch: port reserved immediately, spawn skipped if settings.json missing or credentials empty
 - [Phase 01-working-app]: kill_sidecar is synchronous (not async) — RunEvent exit handlers cannot be async in Tauri
 - [Phase 01-working-app]: Removed invalid open-api feature from tauri-plugin-shell v2 — that feature does not exist
+- [Phase 01-working-app]: pollForReady extracted from startup sequence so onOnboardingComplete and retrySidecar share identical hatchet->redis->ready logic
+- [Phase 01-working-app]: HttpTaskClient baseUrl: VITE_API_URL fallback only in browser dev mode; Tauri always receives explicit runtime port
 
 ### Critical Pitfalls (from research — address in Phase 1)
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:22:44.770Z
-Stopped at: Completed 01-working-app-02-PLAN.md
+Last session: 2026-03-12T09:26:57.235Z
+Stopped at: Completed 01-working-app-04-PLAN.md
 Resume file: None
