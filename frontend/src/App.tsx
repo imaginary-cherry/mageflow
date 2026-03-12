@@ -74,6 +74,7 @@ function MainApp({
   // Sidecar crash detection and periodic health polling
   useEffect(() => {
     let sidecarExitUnlisten: (() => void) | null = null;
+    let settingsUnlisten: (() => void) | null = null;
     let healthInterval: ReturnType<typeof setInterval> | null = null;
     let crashed = false;
 
@@ -96,6 +97,9 @@ function MainApp({
             },
             duration: Infinity,
           });
+        });
+        settingsUnlisten = await listen('open-settings', () => {
+          setSettingsOpen(true);
         });
       } catch {
         // listen unavailable — fall through to polling
@@ -135,6 +139,7 @@ function MainApp({
 
     return () => {
       if (sidecarExitUnlisten) sidecarExitUnlisten();
+      if (settingsUnlisten) settingsUnlisten();
       if (healthInterval) clearInterval(healthInterval);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
