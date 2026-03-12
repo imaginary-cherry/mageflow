@@ -2,16 +2,19 @@ from unittest.mock import MagicMock
 
 import fakeredis
 from hatchet_sdk import Hatchet
+from pydantic import BaseModel
+
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
-from pydantic import BaseModel
 from thirdmagic.signature import Signature
 
 # Step 1: Build a mock hatchet client with empty namespace
 _mock_client = MagicMock()
 _mock_client.config = MagicMock()
 _mock_client.config.logger = MagicMock()
-_mock_client.config.namespace = ""  # CRITICAL: empty string so task names are not MagicMocks
+_mock_client.config.namespace = (
+    ""  # CRITICAL: empty string so task names are not MagicMocks
+)
 
 # Step 2: Create real Hatchet wrapping mock client (no network connection made)
 _hatchet = Hatchet(client=_mock_client)

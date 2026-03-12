@@ -6,8 +6,9 @@ TEST-05: dispatch records do not leak between tests (ordering matters — part1 
 TEST-06: adapter.clear() resets dispatch records mid-test
 """
 
-import mageflow
 import pytest
+
+import mageflow
 
 
 async def test_nothing_dispatched_before_dispatch(mageflow_client):

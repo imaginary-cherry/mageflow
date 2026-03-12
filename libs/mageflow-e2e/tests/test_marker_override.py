@@ -4,8 +4,9 @@ Marker override test: TEST-07
 TEST-07: @pytest.mark.mageflow(client=...) overrides default client and loads alt_client task_defs
 """
 
-import mageflow
 import pytest
+
+import mageflow
 
 
 @pytest.mark.mageflow(client="myapp.alt_client:mf")

@@ -4,11 +4,10 @@ These tests serve as usage examples for downstream consumers.
 """
 
 import pytest
+from pydantic import BaseModel
 
 import mageflow
 from mageflow.testing._adapter import SwarmDispatchRecord, TaskDispatchRecord
-from pydantic import BaseModel
-
 
 # ---------------------------------------------------------------------------
 # TestTaskDispatchWorkflow
@@ -28,7 +27,9 @@ class TestTaskDispatchWorkflow:
         await task_sig.acall({"order_id": 123})
 
         # Assert it was dispatched with the expected input
-        record = mageflow_client.assert_task_dispatched("process-order", {"order_id": 123})
+        record = mageflow_client.assert_task_dispatched(
+            "process-order", {"order_id": 123}
+        )
         assert isinstance(record, TaskDispatchRecord)
         assert record.task_name == "process-order"
         assert record.input_data == {"order_id": 123}
@@ -37,16 +38,22 @@ class TestTaskDispatchWorkflow:
     async def test_dispatch_multiple_tasks_and_verify_each(self, mageflow_client):
         """User dispatches two different tasks and verifies each independently."""
         sig_email = await mageflow.asign("send-email", model_validators=BaseModel)
-        sig_inventory = await mageflow.asign("update-inventory", model_validators=BaseModel)
+        sig_inventory = await mageflow.asign(
+            "update-inventory", model_validators=BaseModel
+        )
 
         await sig_email.acall({"to": "user@example.com"})
         await sig_inventory.acall({"product_id": 42, "quantity": 5})
 
         # Verify each task was dispatched
-        email_record = mageflow_client.assert_task_dispatched("send-email", {"to": "user@example.com"})
+        email_record = mageflow_client.assert_task_dispatched(
+            "send-email", {"to": "user@example.com"}
+        )
         assert email_record.task_name == "send-email"
 
-        inventory_record = mageflow_client.assert_task_dispatched("update-inventory", {"product_id": 42})
+        inventory_record = mageflow_client.assert_task_dispatched(
+            "update-inventory", {"product_id": 42}
+        )
         assert inventory_record.task_name == "update-inventory"
 
         # Verify total task dispatch count
@@ -87,7 +94,9 @@ class TestChainDispatchWorkflow:
         itself). assert_chain_dispatched only fires on acall_chain_done, which
         requires the callback flow — not triggered by acall alone.
         """
-        sig_validate = await mageflow.asign("validate-order", model_validators=BaseModel)
+        sig_validate = await mageflow.asign(
+            "validate-order", model_validators=BaseModel
+        )
         sig_charge = await mageflow.asign("charge-payment", model_validators=BaseModel)
 
         chain_sig = await mageflow.achain(
@@ -116,7 +125,9 @@ class TestSwarmDispatchWorkflow:
     async def test_dispatch_swarm_and_verify(self, mageflow_client):
         """User fills a swarm and verifies the dispatch with task name assertions."""
         sig_resize = await mageflow.asign("resize-image", model_validators=BaseModel)
-        sig_compress = await mageflow.asign("compress-image", model_validators=BaseModel)
+        sig_compress = await mageflow.asign(
+            "compress-image", model_validators=BaseModel
+        )
 
         swarm_sig = await mageflow.aswarm(
             tasks=[sig_resize.key, sig_compress.key],
@@ -178,7 +189,9 @@ class TestMixedWorkflow:
     """A user dispatches multiple signature types in the same test."""
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_dispatch_task_and_swarm_then_verify_independently(self, mageflow_client):
+    async def test_dispatch_task_and_swarm_then_verify_independently(
+        self, mageflow_client
+    ):
         """User dispatches a task and a swarm, then verifies each independently.
 
         Demonstrates that task_dispatches, swarm_dispatches, and dispatches (raw)
@@ -205,7 +218,9 @@ class TestMixedWorkflow:
         assert len(mageflow_client.dispatches) == 2
 
         # Use typed assertion methods for each
-        task_record = mageflow_client.assert_task_dispatched("log-event", {"event": "user-login"})
+        task_record = mageflow_client.assert_task_dispatched(
+            "log-event", {"event": "user-login"}
+        )
         assert task_record.task_name == "log-event"
 
         swarm_record = mageflow_client.assert_swarm_dispatched(
