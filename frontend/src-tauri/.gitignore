@@ -2,3 +2,10 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Nuitka-compiled Python sidecar binaries (platform-specific, large)
+/binaries/mageflow-server-*
+!/binaries/.gitkeep
+/binaries/__main__.build/
+/binaries/__main__.dist/
+/binaries/__main__.onefile-build/
