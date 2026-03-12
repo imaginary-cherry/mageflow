@@ -1,8 +1,7 @@
 import dataclasses
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
-
 from thirdmagic.clients.base import BaseClientAdapter
 from thirdmagic.clients.lifecycle import BaseLifecycle
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -25,28 +24,29 @@ class RecordedDispatch:
 
 @dataclasses.dataclass
 class TaskDispatchRecord:
-    task_name: str       # signature.task_name (human-readable)
-    input_data: Any      # msg passed to acall_signature / await_signature
-    kwargs: dict         # extra kwargs forwarded
+    task_name: str  # signature.task_name (human-readable)
+    input_data: Any  # msg passed to acall_signature / await_signature
+    kwargs: dict  # extra kwargs forwarded
 
 
 @dataclasses.dataclass
 class SwarmDispatchRecord:
-    swarm_name: str           # swarm.task_name (human-readable)
-    task_names: list[str]     # resolved sub-task names at dispatch time
+    swarm_name: str  # swarm.task_name (human-readable)
+    task_names: list[str]  # resolved sub-task names at dispatch time
     kwargs: dict
 
 
 @dataclasses.dataclass
 class ChainDispatchRecord:
-    chain_name: str       # chain.task_name (e.g. "chain-task:first_task")
-    results: Any          # results from acall_chain_done
-    task_names: list[str] # resolved sub-task names
+    chain_name: str  # chain.task_name (e.g. "chain-task:first_task")
+    results: Any  # results from acall_chain_done
+    task_names: list[str]  # resolved sub-task names
 
 
 # ------------------------------------------------------------------
 # Matching helpers
 # ------------------------------------------------------------------
+
 
 def _to_dict(value: Any) -> dict:
     """Convert a pydantic BaseModel or dict to a plain dict.

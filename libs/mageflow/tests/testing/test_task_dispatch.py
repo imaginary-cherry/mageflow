@@ -1,23 +1,25 @@
 """Tests for task dispatch assertion API in TestClientAdapter."""
+
 import pytest
-import pytest_asyncio
 
 from mageflow.testing._adapter import (
     TaskDispatchRecord,
     TestClientAdapter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_adapter() -> TestClientAdapter:
     """Create a fresh TestClientAdapter without any Redis dependency."""
     return TestClientAdapter()
 
 
-def _append_task(adapter: TestClientAdapter, task_name: str, input_data: dict, **kwargs) -> None:
+def _append_task(
+    adapter: TestClientAdapter, task_name: str, input_data: dict, **kwargs
+) -> None:
     """Directly append a TaskDispatchRecord — tests assertion logic, not recording."""
     adapter._typed_dispatches.append(
         TaskDispatchRecord(task_name=task_name, input_data=input_data, kwargs=kwargs)
@@ -27,6 +29,7 @@ def _append_task(adapter: TestClientAdapter, task_name: str, input_data: dict, *
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAssertTaskDispatchedByName:
     def test_found(self):
@@ -74,7 +77,9 @@ class TestAssertTaskDispatchedExactMatch:
     def test_exact_match_pass(self):
         adapter = _make_adapter()
         _append_task(adapter, "my-task", {"order_id": 123})
-        record = adapter.assert_task_dispatched("my-task", {"order_id": 123}, exact=True)
+        record = adapter.assert_task_dispatched(
+            "my-task", {"order_id": 123}, exact=True
+        )
         assert record is not None
 
     def test_exact_match_fail_extra_keys(self):
@@ -87,7 +92,9 @@ class TestAssertTaskDispatchedExactMatch:
         adapter = _make_adapter()
         _append_task(adapter, "my-task", {"order_id": 123})
         with pytest.raises(AssertionError, match="input did not match"):
-            adapter.assert_task_dispatched("my-task", {"order_id": 123, "missing": "x"}, exact=True)
+            adapter.assert_task_dispatched(
+                "my-task", {"order_id": 123, "missing": "x"}, exact=True
+            )
 
 
 class TestAssertTaskDispatchedNotFound:
@@ -155,7 +162,8 @@ class TestTaskDispatchesProperty:
         assert len(adapter.task_dispatches) == 1
 
     def test_filters_to_task_records_only(self):
-        from mageflow.testing._adapter import SwarmDispatchRecord, ChainDispatchRecord
+        from mageflow.testing._adapter import ChainDispatchRecord, SwarmDispatchRecord
+
         adapter = _make_adapter()
         _append_task(adapter, "my-task", {})
         adapter._typed_dispatches.append(

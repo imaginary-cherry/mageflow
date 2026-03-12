@@ -1,4 +1,5 @@
 """Tests for chain dispatch assertion API in TestClientAdapter."""
+
 import pytest
 
 from mageflow.testing._adapter import (
@@ -8,10 +9,10 @@ from mageflow.testing._adapter import (
     TestClientAdapter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_adapter() -> TestClientAdapter:
     return TestClientAdapter()
@@ -35,6 +36,7 @@ def _append_chain(
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAssertChainDispatchedByName:
     def test_found(self):
@@ -61,26 +63,34 @@ class TestAssertChainDispatchedWithTaskNames:
     def test_expected_task_names_subset_passes(self):
         adapter = _make_adapter()
         _append_chain(adapter, "my-chain", ["task-a", "task-b", "task-c"])
-        record = adapter.assert_chain_dispatched("my-chain", expected_task_names=["task-a"])
+        record = adapter.assert_chain_dispatched(
+            "my-chain", expected_task_names=["task-a"]
+        )
         assert record is not None
 
     def test_all_expected_present_passes(self):
         adapter = _make_adapter()
         _append_chain(adapter, "my-chain", ["task-a", "task-b"])
-        record = adapter.assert_chain_dispatched("my-chain", expected_task_names=["task-a", "task-b"])
+        record = adapter.assert_chain_dispatched(
+            "my-chain", expected_task_names=["task-a", "task-b"]
+        )
         assert record is not None
 
     def test_missing_task_name_fails(self):
         adapter = _make_adapter()
         _append_chain(adapter, "my-chain", ["task-a"])
         with pytest.raises(AssertionError, match="task names did not match"):
-            adapter.assert_chain_dispatched("my-chain", expected_task_names=["task-a", "task-b"])
+            adapter.assert_chain_dispatched(
+                "my-chain", expected_task_names=["task-a", "task-b"]
+            )
 
     def test_error_message_includes_expected_and_actual(self):
         adapter = _make_adapter()
         _append_chain(adapter, "my-chain", ["task-x"])
         with pytest.raises(AssertionError) as exc_info:
-            adapter.assert_chain_dispatched("my-chain", expected_task_names=["task-missing"])
+            adapter.assert_chain_dispatched(
+                "my-chain", expected_task_names=["task-missing"]
+            )
         msg = str(exc_info.value)
         assert "task-missing" in msg
         assert "task-x" in msg
@@ -124,6 +134,7 @@ class TestMixedDispatchesFilteredCorrectly:
     def test_dispatches_property_returns_all_raw_records(self):
         """dispatches property includes ALL RecordedDispatch items (separate list)."""
         from mageflow.testing._adapter import RecordedDispatch
+
         adapter = _make_adapter()
         # typed dispatches are separate from raw dispatches
         adapter._typed_dispatches.append(
@@ -146,6 +157,7 @@ class TestMixedDispatchesFilteredCorrectly:
             TaskDispatchRecord(task_name="task-1", input_data={}, kwargs={})
         )
         from mageflow.testing._adapter import RecordedDispatch
+
         adapter._dispatches.append(
             RecordedDispatch(
                 dispatch_type="signature",

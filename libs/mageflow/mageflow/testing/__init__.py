@@ -1,9 +1,9 @@
 from mageflow.testing._adapter import (
-    RecordedDispatch,
-    TestClientAdapter,
-    TaskDispatchRecord,
-    SwarmDispatchRecord,
     ChainDispatchRecord,
+    RecordedDispatch,
+    SwarmDispatchRecord,
+    TaskDispatchRecord,
+    TestClientAdapter,
 )
 
 __all__ = [

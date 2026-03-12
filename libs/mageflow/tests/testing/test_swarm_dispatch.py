@@ -1,6 +1,6 @@
 """Tests for swarm dispatch assertion API in TestClientAdapter."""
+
 import pytest
-import pytest_asyncio
 
 from mageflow.testing._adapter import (
     ChainDispatchRecord,
@@ -9,10 +9,10 @@ from mageflow.testing._adapter import (
     TestClientAdapter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_adapter() -> TestClientAdapter:
     return TestClientAdapter()
@@ -32,6 +32,7 @@ def _append_swarm(
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAssertSwarmDispatchedByName:
     def test_found(self):
@@ -58,26 +59,34 @@ class TestAssertSwarmDispatchedWithTaskNames:
     def test_expected_task_names_subset_check_passes(self):
         adapter = _make_adapter()
         _append_swarm(adapter, "my-swarm", ["task-a", "task-b", "task-c"])
-        record = adapter.assert_swarm_dispatched("my-swarm", expected_task_names=["task-a", "task-b"])
+        record = adapter.assert_swarm_dispatched(
+            "my-swarm", expected_task_names=["task-a", "task-b"]
+        )
         assert record is not None
 
     def test_all_expected_task_names_present_passes(self):
         adapter = _make_adapter()
         _append_swarm(adapter, "my-swarm", ["task-a", "task-b"])
-        record = adapter.assert_swarm_dispatched("my-swarm", expected_task_names=["task-a", "task-b"])
+        record = adapter.assert_swarm_dispatched(
+            "my-swarm", expected_task_names=["task-a", "task-b"]
+        )
         assert record is not None
 
     def test_missing_expected_task_name_fails(self):
         adapter = _make_adapter()
         _append_swarm(adapter, "my-swarm", ["task-a"])
         with pytest.raises(AssertionError, match="task names did not match"):
-            adapter.assert_swarm_dispatched("my-swarm", expected_task_names=["task-a", "task-b"])
+            adapter.assert_swarm_dispatched(
+                "my-swarm", expected_task_names=["task-a", "task-b"]
+            )
 
     def test_error_message_includes_expected_and_actual(self):
         adapter = _make_adapter()
         _append_swarm(adapter, "my-swarm", ["task-x"])
         with pytest.raises(AssertionError) as exc_info:
-            adapter.assert_swarm_dispatched("my-swarm", expected_task_names=["task-missing"])
+            adapter.assert_swarm_dispatched(
+                "my-swarm", expected_task_names=["task-missing"]
+            )
         msg = str(exc_info.value)
         assert "task-missing" in msg
         assert "task-x" in msg
