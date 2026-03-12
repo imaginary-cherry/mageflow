@@ -264,9 +264,42 @@ jobs:
         working-directory: libs/mageflow
         run: tox -e testing-${{ matrix.backend }}
 
+  e2e-tests:
+    name: E2E Tests (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    needs: [validate-branch-target]
+    if: always() && (needs.validate-branch-target.result == 'success' || needs.validate-branch-target.result == 'skipped')
+
+    strategy:
+      matrix:
+        backend: ['fakeredis', 'testcontainers']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ./libs/third-magic
+          pip install ./libs/mageflow
+          pip install "./libs/mageflow-e2e"
+          pip install "testcontainers[redis]>=4.14.0,<5.0.0"
+
+      - name: Run E2E Tests
+        working-directory: libs/mageflow-e2e
+        env:
+          MAGEFLOW_TESTING_BACKEND: ${{ matrix.backend }}
+        run: pytest tests/ -v
+
   test-results:
     runs-on: ubuntu-22.04
-    needs: [lint, thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests, testing-tests]
+    needs: [lint, thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests, testing-tests, e2e-tests]
     if: always()
     steps:
       - name: Check test results
@@ -297,6 +330,10 @@ jobs:
           fi
           if [[ "${{ needs.testing-tests.result }}" != "success" ]]; then
             echo "Testing package test job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "E2E test job failed"
             exit 1
           fi
           echo "All checks passed successfully!"
