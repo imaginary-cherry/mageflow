@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-working-app-01-PLAN.md
-last_updated: "2026-03-12T09:17:40.433Z"
+stopped_at: Completed 01-working-app-02-PLAN.md
+last_updated: "2026-03-12T09:22:44.772Z"
 last_activity: 2026-03-12 — Roadmap created (3 phases, 13/13 requirements mapped)
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 4
   percent: 0
 ---
 
@@ -52,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01-working-app P00 | 5min | 2 tasks | 6 files |
 | Phase 01-working-app P01 | 20 | 2 tasks | 11 files |
+| Phase 01-working-app P03 | 2 | 2 tasks | 3 files |
+| Phase 01-working-app P02 | 15 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +69,10 @@ Recent decisions affecting current work:
 - [Phase 01-working-app]: Integration tests live at tests/integration/ (outside frontend/) matching vitest integration project config
 - [Phase 01-working-app]: Used create_dev_app() in __main__.py: Tauri serves frontend, server only needs API routes with CORS, no static files
 - [Phase 01-working-app]: workers=1 in uvicorn.run() is mandatory for Nuitka - multi-worker spawning fails in compiled mode
+- [Phase 01-working-app]: validateCredentials uses two-tier fallback: validate_credentials Tauri command first, then restart_sidecar + health poll
+- [Phase 01-working-app]: Deferred sidecar spawn on first launch: port reserved immediately, spawn skipped if settings.json missing or credentials empty
+- [Phase 01-working-app]: kill_sidecar is synchronous (not async) — RunEvent exit handlers cannot be async in Tauri
+- [Phase 01-working-app]: Removed invalid open-api feature from tauri-plugin-shell v2 — that feature does not exist
 
 ### Critical Pitfalls (from research — address in Phase 1)
 
@@ -88,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:17:40.429Z
-Stopped at: Completed 01-working-app-01-PLAN.md
+Last session: 2026-03-12T09:22:44.770Z
+Stopped at: Completed 01-working-app-02-PLAN.md
 Resume file: None

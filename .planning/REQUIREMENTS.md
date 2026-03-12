@@ -9,9 +9,9 @@
 
 - [x] **PKG-01**: Python backend compiled to native binary via Nuitka (standalone, per-platform)
 - [x] **PKG-02**: Tauri v2 shell hosts React frontend using system webview
-- [ ] **PKG-03**: Sidecar auto-starts on app launch with dynamic port allocation
+- [x] **PKG-03**: Sidecar auto-starts on app launch with dynamic port allocation
 - [x] **PKG-04**: Sidecar health-check polling gates UI rendering (no blank/broken state)
-- [ ] **PKG-05**: Sidecar auto-killed on app exit (no orphaned processes)
+- [x] **PKG-05**: Sidecar auto-killed on app exit (no orphaned processes)
 - [x] **PKG-06**: Loading/startup UI shown while sidecar initializes
 
 ### Distribution
@@ -55,9 +55,9 @@
 |-------------|-------|--------|
 | PKG-01 | Phase 1 | Complete |
 | PKG-02 | Phase 1 | Complete |
-| PKG-03 | Phase 1 | Pending |
+| PKG-03 | Phase 1 | Complete |
 | PKG-04 | Phase 1 | Complete |
-| PKG-05 | Phase 1 | Pending |
+| PKG-05 | Phase 1 | Complete |
 | PKG-06 | Phase 1 | Complete |
 | DIST-01 | Phase 2 | Pending |
 | DIST-02 | Phase 3 | Pending |
