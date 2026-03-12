@@ -17,9 +17,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Test Scenarios
 
-- [ ] **TEST-01**: TaskSignature dispatch and `assert_task_dispatched` verification with partial input matching
-- [ ] **TEST-02**: ChainTaskSignature dispatch and first-task dispatch verification
-- [ ] **TEST-03**: SwarmTaskSignature dispatch and `assert_swarm_dispatched` verification with expected task names
+- [x] **TEST-01**: TaskSignature dispatch and `assert_task_dispatched` verification with partial input matching
+- [x] **TEST-02**: ChainTaskSignature dispatch and first-task dispatch verification
+- [x] **TEST-03**: SwarmTaskSignature dispatch and `assert_swarm_dispatched` verification with expected task names
 - [x] **TEST-04**: Clean state assertion via `assert_nothing_dispatched` before dispatch
 - [x] **TEST-05**: Redis is clean at the start of each test (no stale keys from previous tests)
 - [x] **TEST-06**: `adapter.clear()` mid-test reset works correctly
@@ -59,9 +59,9 @@ Requirements for initial release. Each maps to roadmap phases.
 | PKG-03 | Phase 1 | Complete |
 | PKG-04 | Phase 1 | Complete |
 | PKG-05 | Phase 1 | Complete |
-| TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 1 | Pending |
-| TEST-03 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
+| TEST-02 | Phase 1 | Complete |
+| TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Complete |
 | TEST-05 | Phase 1 | Complete |
 | TEST-06 | Phase 1 | Complete |
