@@ -12,7 +12,7 @@ Two phases deliver the complete project. Phase 1 creates the standalone `libs/ma
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Package and Tests** - Standalone e2e package with all dispatch and verification test scenarios (completed 2026-03-12)
+- [x] **Phase 1: Package and Tests** - Standalone e2e package with all dispatch and verification test scenarios (gap closure in progress) (completed 2026-03-12)
 - [ ] **Phase 2: CI Integration** - Dual-backend CI jobs running the full test suite
 
 ## Phase Details
@@ -27,11 +27,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each test starts with a clean Redis state — no stale keys from previous tests — verified by `assert_nothing_dispatched` passing before any dispatch call
   4. `adapter.clear()` called mid-test resets dispatch records and subsequent `assert_nothing_dispatched` passes
   5. `@pytest.mark.mageflow(client=...)` marker override resolves a different client without error
-**Plans:** 3/3 plans complete
+**Plans:** 4/4 plans complete
 Plans:
-- [ ] 01-01-PLAN.md — Package scaffold, pyproject configs, simulated user app modules
-- [ ] 01-02-PLAN.md — Task, chain, and swarm dispatch tests (TEST-01, TEST-02, TEST-03)
-- [ ] 01-03-PLAN.md — Clean state and marker override tests (TEST-04, TEST-05, TEST-06, TEST-07)
+- [x] 01-01-PLAN.md — Package scaffold, pyproject configs, simulated user app modules
+- [x] 01-02-PLAN.md — Task, chain, and swarm dispatch tests (TEST-01, TEST-02, TEST-03)
+- [x] 01-03-PLAN.md — Clean state and marker override tests (TEST-04, TEST-05, TEST-06, TEST-07)
+- [ ] 01-04-PLAN.md — Gap closure: fix asyncio event loop mismatch in pyproject configs
 
 ### Phase 2: CI Integration
 **Goal**: Both CI backend jobs are green and a PR cannot merge if either backend fails
@@ -50,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Package and Tests | 3/3 | Complete   | 2026-03-12 |
+| 1. Package and Tests | 4/4 | Complete   | 2026-03-12 |
 | 2. CI Integration | 0/TBD | Not started | - |
