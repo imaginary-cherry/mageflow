@@ -25,7 +25,7 @@
 - [x] **UX-01**: First-launch onboarding screen for Hatchet and Redis connection settings
 - [x] **UX-02**: Connection settings persist across app restarts via tauri-plugin-store
 - [x] **UX-03**: Meaningful error display for sidecar crash and external connection failures
-- [ ] **UX-04**: System tray integration with connection status indicator and show/hide/quit actions
+- [x] **UX-04**: System tray integration with connection status indicator and show/hide/quit actions
 
 ## v2 Requirements
 
@@ -65,7 +65,7 @@
 | UX-01 | Phase 1 | Complete |
 | UX-02 | Phase 1 | Complete |
 | UX-03 | Phase 1 | Complete |
-| UX-04 | Phase 1 | Pending |
+| UX-04 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
