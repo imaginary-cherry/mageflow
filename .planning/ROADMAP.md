@@ -12,7 +12,7 @@ Three phases take the project from zero to distributed desktop app. Phase 1 buil
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Working App** - Python sidecar + Tauri shell + React integration + all UX running locally
+- [x] **Phase 1: Working App** - Python sidecar + Tauri shell + React integration + all UX running locally (completed 2026-03-12)
 - [ ] **Phase 2: CI Pipeline + Installers** - Cross-platform signed installers produced from GitHub Actions
 - [ ] **Phase 3: Distribution** - Auto-updater and package manager channels live
 
@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User quits the app and no orphaned Python server process remains (verified by process list).
   4. When the sidecar crashes or external services are unreachable, user sees a meaningful error message — not a blank screen.
   5. System tray icon shows connection status; user can show, hide, or quit the app from the tray.
-**Plans:** 6/7 plans executed
+**Plans:** 8/8 plans complete
 Plans:
 - [ ] 01-00-PLAN.md — Wave 0 test stubs for Nyquist compliance
 - [ ] 01-01-PLAN.md — Scaffold Tauri v2 project, Vite config, Python entry point
@@ -37,6 +37,7 @@ Plans:
 - [ ] 01-04-PLAN.md — Startup state machine, splash screen, tray status wiring, error states
 - [ ] 01-05-PLAN.md — System tray integration
 - [ ] 01-06-PLAN.md — Nuitka binary compilation and end-to-end verification
+- [ ] 01-07-PLAN.md — Gap closure: wire tray Settings menu item to frontend SettingsDialog
 
 ### Phase 2: CI Pipeline + Installers
 **Goal**: Every tagged release automatically produces signed, notarized single-file installers for macOS (Universal), Windows x64, and Linux x64 via GitHub Actions.
@@ -65,6 +66,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Working App | 6/7 | In Progress|  |
+| 1. Working App | 8/8 | Complete   | 2026-03-12 |
 | 2. CI Pipeline + Installers | 0/TBD | Not started | - |
 | 3. Distribution | 0/TBD | Not started | - |
