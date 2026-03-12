@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-working-app-05-PLAN.md
-last_updated: "2026-03-12T09:30:46.294Z"
+stopped_at: Completed 01-working-app-06-PLAN.md
+last_updated: "2026-03-12T12:29:40.374Z"
 last_activity: 2026-03-12 — Roadmap created (3 phases, 13/13 requirements mapped)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-working-app P02 | 15 | 1 tasks | 2 files |
 | Phase 01-working-app P04 | 2 | 2 tasks | 5 files |
 | Phase 01-working-app P05 | 6 | 2 tasks | 6 files |
+| Phase 01-working-app P06 | 45 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase 01-working-app]: HttpTaskClient baseUrl: VITE_API_URL fallback only in browser dev mode; Tauri always receives explicit runtime port
 - [Phase 01-working-app]: Icons embedded via include_bytes! — zero runtime I/O, works correctly in the bundled Tauri app
 - [Phase 01-working-app]: Tray created in setup hook rather than RunEvent::Ready — ensures tray appears before window
+- [Phase 01-working-app]: image crate used for tray icon PNG decode — Tauri v2.10 does not have Image::from_bytes
+- [Phase 01-working-app]: externalBin must be root-relative path without binaries/ prefix — Tauri appends target-triple automatically
 
 ### Critical Pitfalls (from research — address in Phase 1)
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:30:46.292Z
-Stopped at: Completed 01-working-app-05-PLAN.md
+Last session: 2026-03-12T12:29:40.372Z
+Stopped at: Completed 01-working-app-06-PLAN.md
 Resume file: None
