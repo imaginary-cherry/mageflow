@@ -1,3 +1,5 @@
+mod tray;
+
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, RunEvent, State};
 use tauri_plugin_shell::ShellExt;
@@ -148,6 +150,15 @@ async fn restart_sidecar(app: AppHandle) -> Result<u16, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Tray command
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn set_tray_status(app: AppHandle, status: String) {
+    tray::update_tray_icon(&app, &status);
+}
+
+// ---------------------------------------------------------------------------
 // App entry point
 // ---------------------------------------------------------------------------
 
@@ -166,12 +177,14 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            tray::create_tray(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             get_sidecar_port,
             get_sidecar_status,
             restart_sidecar,
+            set_tray_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
