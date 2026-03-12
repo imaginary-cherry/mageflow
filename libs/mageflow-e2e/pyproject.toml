@@ -4,8 +4,7 @@ version = "0.1.0"
 description = "End-to-end tests for the mageflow testing API from an external user perspective"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "mageflow[hatchet]",
-    "fakeredis[json,lua]>=2.34.0,<3.0.0",
+    "mageflow[hatchet,testing]",
     "pytest>=9.0.2,<10.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
 ]

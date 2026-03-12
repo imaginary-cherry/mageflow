@@ -284,18 +284,14 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
+        working-directory: libs/mageflow-e2e
         run: |
           pip install --upgrade pip
-          pip install ./libs/third-magic
-          pip install ./libs/mageflow
-          pip install "./libs/mageflow-e2e"
-          pip install "testcontainers[redis]>=4.14.0,<5.0.0"
+          pip install tox
 
       - name: Run E2E Tests
         working-directory: libs/mageflow-e2e
-        env:
-          MAGEFLOW_TESTING_BACKEND: ${{ matrix.backend }}
-        run: pytest tests/ -v
+        run: tox -e e2e-${{ matrix.backend }}
 
   test-results:
     runs-on: ubuntu-22.04
