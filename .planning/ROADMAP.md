@@ -47,7 +47,7 @@ Plans:
   1. Pushing a version tag triggers a GitHub Actions workflow that produces a .dmg (macOS arm64 + x86_64), .msi (Windows x64), and .deb/.AppImage (Linux x64) without manual intervention.
   2. The macOS installer passes Gatekeeper (notarized and signed); the Windows installer is signed and does not trigger Defender quarantine; the Linux package installs cleanly.
   3. A fresh machine with no Python, Rust, or Node installed can install the app from the produced artifact and connect to Hatchet/Redis successfully.
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 02-01-PLAN.md — Release workflow + tauri.conf.json signing config
 - [ ] 02-02-PLAN.md — Secret configuration + test tag push verification
@@ -70,5 +70,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Working App | 8/8 | Complete   | 2026-03-12 |
-| 2. CI Pipeline + Installers | 0/2 | Planning complete | - |
+| 2. CI Pipeline + Installers | 1/2 | In Progress|  |
 | 3. Distribution | 0/TBD | Not started | - |
