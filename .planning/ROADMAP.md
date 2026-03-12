@@ -28,12 +28,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User quits the app and no orphaned Python server process remains (verified by process list).
   4. When the sidecar crashes or external services are unreachable, user sees a meaningful error message — not a blank screen.
   5. System tray icon shows connection status; user can show, hide, or quit the app from the tray.
-**Plans:** 6 plans
+**Plans:** 7 plans
 Plans:
+- [ ] 01-00-PLAN.md — Wave 0 test stubs for Nyquist compliance
 - [ ] 01-01-PLAN.md — Scaffold Tauri v2 project, Vite config, Python entry point
 - [ ] 01-02-PLAN.md — Sidecar lifecycle in Rust (spawn, port, kill)
-- [ ] 01-03-PLAN.md — Settings persistence and onboarding UI
-- [ ] 01-04-PLAN.md — Startup state machine, splash screen, error states
+- [ ] 01-03-PLAN.md — Settings persistence, credential validation, and onboarding UI
+- [ ] 01-04-PLAN.md — Startup state machine, splash screen, tray status wiring, error states
 - [ ] 01-05-PLAN.md — System tray integration
 - [ ] 01-06-PLAN.md — Nuitka binary compilation and end-to-end verification
 
@@ -64,6 +65,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Working App | 0/6 | Planning complete | - |
+| 1. Working App | 0/7 | Planning complete | - |
 | 2. CI Pipeline + Installers | 0/TBD | Not started | - |
 | 3. Distribution | 0/TBD | Not started | - |
