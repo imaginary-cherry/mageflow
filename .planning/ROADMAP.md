@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each test starts with a clean Redis state — no stale keys from previous tests — verified by `assert_nothing_dispatched` passing before any dispatch call
   4. `adapter.clear()` called mid-test resets dispatch records and subsequent `assert_nothing_dispatched` passes
   5. `@pytest.mark.mageflow(client=...)` marker override resolves a different client without error
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 Plans:
 - [ ] 01-01-PLAN.md — Package scaffold, pyproject configs, simulated user app modules
 - [ ] 01-02-PLAN.md — Task, chain, and swarm dispatch tests (TEST-01, TEST-02, TEST-03)
@@ -50,5 +50,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Package and Tests | 1/3 | In Progress|  |
+| 1. Package and Tests | 2/3 | In Progress|  |
 | 2. CI Integration | 0/TBD | Not started | - |

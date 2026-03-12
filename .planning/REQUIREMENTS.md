@@ -20,10 +20,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-01**: TaskSignature dispatch and `assert_task_dispatched` verification with partial input matching
 - [ ] **TEST-02**: ChainTaskSignature dispatch and first-task dispatch verification
 - [ ] **TEST-03**: SwarmTaskSignature dispatch and `assert_swarm_dispatched` verification with expected task names
-- [ ] **TEST-04**: Clean state assertion via `assert_nothing_dispatched` before dispatch
-- [ ] **TEST-05**: Redis is clean at the start of each test (no stale keys from previous tests)
-- [ ] **TEST-06**: `adapter.clear()` mid-test reset works correctly
-- [ ] **TEST-07**: `@pytest.mark.mageflow(client=...)` marker override tested from external package
+- [x] **TEST-04**: Clean state assertion via `assert_nothing_dispatched` before dispatch
+- [x] **TEST-05**: Redis is clean at the start of each test (no stale keys from previous tests)
+- [x] **TEST-06**: `adapter.clear()` mid-test reset works correctly
+- [x] **TEST-07**: `@pytest.mark.mageflow(client=...)` marker override tested from external package
 
 ### CI Integration
 
@@ -62,10 +62,10 @@ Requirements for initial release. Each maps to roadmap phases.
 | TEST-01 | Phase 1 | Pending |
 | TEST-02 | Phase 1 | Pending |
 | TEST-03 | Phase 1 | Pending |
-| TEST-04 | Phase 1 | Pending |
-| TEST-05 | Phase 1 | Pending |
-| TEST-06 | Phase 1 | Pending |
-| TEST-07 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Complete |
+| TEST-05 | Phase 1 | Complete |
+| TEST-06 | Phase 1 | Complete |
+| TEST-07 | Phase 1 | Complete |
 | CI-01 | Phase 2 | Pending |
 | CI-02 | Phase 2 | Pending |
 | CI-03 | Phase 2 | Pending |
