@@ -1,17 +1,15 @@
 import dataclasses
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
+from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.clients.base import BaseClientAdapter
 from thirdmagic.clients.lifecycle import BaseLifecycle
+from thirdmagic.signature import Signature
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
-
-if TYPE_CHECKING:
-    from thirdmagic.chain.model import ChainTaskSignature
-    from thirdmagic.signature import Signature
-    from thirdmagic.swarm.model import SwarmTaskSignature
-    from thirdmagic.task import TaskSignature
-    from thirdmagic.utils import HatchetTaskType
+from thirdmagic.utils import HatchetTaskType
 
 
 @dataclasses.dataclass
