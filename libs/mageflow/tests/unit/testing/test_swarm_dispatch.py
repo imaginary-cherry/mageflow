@@ -108,11 +108,11 @@ class TestSwarmDispatchesProperty:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_afill_swarm_resolves_task_names_from_signature(test_adapter):
+async def test_afill_swarm_resolves_task_names_from_signature(mageflow_client):
     """Integration test: afill_swarm correctly resolves sub-task task_names from Redis.
 
     This proves the try/except in afill_swarm does NOT fall back to [] on the happy path.
-    The test_adapter fixture depends on _mageflow_init_rapyer which provides a live Redis.
+    The mageflow_client fixture depends on _mageflow_init_rapyer which provides a live Redis.
     """
     from pydantic import BaseModel
 
@@ -127,10 +127,10 @@ async def test_afill_swarm_resolves_task_names_from_signature(test_adapter):
         task_name="test-swarm-integration",
     )
 
-    # Call afill_swarm directly on the test_adapter
-    await test_adapter.afill_swarm(swarm_sig)
+    # Call afill_swarm directly on the mageflow_client adapter
+    await mageflow_client.afill_swarm(swarm_sig)
 
-    record = test_adapter.assert_swarm_dispatched("test-swarm-integration")
+    record = mageflow_client.assert_swarm_dispatched("test-swarm-integration")
     assert isinstance(record, SwarmDispatchRecord)
     # The key assertion: task_names must be non-empty (not the [] fallback from except branch)
     assert len(record.task_names) == 2
