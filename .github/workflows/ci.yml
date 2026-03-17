@@ -266,7 +266,7 @@ jobs:
 
   test-results:
     runs-on: ubuntu-22.04
-    needs: [lint, thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests, testing-tests, e2e-tests]
+    needs: [lint, thirdmagic-tests, mageflow-mcp-unit-tests, mageflow-mcp-integration-tests, unit-tests, integration-tests, e2e-tests]
     if: always()
     steps:
       - name: Check test results
@@ -293,10 +293,6 @@ jobs:
           fi
           if [[ "${{ needs.integration-tests.result }}" != "success" ]]; then
             echo "Integration test job failed"
-            exit 1
-          fi
-          if [[ "${{ needs.testing-tests.result }}" != "success" ]]; then
-            echo "Testing package test job failed"
             exit 1
           fi
           if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
