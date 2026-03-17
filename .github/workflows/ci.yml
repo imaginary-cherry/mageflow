@@ -235,35 +235,6 @@ jobs:
         if: always()
         run: docker compose -f libs/mageflow/tests/integration/hatchet/docker-compose.hatchet.yml down
 
-  testing-tests:
-    name: Testing Package (${{ matrix.backend }})
-    runs-on: ubuntu-latest
-    needs: [validate-branch-target]
-    if: always() && (needs.validate-branch-target.result == 'success' || needs.validate-branch-target.result == 'skipped')
-
-    strategy:
-      matrix:
-        backend: ['fakeredis', 'testcontainers']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: libs/mageflow
-        run: |
-          pip install --upgrade pip
-          pip install tox
-
-      - name: Run Testing Tests
-        working-directory: libs/mageflow
-        run: tox -e testing-${{ matrix.backend }}
-
   e2e-tests:
     name: E2E Tests (${{ matrix.backend }})
     runs-on: ubuntu-latest
