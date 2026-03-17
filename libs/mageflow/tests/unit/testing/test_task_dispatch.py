@@ -2,10 +2,7 @@
 
 import pytest
 
-from mageflow.testing._adapter import (
-    TaskDispatchRecord,
-    TestClientAdapter,
-)
+from mageflow.testing import TaskDispatchRecord, TestClientAdapter
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -162,8 +159,6 @@ class TestTaskDispatchesProperty:
         assert len(adapter.task_dispatches) == 1
 
     def test_filters_to_task_records_only(self):
-        from mageflow.testing._adapter import ChainDispatchRecord, SwarmDispatchRecord
-
         adapter = _make_adapter()
         _append_task(adapter, "my-task", {})
         adapter._typed_dispatches.append(

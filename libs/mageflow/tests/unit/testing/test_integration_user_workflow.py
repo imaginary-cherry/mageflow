@@ -7,7 +7,7 @@ import pytest
 from pydantic import BaseModel
 
 import mageflow
-from mageflow.testing._adapter import SwarmDispatchRecord, TaskDispatchRecord
+from mageflow.testing import SwarmDispatchRecord, TaskDispatchRecord
 
 # ---------------------------------------------------------------------------
 # TestTaskDispatchWorkflow

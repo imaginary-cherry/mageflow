@@ -2,7 +2,7 @@
 
 import pytest
 
-from mageflow.testing._adapter import (
+from mageflow.testing import (
     ChainDispatchRecord,
     SwarmDispatchRecord,
     TaskDispatchRecord,
@@ -133,8 +133,6 @@ class TestMixedDispatchesFilteredCorrectly:
 
     def test_dispatches_property_returns_all_raw_records(self):
         """dispatches property includes ALL RecordedDispatch items (separate list)."""
-        from mageflow.testing._adapter import RecordedDispatch
-
         adapter = _make_adapter()
         # typed dispatches are separate from raw dispatches
         adapter._typed_dispatches.append(
@@ -156,7 +154,6 @@ class TestMixedDispatchesFilteredCorrectly:
         adapter._typed_dispatches.append(
             TaskDispatchRecord(task_name="task-1", input_data={}, kwargs={})
         )
-        from mageflow.testing._adapter import RecordedDispatch
 
         adapter._dispatches.append(
             RecordedDispatch(
