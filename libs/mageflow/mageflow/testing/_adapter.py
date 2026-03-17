@@ -366,23 +366,6 @@ class TestClientAdapter(BaseClientAdapter):
         expected_input: dict | None = None,
         exact: bool = False,
     ) -> TaskDispatchRecord:
-        """Assert that a task with the given name was dispatched.
-
-        Args:
-            task_name: The human-readable task name to look for.
-            expected_input: Optional dict of expected input data. When provided,
-                checks that at least one dispatch with this task_name matches the
-                input. By default uses partial matching (extra keys are ignored).
-            exact: When True, uses exact matching (actual input must equal expected
-                exactly, no extra keys allowed).
-
-        Returns:
-            The matching TaskDispatchRecord.
-
-        Raises:
-            AssertionError: If no dispatch with task_name exists, or if none of
-                the dispatches match the expected_input.
-        """
         name_matches = [d for d in self.task_dispatches if d.task_name == task_name]
         if not name_matches:
             dispatched_names = [d.task_name for d in self.task_dispatches]
@@ -407,42 +390,44 @@ class TestClientAdapter(BaseClientAdapter):
             f"Task '{task_name}' was dispatched but input did not match.\n{diff}"
         )
 
+    @staticmethod
+    def _assert_group_dispatched(
+        dispatches: list,
+        name: str,
+        name_attr: str,
+        label: str,
+        expected_task_names: list[str] | None = None,
+    ):
+        name_matches = [d for d in dispatches if getattr(d, name_attr) == name]
+        if not name_matches:
+            dispatched_names = [getattr(d, name_attr) for d in dispatches]
+            raise AssertionError(
+                f"{label} '{name}' was not dispatched. "
+                f"Dispatched {label.lower()}s: {dispatched_names}"
+            )
+        if expected_task_names is None:
+            return name_matches[0]
+        for record in name_matches:
+            if all(n in record.task_names for n in expected_task_names):
+                return record
+        first = name_matches[0]
+        raise AssertionError(
+            f"{label} '{name}' was dispatched but task names did not match.\n"
+            f"  Expected: {expected_task_names}\n"
+            f"  Actual: {first.task_names}"
+        )
+
     def assert_swarm_dispatched(
         self,
         swarm_name: str,
         expected_task_names: list[str] | None = None,
     ) -> SwarmDispatchRecord:
-        """Assert that a swarm with the given name was dispatched.
-
-        Args:
-            swarm_name: The human-readable swarm name to look for.
-            expected_task_names: Optional list of task names that must all appear
-                in the swarm's resolved task_names (subset check).
-
-        Returns:
-            The matching SwarmDispatchRecord.
-
-        Raises:
-            AssertionError: If no swarm dispatch with swarm_name exists, or if
-                none of the swarm dispatches contain all expected_task_names.
-        """
-        name_matches = [d for d in self.swarm_dispatches if d.swarm_name == swarm_name]
-        if not name_matches:
-            dispatched_names = [d.swarm_name for d in self.swarm_dispatches]
-            raise AssertionError(
-                f"Swarm '{swarm_name}' was not dispatched. "
-                f"Dispatched swarms: {dispatched_names}"
-            )
-        if expected_task_names is None:
-            return name_matches[0]
-        for record in name_matches:
-            if all(name in record.task_names for name in expected_task_names):
-                return record
-        first = name_matches[0]
-        raise AssertionError(
-            f"Swarm '{swarm_name}' was dispatched but task names did not match.\n"
-            f"  Expected: {expected_task_names}\n"
-            f"  Actual: {first.task_names}"
+        return self._assert_group_dispatched(
+            self.swarm_dispatches,
+            swarm_name,
+            "swarm_name",
+            "Swarm",
+            expected_task_names,
         )
 
     def assert_chain_dispatched(
@@ -450,41 +435,12 @@ class TestClientAdapter(BaseClientAdapter):
         chain_name: str,
         expected_task_names: list[str] | None = None,
     ) -> ChainDispatchRecord:
-        """Assert that a chain with the given name completed.
-
-        Note: This asserts chain *completion* (when acall_chain_done fired), not
-        chain initiation. The chain's individual task dispatches are also visible
-        in task_dispatches.
-
-        Args:
-            chain_name: The human-readable chain name to look for.
-            expected_task_names: Optional list of task names that must all appear
-                in the chain's resolved task_names (subset check).
-
-        Returns:
-            The matching ChainDispatchRecord.
-
-        Raises:
-            AssertionError: If no chain dispatch with chain_name exists, or if
-                none of the chain dispatches contain all expected_task_names.
-        """
-        name_matches = [d for d in self.chain_dispatches if d.chain_name == chain_name]
-        if not name_matches:
-            dispatched_names = [d.chain_name for d in self.chain_dispatches]
-            raise AssertionError(
-                f"Chain '{chain_name}' was not dispatched. "
-                f"Dispatched chains: {dispatched_names}"
-            )
-        if expected_task_names is None:
-            return name_matches[0]
-        for record in name_matches:
-            if all(name in record.task_names for name in expected_task_names):
-                return record
-        first = name_matches[0]
-        raise AssertionError(
-            f"Chain '{chain_name}' was dispatched but task names did not match.\n"
-            f"  Expected: {expected_task_names}\n"
-            f"  Actual: {first.task_names}"
+        return self._assert_group_dispatched(
+            self.chain_dispatches,
+            chain_name,
+            "chain_name",
+            "Chain",
+            expected_task_names,
         )
 
     def assert_nothing_dispatched(self) -> None:
