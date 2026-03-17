@@ -1,6 +1,13 @@
+import pytest
 import pytest_asyncio
 
-pytest_plugins = ["mageflow.testing.plugin"]
+
+def pytest_configure(config):
+    """Register the mageflow testing plugin if not already loaded via entry-point."""
+    if not config.pluginmanager.has_plugin("mageflow"):
+        import mageflow.testing.plugin
+
+        config.pluginmanager.register(mageflow.testing.plugin, "mageflow")
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
