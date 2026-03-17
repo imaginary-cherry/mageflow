@@ -41,13 +41,16 @@ class ChainDispatchRecord:
     task_names: list[str]  # resolved sub-task names
 
 
+SignatureDispatchType = TaskDispatchRecord | SwarmDispatchRecord | ChainDispatchRecord
+
 # ------------------------------------------------------------------
 # Matching helpers
 # ------------------------------------------------------------------
 
 
 def _to_dict(value: Any) -> dict:
-    """Convert a pydantic BaseModel or dict to a plain dict.
+    """
+    Convert a pydantic BaseModel or dict to a plain dict.
 
     Returns {} for None. Raises TypeError for unconvertible types.
     """
@@ -64,7 +67,8 @@ def _to_dict(value: Any) -> dict:
 
 
 def _partial_match(actual_input: Any, expected: dict) -> bool:
-    """Return True if all keys in `expected` match the corresponding keys in `actual_input`.
+    """
+    Return True if all keys in `expected` match the corresponding keys in `actual_input`.
 
     If `expected` is empty, always returns True (no constraints).
     """
@@ -120,9 +124,7 @@ class TestClientAdapter(BaseClientAdapter):
         hatchet_tasks: dict[str, Any] | None = None,
     ):
         self._dispatches: list[RecordedDispatch] = []
-        self._typed_dispatches: list[
-            TaskDispatchRecord | SwarmDispatchRecord | ChainDispatchRecord
-        ] = []
+        self._typed_dispatches: list[SignatureDispatchType] = []
         self._task_defs: dict[str, MageflowTaskDefinition] = task_defs or {}
         self._local_execution: bool = local_execution
         self._hatchet_tasks: dict[str, Any] = hatchet_tasks or {}
