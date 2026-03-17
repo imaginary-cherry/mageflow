@@ -12,6 +12,8 @@ def _make_dev_token() -> str:
         "server_url": "http://localhost:8080",
         "grpc_broadcast_address": "localhost:7070",
     }
-    header = base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode().rstrip("=")
+    header = (
+        base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode().rstrip("=")
+    )
     payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
     return f"{header}.{payload}.dev"
