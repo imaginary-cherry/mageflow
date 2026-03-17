@@ -1,4 +1,5 @@
-"""TEST-02: ChainTaskSignature dispatch + first-task verification.
+"""
+TEST-02: ChainTaskSignature dispatch + first-task verification.
 
 Validates that chain.acall() dispatches the first task in the chain via the
 public mageflow API and that TestClientAdapter records it as a TaskDispatchRecord.

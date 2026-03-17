@@ -1,4 +1,5 @@
-"""TEST-01: TaskSignature dispatch + partial input match.
+"""
+TEST-01: TaskSignature dispatch + partial input match.
 
 Validates the public mageflow.asign() API records dispatches correctly
 and that TestClientAdapter assertion methods work with partial and full input.

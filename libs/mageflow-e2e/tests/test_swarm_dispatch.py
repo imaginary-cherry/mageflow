@@ -1,4 +1,5 @@
-"""TEST-03: SwarmTaskSignature dispatch + swarm assertion.
+"""
+TEST-03: SwarmTaskSignature dispatch + swarm assertion.
 
 Validates that swarm.acall() dispatches via afill_swarm and records a
 SwarmDispatchRecord with expected sub-task names via the public mageflow API.
