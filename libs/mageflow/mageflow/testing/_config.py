@@ -36,7 +36,7 @@ def _load_client(dotted_path: str):
             module_path, _, attr = dotted_path.rpartition(".")
         module = importlib.import_module(module_path)
         return getattr(module, attr)
-    except (ImportError, AttributeError) as e:
+    except (ImportError, AttributeError, ValueError) as e:
         raise pytest.UsageError(
             f"Could not load mageflow client from '{dotted_path}': {e}"
         )

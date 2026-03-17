@@ -5,20 +5,6 @@ from thirdmagic.task_def import MageflowTaskDefinition
 
 from mageflow.testing._adapter import TestClientAdapter
 from mageflow.testing._config import _load_client, _read_testing_config
-from mageflow.testing._redis import (
-    _mageflow_flush_redis,
-    _mageflow_init_rapyer,
-    _mageflow_redis_client,
-)
-
-# Re-export redis fixtures so pytest discovers them via the pytest11 plugin entry point.
-# Without this, external packages using mageflow_client fixture cannot resolve the
-# _mageflow_redis_client / _mageflow_init_rapyer dependencies.
-__all__ = [
-    "_mageflow_redis_client",
-    "_mageflow_flush_redis",
-    "_mageflow_init_rapyer",
-]
 
 
 def pytest_configure(config):
@@ -33,6 +19,43 @@ def _mageflow_testing_config(request):
     return _read_testing_config(request.config.rootdir)
 
 
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def _mageflow_redis_client(_mageflow_testing_config):
+    from mageflow.testing._redis import BackendOptions, _get_backend
+
+    backend = _get_backend(_mageflow_testing_config)
+    if backend == BackendOptions.FAKE_REDIS:
+        import fakeredis
+
+        client = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        yield client
+        await client.aclose()
+    else:
+        from testcontainers.redis import AsyncRedisContainer
+
+        with AsyncRedisContainer(
+            image="redis/redis-stack-server:7.2.0-v13"
+        ) as container:
+            client = await container.get_async_client(decode_responses=True)
+            yield client
+        await client.aclose()
+
+
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
+async def _mageflow_flush_redis(_mageflow_redis_client):
+    yield
+    await _mageflow_redis_client.flushdb()
+
+
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
+async def _mageflow_init_rapyer(_mageflow_redis_client, _mageflow_flush_redis):
+    import rapyer
+
+    await rapyer.init_rapyer(_mageflow_redis_client, prefer_normal_json_dump=True)
+    yield
+    await rapyer.teardown_rapyer()
+
+
 @pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def mageflow_client(
     request,
@@ -43,9 +66,15 @@ async def mageflow_client(
     marker = request.node.get_closest_marker("mageflow")
     overrides = marker.kwargs if marker else {}
 
-    client_path = overrides.get("client") or _mageflow_testing_config.get("client")
-    local_execution = overrides.get("local_execution") or _mageflow_testing_config.get(
-        "local_execution", False
+    client_path = (
+        overrides["client"]
+        if "client" in overrides
+        else _mageflow_testing_config.get("client")
+    )
+    local_execution = (
+        overrides["local_execution"]
+        if "local_execution" in overrides
+        else _mageflow_testing_config.get("local_execution", False)
     )
     task_defs = {}
     if client_path:
