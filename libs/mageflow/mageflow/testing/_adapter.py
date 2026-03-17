@@ -11,6 +11,8 @@ from thirdmagic.task import TaskSignature
 from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import HatchetTaskType
 
+from mageflow.lifecycle.task import TaskLifecycle
+
 
 @dataclasses.dataclass
 class RecordedDispatch:
@@ -325,12 +327,10 @@ class TestClientAdapter(BaseClientAdapter):
         return task.name
 
     async def create_lifecycle(self, *args) -> BaseLifecycle:
-        from mageflow.lifecycle.task import TaskLifecycle
-
         return TaskLifecycle()
 
     async def lifecycle_from_signature(self, *args) -> BaseLifecycle:
-        return None
+        return TaskLifecycle()
 
     # ------------------------------------------------------------------
     # Public helpers
