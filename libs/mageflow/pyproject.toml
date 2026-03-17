@@ -58,7 +58,17 @@ dev = [
     "fakeredis[json,lua]>=2.34.0,<3.0.0",
     "black>=26.1.0",
     "ruff>=0.15.5",
+    "testcontainers[redis]>=4.14.0,<5.0.0",
 ]
+testing = [
+    "testcontainers[redis]>=4.14.0,<5.0.0",
+    "pytest>=9.0.0,<10.0.0",
+    "pytest-asyncio>=1.2.0,<2.0.0",
+    "fakeredis[json,lua]>=2.34.0,<3.0.0",
+]
+
+[project.entry-points.pytest11]
+mageflow = "mageflow.testing.plugin"
 
 [project.urls]
 Homepage = "https://imaginary-cherry.github.io/mageflow/"
@@ -103,6 +113,10 @@ exclude_lines = [
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[tool.mageflow.testing]
+# backend = "testcontainers"  # default: uses real Redis via testcontainers (requires Docker)
+# backend = "fakeredis"       # alternative: uses fakeredis (no Docker required)
 
 [tool.ruff]
 select = ["I", "F401"]
