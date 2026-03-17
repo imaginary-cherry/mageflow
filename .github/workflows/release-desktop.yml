@@ -7,9 +7,11 @@
 name: Release Desktop App
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types:
+      - completed
+
 
 jobs:
   release:
