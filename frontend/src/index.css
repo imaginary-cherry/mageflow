@@ -8,123 +8,124 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 270 20% 99%;
+    --foreground: 262 30% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 262 30% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 262 30% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 262 52% 47%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 262 30% 94%;
+    --secondary-foreground: 262 52% 25%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 262 20% 95%;
+    --muted-foreground: 262 12% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 291 47% 93%;
+    --accent-foreground: 291 50% 30%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 262 20% 90%;
+    --input: 262 20% 90%;
+    --ring: 262 52% 47%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 262 25% 97%;
+    --sidebar-foreground: 262 20% 20%;
+    --sidebar-primary: 262 52% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 262 20% 93%;
+    --sidebar-accent-foreground: 262 52% 25%;
+    --sidebar-border: 262 15% 90%;
+    --sidebar-ring: 262 52% 47%;
 
     /* Task type colors */
-    --task-simple: 217 91% 97%;
-    --task-simple-border: 217 91% 85%;
-    --task-simple-accent: 217 91% 60%;
-    
-    --task-chain: 262 83% 97%;
-    --task-chain-border: 262 83% 80%;
-    --task-chain-accent: 262 83% 58%;
-    
+    --task-simple: 187 60% 95%;
+    --task-simple-border: 187 60% 75%;
+    --task-simple-accent: 187 100% 35%;
+
+    --task-chain: 262 52% 96%;
+    --task-chain-border: 262 52% 78%;
+    --task-chain-accent: 262 52% 47%;
+
     --task-swarm: 25 95% 97%;
     --task-swarm-border: 25 95% 80%;
     --task-swarm-accent: 25 95% 53%;
 
     /* Task status colors */
-    --status-pending: 215 16% 47%;
-    --status-running: 217 91% 60%;
+    --status-pending: 262 12% 50%;
+    --status-running: 262 52% 47%;
     --status-completed: 142 76% 36%;
     --status-failed: 0 84% 60%;
-    --status-cancelled: 215 16% 47%;
+    --status-cancelled: 262 12% 50%;
     --status-paused: 45 93% 47%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 260 30% 7%;
+    --foreground: 260 15% 93%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 260 28% 9%;
+    --card-foreground: 260 15% 93%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 260 28% 9%;
+    --popover-foreground: 260 15% 93%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 262 52% 65%;
+    --primary-foreground: 260 30% 7%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 262 25% 16%;
+    --secondary-foreground: 262 20% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 262 20% 15%;
+    --muted-foreground: 262 15% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 187 80% 18%;
+    --accent-foreground: 187 70% 80%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 95%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 262 20% 18%;
+    --input: 262 20% 18%;
+    --ring: 262 52% 65%;
+
+    --sidebar-background: 262 30% 8%;
+    --sidebar-foreground: 262 10% 90%;
+    --sidebar-primary: 262 52% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 262 20% 14%;
+    --sidebar-accent-foreground: 262 10% 90%;
+    --sidebar-border: 262 20% 14%;
+    --sidebar-ring: 262 52% 60%;
 
     /* Task type colors - dark mode */
-    --task-simple: 217 91% 15%;
-    --task-simple-border: 217 91% 40%;
-    --task-simple-accent: 217 91% 60%;
-    
-    --task-chain: 262 83% 15%;
-    --task-chain-border: 262 83% 40%;
-    --task-chain-accent: 262 83% 65%;
-    
+    --task-simple: 187 80% 12%;
+    --task-simple-border: 187 70% 35%;
+    --task-simple-accent: 187 100% 42%;
+
+    --task-chain: 262 52% 15%;
+    --task-chain-border: 262 52% 40%;
+    --task-chain-accent: 262 52% 65%;
+
     --task-swarm: 25 95% 15%;
     --task-swarm-border: 25 95% 40%;
     --task-swarm-accent: 25 95% 60%;
 
     /* Task status colors - dark mode */
-    --status-pending: 215 20% 65%;
-    --status-running: 217 91% 70%;
+    --status-pending: 262 15% 60%;
+    --status-running: 262 52% 65%;
     --status-completed: 142 76% 50%;
     --status-failed: 0 84% 65%;
-    --status-cancelled: 215 20% 55%;
+    --status-cancelled: 262 15% 55%;
     --status-paused: 45 93% 55%;
   }
 }

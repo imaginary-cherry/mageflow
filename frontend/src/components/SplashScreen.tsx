@@ -14,7 +14,7 @@ export default function SplashScreen({ statusMessage }: SplashScreenProps) {
         </h1>
 
         {/* Animated spinner */}
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-400" />
+        <Loader2 className="h-10 w-10 animate-spin text-purple-400" />
 
         {/* Status message */}
         <p className="text-sm text-gray-400">{statusMessage}</p>
