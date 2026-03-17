@@ -2,7 +2,6 @@ import os
 from enum import Enum
 from pathlib import Path
 
-import pytest
 import pytest_asyncio
 import rapyer
 
@@ -29,29 +28,24 @@ def _get_backend() -> BackendOptions:
     return BackendOptions.TESTCONTAINERS
 
 
-@pytest.fixture(scope="session")
-def _mageflow_redis_container():
-    if _get_backend() == "fakeredis":
-        yield None
-        return
-    from testcontainers.redis import AsyncRedisContainer
-
-    with AsyncRedisContainer(image="redis/redis-stack-server:7.2.0-v13") as container:
-        yield container
-
-
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
-async def _mageflow_redis_client(_mageflow_redis_container):
-    if _mageflow_redis_container is None:
+async def _mageflow_redis_client():
+    backend = _get_backend()
+    if backend == BackendOptions.FAKE_REDIS:
         import fakeredis
 
         client = fakeredis.aioredis.FakeRedis(decode_responses=True)
         yield client
         await client.aclose()
-        return
-    client = await _mageflow_redis_container.get_async_client(decode_responses=True)
-    yield client
-    await client.aclose()
+    else:
+        from testcontainers.redis import AsyncRedisContainer
+
+        with AsyncRedisContainer(
+            image="redis/redis-stack-server:7.2.0-v13"
+        ) as container:
+            client = await container.get_async_client(decode_responses=True)
+            yield client
+        await client.aclose()
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")

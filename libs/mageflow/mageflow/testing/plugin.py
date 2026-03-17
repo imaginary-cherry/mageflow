@@ -9,14 +9,12 @@ from mageflow.testing._redis import (
     _mageflow_flush_redis,
     _mageflow_init_rapyer,
     _mageflow_redis_client,
-    _mageflow_redis_container,
 )
 
 # Re-export redis fixtures so pytest discovers them via the pytest11 plugin entry point.
 # Without this, external packages using mageflow_client fixture cannot resolve the
 # _mageflow_redis_client / _mageflow_init_rapyer dependencies.
 __all__ = [
-    "_mageflow_redis_container",
     "_mageflow_redis_client",
     "_mageflow_flush_redis",
     "_mageflow_init_rapyer",
