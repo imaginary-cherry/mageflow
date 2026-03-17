@@ -50,8 +50,9 @@ async def mageflow_client(
     task_defs = {}
     if client_path:
         real_client = _load_client(client_path)
-        await MageflowTaskDefinition.ainsert(*real_client._task_defs)
-        for task_def in real_client._task_defs:
+        task_defs = real_client._task_defs
+        await MageflowTaskDefinition.ainsert(*task_defs)
+        for task_def in task_defs:
             task_defs[task_def.task_name] = task_def
 
     adapter = TestClientAdapter(task_defs=task_defs, local_execution=local_execution)
