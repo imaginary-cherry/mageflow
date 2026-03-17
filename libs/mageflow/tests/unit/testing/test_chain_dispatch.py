@@ -4,6 +4,7 @@ import pytest
 
 from mageflow.testing import (
     ChainDispatchRecord,
+    RecordedDispatch,
     SwarmDispatchRecord,
     TaskDispatchRecord,
     TestClientAdapter,

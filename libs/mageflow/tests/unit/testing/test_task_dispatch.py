@@ -2,7 +2,12 @@
 
 import pytest
 
-from mageflow.testing import TaskDispatchRecord, TestClientAdapter
+from mageflow.testing import (
+    ChainDispatchRecord,
+    SwarmDispatchRecord,
+    TaskDispatchRecord,
+    TestClientAdapter,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
