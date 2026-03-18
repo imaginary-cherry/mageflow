@@ -18,24 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version
-        id: version
+      - name: Determine tag
+        id: tag
         run: |
           VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=app/v${VERSION}-beta" >> "$GITHUB_OUTPUT"
 
-      - name: Create beta tag if it doesn't exist
-        run: |
-          TAG="app/v${{ steps.version.outputs.version }}-beta"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — skipping"
-          else
-            git config user.name github-actions
-            git config user.email github-actions@github.com
-            git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
-            git push origin "$TAG"
-            echo "Created tag $TAG"
-          fi
+      - name: Create tag if it doesn't exist
+        uses: ./.github/actions/create-tag
+        with:
+          tag: ${{ steps.tag.outputs.tag }}
 
   tag-stable:
     if: github.ref_name == 'main'
@@ -45,21 +37,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version
-        id: version
+      - name: Determine tag
+        id: tag
         run: |
           VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=app/v${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Create stable tag if it doesn't exist
-        run: |
-          TAG="app/v${{ steps.version.outputs.version }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — skipping"
-          else
-            git config user.name github-actions
-            git config user.email github-actions@github.com
-            git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
-            git push origin "$TAG"
-            echo "Created tag $TAG"
-          fi
+      - name: Create tag if it doesn't exist
+        uses: ./.github/actions/create-tag
+        with:
+          tag: ${{ steps.tag.outputs.tag }}
