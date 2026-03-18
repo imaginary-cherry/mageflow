@@ -92,7 +92,8 @@ export async function validateCredentials(settings: AppSettings): Promise<Valida
       return { valid, hatchetError, redisError };
     } catch (invokeErr) {
       // validate_credentials command not yet available — fall back to restart_sidecar approach
-      // Save settings, restart sidecar, poll health, check per-service status
+      // Save current settings so we can restore on failure
+      const previousSettings = await loadSettings();
       await saveSettings(settings);
       const port = await invoke<number>('restart_sidecar');
       const healthUrl = `http://127.0.0.1:${port}/api/health`;
@@ -111,6 +112,9 @@ export async function validateCredentials(settings: AppSettings): Promise<Valida
             const hatchetError = data.hatchet && data.hatchet !== 'connected' ? `Could not connect to Hatchet: ${data.hatchet}` : undefined;
             const redisError = data.redis && data.redis !== 'connected' ? `Could not connect to Redis at this URL` : undefined;
             const valid = !hatchetError && !redisError;
+            if (!valid && previousSettings) {
+              await saveSettings(previousSettings);
+            }
             return { valid, hatchetError, redisError };
           }
         } catch (e) {
@@ -118,6 +122,10 @@ export async function validateCredentials(settings: AppSettings): Promise<Valida
         }
       }
 
+      // Validation timed out — restore previous settings
+      if (previousSettings) {
+        await saveSettings(previousSettings);
+      }
       return {
         valid: false,
         hatchetError: 'Could not reach sidecar health check',
