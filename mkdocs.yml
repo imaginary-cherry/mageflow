@@ -63,6 +63,7 @@ nav:
       - What is MageFlow?: index.md
       - Setup: setup.md
   - Documentation:
+    - Viewer: documentation/viewer.md
     - Callbacks: documentation/callbacks.md
     - Chain: documentation/chain.md
     - Swarm: documentation/swarm.md
