@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # MageFlow Viewer
 
 Desktop app for visualizing mageflow workflows as interactive task graphs.
