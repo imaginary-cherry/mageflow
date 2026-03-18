@@ -26,3 +26,4 @@ tauri-plugin-log = "2"
 tauri-plugin-shell = { version = "2" }
 tauri-plugin-store = "2"
 image = { version = "0.25", default-features = false, features = ["png"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }

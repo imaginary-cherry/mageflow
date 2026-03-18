@@ -6,12 +6,83 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_store::StoreExt;
 
+const KEYRING_SERVICE: &str = "dev.mageflow.viewer";
+
 // ---------------------------------------------------------------------------
 // State structs
 // ---------------------------------------------------------------------------
 
 pub struct SidecarState(pub Mutex<Option<CommandChild>>);
 pub struct SidecarPort(pub Mutex<Option<u16>>);
+
+// ---------------------------------------------------------------------------
+// Keyring helpers
+// ---------------------------------------------------------------------------
+
+fn read_secret(key: &str) -> Option<String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, key).ok()?;
+    entry.get_password().ok()
+}
+
+fn write_secret(key: &str, value: &str) -> Result<(), String> {
+    let entry =
+        keyring::Entry::new(KEYRING_SERVICE, key).map_err(|e| format!("keyring error: {e}"))?;
+    entry
+        .set_password(value)
+        .map_err(|e| format!("keyring set error: {e}"))
+}
+
+fn delete_secret_entry(key: &str) {
+    if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, key) {
+        let _ = entry.delete_credential();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tauri keyring commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn save_secret(key: String, value: String) -> Result<(), String> {
+    write_secret(&key, &value)
+}
+
+#[tauri::command]
+fn load_secret(key: String) -> Result<Option<String>, String> {
+    Ok(read_secret(&key))
+}
+
+#[tauri::command]
+fn delete_secret(key: String) -> Result<(), String> {
+    delete_secret_entry(&key);
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// One-time migration: settings.json store → OS keychain
+// ---------------------------------------------------------------------------
+
+fn migrate_secrets_to_keychain(app: &AppHandle) {
+    let store = match app.store("settings.json") {
+        Ok(s) => s,
+        Err(_) => return, // no store yet — nothing to migrate
+    };
+
+    for key in &["hatchetApiKey", "redisUrl"] {
+        if let Some(val) = store.get(*key) {
+            if let Some(s) = val.as_str() {
+                if !s.is_empty() {
+                    // Only write if keychain doesn't already have a value
+                    if read_secret(key).is_none() {
+                        let _ = write_secret(key, s);
+                    }
+                    store.delete(*key);
+                }
+            }
+        }
+    }
+    let _ = store.save();
+}
 
 // ---------------------------------------------------------------------------
 // Port allocation
@@ -40,45 +111,21 @@ async fn spawn_sidecar(app: &AppHandle) {
         *guard = Some(port);
     }
 
-    // Read credentials from the persistent store.
-    // If the store doesn't exist yet (first launch) we skip spawning and let
-    // the onboarding flow trigger restart_sidecar once the user saves settings.
-    let hatchet_key: String;
-    let redis_url: String;
-
-    match app.store("settings.json") {
-        Ok(store) => {
-            let key = store.get("hatchetApiKey");
-            let url = store.get("redisUrl");
-
-            match (key, url) {
-                (Some(k), Some(u)) => {
-                    hatchet_key = match k.as_str() {
-                        Some(s) if !s.is_empty() => s.to_string(),
-                        _ => {
-                            println!("[sidecar] hatchetApiKey is empty — skipping spawn until settings are saved");
-                            return;
-                        }
-                    };
-                    redis_url = match u.as_str() {
-                        Some(s) if !s.is_empty() => s.to_string(),
-                        _ => {
-                            println!("[sidecar] redisUrl is empty — skipping spawn until settings are saved");
-                            return;
-                        }
-                    };
-                }
-                _ => {
-                    println!("[sidecar] Settings not found — skipping spawn until settings are saved (port {} reserved)", port);
-                    return;
-                }
-            }
-        }
-        Err(e) => {
-            println!("[sidecar] Could not open settings store: {} — skipping spawn", e);
+    // Read credentials from the OS keychain.
+    let hatchet_key = match read_secret("hatchetApiKey") {
+        Some(s) if !s.is_empty() => s,
+        _ => {
+            println!("[sidecar] hatchetApiKey not in keychain — skipping spawn until settings are saved");
             return;
         }
-    }
+    };
+    let redis_url = match read_secret("redisUrl") {
+        Some(s) if !s.is_empty() => s,
+        _ => {
+            println!("[sidecar] redisUrl not in keychain — skipping spawn until settings are saved");
+            return;
+        }
+    };
 
     // Build and launch the sidecar command.
     let shell = app.shell();
@@ -177,6 +224,7 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            migrate_secrets_to_keychain(app.handle());
             tray::create_tray(app.handle())?;
             Ok(())
         })
@@ -185,6 +233,9 @@ pub fn run() {
             get_sidecar_status,
             restart_sidecar,
             set_tray_status,
+            save_secret,
+            load_secret,
+            delete_secret,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

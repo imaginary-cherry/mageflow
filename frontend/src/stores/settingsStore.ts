@@ -35,10 +35,8 @@ export async function loadSettings(): Promise<AppSettings | null> {
   }
 
   try {
-    const { load } = await import('@tauri-apps/plugin-store');
-    const store = await load('settings.json');
-    const hatchetApiKey = await store.get<string>('hatchetApiKey');
-    const redisUrl = await store.get<string>('redisUrl');
+    const hatchetApiKey = await invoke<string | null>('load_secret', { key: 'hatchetApiKey' });
+    const redisUrl = await invoke<string | null>('load_secret', { key: 'redisUrl' });
     if (hatchetApiKey && redisUrl && hatchetApiKey.trim() !== '' && redisUrl.trim() !== '') {
       return { hatchetApiKey, redisUrl };
     }
@@ -55,11 +53,8 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
     return;
   }
 
-  const { load } = await import('@tauri-apps/plugin-store');
-  const store = await load('settings.json');
-  await store.set('hatchetApiKey', settings.hatchetApiKey);
-  await store.set('redisUrl', settings.redisUrl);
-  await store.save();
+  await invoke('save_secret', { key: 'hatchetApiKey', value: settings.hatchetApiKey });
+  await invoke('save_secret', { key: 'redisUrl', value: settings.redisUrl });
 }
 
 export async function hasSettings(): Promise<boolean> {
