@@ -154,9 +154,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ./frontend
-          tagName: app/v__VERSION__
-          releaseName: 'Mageflow Viewer v__VERSION__'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Mageflow Viewer ${{ github.ref_name }}'
           releaseBody: 'Download the installer for your platform from the assets below.'
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
           args: ${{ matrix.args }}

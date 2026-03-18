@@ -10,21 +10,48 @@ on:
       - 'libs/mage-voyance/**'
 
 jobs:
-  tag:
+  tag-beta:
+    if: github.ref_name == 'develop'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tauri.conf.json
+      - name: Extract version
         id: version
         run: |
           VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Detected version: $VERSION"
 
-      - name: Create app tag if it doesn't exist
+      - name: Create beta tag if it doesn't exist
+        run: |
+          TAG="app/v${{ steps.version.outputs.version }}-beta"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — skipping"
+          else
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
+            git push origin "$TAG"
+            echo "Created tag $TAG"
+          fi
+
+  tag-stable:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create stable tag if it doesn't exist
         run: |
           TAG="app/v${{ steps.version.outputs.version }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -32,7 +59,7 @@ jobs:
           else
             git config user.name github-actions
             git config user.email github-actions@github.com
-            git tag -a "$TAG" -m "Release Mageflow Viewer v${{ steps.version.outputs.version }}"
+            git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
             git push origin "$TAG"
             echo "Created tag $TAG"
           fi
