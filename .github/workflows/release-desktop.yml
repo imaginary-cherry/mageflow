@@ -2,9 +2,7 @@
 # Combined with Nuitka sidecar pre-build and macOS codesign pattern
 # Triggers on v* tag push and produces installers for all platforms.
 # macOS ships ad-hoc signed (no Apple Developer account needed). Users open via right-click > Open to bypass Gatekeeper.
-# Windows ships unsigned initially — add Azure Trusted Signing (signCommand) in v1.1.
-# TODO(windows-signing): Configure AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET secrets
-#   and add bundle.windows.signCommand to tauri.conf.json once Azure Trusted Signing is set up.
+# Windows ships unsigned. Users click "Run anyway" on SmartScreen.
 name: Release Desktop App
 
 on:
@@ -156,10 +154,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Windows Azure Trusted Signing (3 secrets — unused until signCommand is configured)
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         with:
           projectPath: ./frontend
           tagName: v__VERSION__
