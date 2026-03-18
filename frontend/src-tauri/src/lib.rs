@@ -7,6 +7,8 @@ use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_store::StoreExt;
 
 const KEYRING_SERVICE: &str = "dev.mageflow.viewer";
+const SECRET_HATCHET_API_KEY: &str = "hatchetApiKey";
+const SECRET_REDIS_URL: &str = "redisUrl";
 
 // ---------------------------------------------------------------------------
 // State structs
@@ -68,7 +70,7 @@ fn migrate_secrets_to_keychain(app: &AppHandle) {
         Err(_) => return, // no store yet — nothing to migrate
     };
 
-    for key in &["hatchetApiKey", "redisUrl"] {
+    for key in &[SECRET_HATCHET_API_KEY, SECRET_REDIS_URL] {
         if let Some(val) = store.get(*key) {
             if let Some(s) = val.as_str() {
                 if !s.is_empty() {
@@ -112,17 +114,17 @@ async fn spawn_sidecar(app: &AppHandle) {
     }
 
     // Read credentials from the OS keychain.
-    let hatchet_key = match read_secret("hatchetApiKey") {
+    let hatchet_key = match read_secret(SECRET_HATCHET_API_KEY) {
         Some(s) if !s.is_empty() => s,
         _ => {
-            println!("[sidecar] hatchetApiKey not in keychain — skipping spawn until settings are saved");
+            println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_HATCHET_API_KEY);
             return;
         }
     };
-    let redis_url = match read_secret("redisUrl") {
+    let redis_url = match read_secret(SECRET_REDIS_URL) {
         Some(s) if !s.is_empty() => s,
         _ => {
-            println!("[sidecar] redisUrl not in keychain — skipping spawn until settings are saved");
+            println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_REDIS_URL);
             return;
         }
     };

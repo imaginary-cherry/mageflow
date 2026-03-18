@@ -18,6 +18,10 @@ export function isTauriEnvironment(): boolean {
 // localStorage keys for browser dev fallback
 const LS_KEY = 'mageflow_settings';
 
+// Secret key names — shared with Rust keyring commands
+const SECRET_HATCHET_API_KEY = 'hatchetApiKey';
+const SECRET_REDIS_URL = 'redisUrl';
+
 export async function loadSettings(): Promise<AppSettings | null> {
   if (!isTauriEnvironment()) {
     // Browser dev fallback: use localStorage
@@ -35,8 +39,8 @@ export async function loadSettings(): Promise<AppSettings | null> {
   }
 
   try {
-    const hatchetApiKey = await invoke<string | null>('load_secret', { key: 'hatchetApiKey' });
-    const redisUrl = await invoke<string | null>('load_secret', { key: 'redisUrl' });
+    const hatchetApiKey = await invoke<string | null>('load_secret', { key: SECRET_HATCHET_API_KEY });
+    const redisUrl = await invoke<string | null>('load_secret', { key: SECRET_REDIS_URL });
     if (hatchetApiKey && redisUrl && hatchetApiKey.trim() !== '' && redisUrl.trim() !== '') {
       return { hatchetApiKey, redisUrl };
     }
@@ -53,8 +57,8 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
     return;
   }
 
-  await invoke('save_secret', { key: 'hatchetApiKey', value: settings.hatchetApiKey });
-  await invoke('save_secret', { key: 'redisUrl', value: settings.redisUrl });
+  await invoke('save_secret', { key: SECRET_HATCHET_API_KEY, value: settings.hatchetApiKey });
+  await invoke('save_secret', { key: SECRET_REDIS_URL, value: settings.redisUrl });
 }
 
 export async function hasSettings(): Promise<boolean> {
