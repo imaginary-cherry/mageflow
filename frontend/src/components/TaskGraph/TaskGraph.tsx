@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -7,6 +7,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -46,10 +47,15 @@ const TaskGraph = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
+  const rfInstance = useRef<ReactFlowInstance | null>(null);
 
   useEffect(() => {
     setNodes(layoutNodes);
     setEdges(layoutEdges);
+    // Re-center the graph when layout changes
+    if (rfInstance.current && layoutNodes.length > 0) {
+      setTimeout(() => rfInstance.current?.fitView({ padding: 0.1 }), 50);
+    }
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
   if (state.rootLoading) {
@@ -67,9 +73,10 @@ const TaskGraph = () => {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onInit={(instance) => { rfInstance.current = instance; }}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.1 }}
         className="bg-background"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="!bg-background" />
