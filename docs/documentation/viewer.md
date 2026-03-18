@@ -2,9 +2,7 @@
 
 Desktop app for visualizing mageflow workflows as interactive task graphs.
 
-![MageFlow Viewer main screen](../assets/viewer/main-graph.png)
-
-<!-- SCREENSHOT: Main task graph view showing workflow nodes and edges -->
+![MageFlow Viewer task graph](../assets/viewer/task-graph.png)
 
 ## Installation
 
@@ -26,83 +24,60 @@ On first launch, the onboarding screen asks for your connection details:
 
 ![Onboarding screen](../assets/viewer/onboarding.png)
 
-<!-- SCREENSHOT: Onboarding screen with Hatchet API key and Redis URL fields -->
-
-- **Hatchet API Token** -- from your Hatchet dashboard
+- **Hatchet API Key** -- from your Hatchet dashboard
 - **Redis URL** -- your Redis instance (e.g. `redis://localhost:6379`)
 
-After connecting, the app starts the backend sidecar and loads your workflows.
-
-![Loading screen](../assets/viewer/loading.png)
-
-<!-- SCREENSHOT: Splash/loading screen while sidecar starts -->
+After connecting, the app starts the backend sidecar and loads your workflows automatically.
 
 ## Task Graph
 
-The main view renders your workflow as an interactive graph using ReactFlow.
-
-![Task graph view](../assets/viewer/task-graph.png)
-
-<!-- SCREENSHOT: Task graph with SimpleTask, ContainerTask nodes -->
+The main view renders your workflow as an interactive graph.
 
 **Node types:**
 
-- **SimpleTask** -- a single task execution
-- **ContainerTask** -- a task containing child tasks (swarm, chain)
-- **LoadingTask** -- a task still being resolved
+- **Simple** -- a single task execution (blue)
+- **Chain** -- sequential tasks that run one after another (purple container)
+- **Swarm** -- parallel tasks that run simultaneously (orange container)
+
+The header bar shows a legend and status filters. Use **Refresh** to reload the graph.
 
 Pan, zoom, and click any node to inspect it.
 
 ## Task Details
 
-Click a node to open the detail panel.
+Click a node to open the detail panel on the right.
 
 ![Task detail panel](../assets/viewer/task-detail.png)
 
-<!-- SCREENSHOT: Slide-out sheet showing task status, children, metadata -->
-
 The panel shows:
 
-- Status and timing
-- Child tasks (for containers)
-- Callbacks
-- Metadata
-- Available actions
+- Task type, name, and ID
+- Current status
+- Child tasks (sequential or parallel)
+- Callbacks (success/error)
+- Actions: **Pause**, **Cancel**, **Retry**
 
 ## Settings
 
-Open settings from the system tray or the app menu.
+Click the gear icon in the top-right corner to open settings.
 
 ![Settings dialog](../assets/viewer/settings.png)
 
-<!-- SCREENSHOT: Settings dialog -->
-
-Update your Hatchet API token or Redis URL here. Changes take effect after reconnecting.
+Update your Hatchet API key or Redis URL here. Click **Save Settings** to apply.
 
 ## System Tray
 
-The app lives in your system tray with connection status.
+The app lives in your system tray with connection status:
 
-![System tray](../assets/viewer/system-tray.png)
-
-<!-- SCREENSHOT: System tray menu showing connection status, show/hide/quit -->
-
-- **Connection indicator** -- shows backend status
+- **Connection indicator** -- shows whether the backend is connected
 - **Show/Hide** -- toggle the main window
-- **Quit** -- fully exit the app
+- **Settings** -- open the settings dialog
+- **Quit** -- fully exit the app and stop the backend
 
 ## Troubleshooting
 
 **Connection banner appears:**
-The app shows a banner when the backend sidecar is unreachable. Check that your Redis instance is running and your Hatchet token is valid.
-
-![Connection error banner](../assets/viewer/connection-banner.png)
-
-<!-- SCREENSHOT: Connection banner when backend unreachable -->
+A warning banner shows when the backend becomes unreachable. Check that your Redis instance is running and your Hatchet token is valid.
 
 **Startup error screen:**
-If the sidecar fails to start, an error screen shows the details. Verify your credentials in Settings.
-
-![Startup error](../assets/viewer/startup-error.png)
-
-<!-- SCREENSHOT: Startup error screen -->
+If the sidecar fails to start, an error screen shows the details with a **Retry** button. Open **Settings** to verify your credentials.
