@@ -13,8 +13,8 @@ runs:
       shell: bash
       run: |
         TAG="${{ inputs.tag }}"
-        if git rev-parse "$TAG" >/dev/null 2>&1; then
-          echo "Tag $TAG already exists — skipping"
+        if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+          echo "Tag $TAG already exists on remote — skipping"
         else
           git config user.name github-actions
           git config user.email github-actions@github.com
