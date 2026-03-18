@@ -1,8 +1,8 @@
-# Source: https://v2.tauri.app/distribute/pipelines/github/
-# Combined with Nuitka sidecar pre-build and macOS codesign pattern
-# Triggers on v* tag push and produces installers for all platforms.
-# macOS ships ad-hoc signed (no Apple Developer account needed). Users open via right-click > Open to bypass Gatekeeper.
-# Windows ships unsigned. Users click "Run anyway" on SmartScreen.
+# Builds cross-platform desktop installers when an app/v* tag is pushed.
+# Tags are created automatically by tag-desktop-release.yml on push to main/develop.
+# Restrict manual app/v* tag creation with a GitHub Ruleset to enforce this.
+# macOS: ad-hoc signed (no Apple Developer account). Users open via right-click > Open.
+# Windows: unsigned. Users click "Run anyway" on SmartScreen.
 name: Release Desktop App
 
 on:
@@ -11,25 +11,7 @@ on:
       - 'app/v*'
 
 jobs:
-  verify-branch:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Verify tag is on main or develop
-        run: |
-          git fetch origin main develop
-          if git merge-base --is-ancestor $GITHUB_SHA origin/main || \
-             git merge-base --is-ancestor $GITHUB_SHA origin/develop; then
-            echo "Tag is on main or develop — proceeding"
-          else
-            echo "::error::Tag must be on main or develop branch"
-            exit 1
-          fi
-
   release:
-    needs: verify-branch
     permissions:
       contents: write
     strategy:
