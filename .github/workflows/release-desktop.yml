@@ -20,12 +20,20 @@ jobs:
         include:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            nuitka-macos-arch: 'arm64'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            nuitka-macos-arch: 'x86_64'
           - platform: 'ubuntu-22.04'
             args: ''
+            target: ''
+            nuitka-macos-arch: ''
           - platform: 'windows-latest'
             args: ''
+            target: ''
+            nuitka-macos-arch: ''
 
     runs-on: ${{ matrix.platform }}
 
@@ -92,6 +100,7 @@ jobs:
           working-directory: .
           output-dir: frontend/src-tauri/binaries/
           output-file: mageflow-server-temp
+          macos-target-arch: ${{ matrix.nuitka-macos-arch }}
           include-package: >-
             uvicorn,
             fastapi,
@@ -113,7 +122,10 @@ jobs:
       - name: Rename sidecar to target-triple format
         shell: bash
         run: |
-          TARGET=$(rustc --print host-tuple)
+          TARGET="${{ matrix.target }}"
+          if [[ -z "$TARGET" ]]; then
+            TARGET=$(rustc --print host-tuple)
+          fi
           BIN_DIR="frontend/src-tauri/binaries"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             if [[ -f "${BIN_DIR}/mageflow-server-temp.exe" ]]; then
@@ -138,7 +150,7 @@ jobs:
       - name: Ad-hoc codesign sidecar binary (macOS)
         if: runner.os == 'macOS'
         run: |
-          TARGET=$(rustc --print host-tuple)
+          TARGET="${{ matrix.target }}"
           SIDECAR="frontend/src-tauri/binaries/mageflow-server-${TARGET}"
           codesign --force --sign - "$SIDECAR"
 
