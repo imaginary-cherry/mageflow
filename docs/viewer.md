@@ -2,7 +2,7 @@
 
 Desktop app for visualizing mageflow workflows as interactive task graphs.
 
-![MageFlow Viewer task graph](../assets/viewer/task-graph.png)
+![MageFlow Viewer task graph](assets/viewer/task-graph.png)
 
 ## Installation
 
@@ -22,7 +22,7 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 On first launch, the onboarding screen asks for your connection details:
 
-![Onboarding screen](../assets/viewer/onboarding.png)
+![Onboarding screen](assets/viewer/onboarding.png)
 
 - **Hatchet API Key** -- from your Hatchet dashboard
 - **Redis URL** -- your Redis instance (e.g. `redis://localhost:6379`)
@@ -47,7 +47,7 @@ Pan, zoom, and click any node to inspect it.
 
 Click a node to open the detail panel on the right.
 
-![Task detail panel](../assets/viewer/task-detail.png)
+![Task detail panel](assets/viewer/task-detail.png)
 
 The panel shows:
 
@@ -61,7 +61,7 @@ The panel shows:
 
 Click the gear icon in the top-right corner to open settings.
 
-![Settings dialog](../assets/viewer/settings.png)
+![Settings dialog](assets/viewer/settings.png)
 
 Update your Hatchet API key or Redis URL here. Click **Save Settings** to apply.
 

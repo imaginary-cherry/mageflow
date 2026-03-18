@@ -63,7 +63,6 @@ nav:
       - What is MageFlow?: index.md
       - Setup: setup.md
   - Documentation:
-    - Viewer: documentation/viewer.md
     - Callbacks: documentation/callbacks.md
     - Chain: documentation/chain.md
     - Swarm: documentation/swarm.md
@@ -77,6 +76,7 @@ nav:
       - Swarm: api/swarm.md
       - Signature: api/signature.md
       - Configuration: api/config.md
+  - Viewer App: viewer.md
   - Roadmap: roadmap.md
   - Changelog: changelog.md
 
