@@ -28,21 +28,21 @@ function StartupErrorScreen({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gray-950 text-white gap-4">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground gap-4">
       <h2 className="text-2xl font-semibold">Startup Failed</h2>
-      <p className="text-gray-400 text-sm max-w-sm text-center">{errorMessage}</p>
+      <p className="text-muted-foreground text-sm max-w-sm text-center">{errorMessage}</p>
       <div className="flex gap-3 mt-2">
         <button
           type="button"
           onClick={onRetry}
-          className="px-4 py-2 rounded-md bg-purple-700 hover:bg-purple-600 text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-md bg-primary hover:bg-primary/80 text-primary-foreground text-sm font-medium transition-colors"
         >
           Retry
         </button>
         <button
           type="button"
           onClick={onOpenSettings}
-          className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium transition-colors"
         >
           Settings
         </button>
@@ -160,12 +160,12 @@ function MainApp({
             />
 
             {/* Minimal header with settings gear */}
-            <header className="flex items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
+            <header className="flex items-center justify-end px-4 py-2 border-b border-border bg-background">
               <button
                 type="button"
                 onClick={onOpenSettings}
                 aria-label="Open settings"
-                className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <Settings className="h-5 w-5" />
               </button>
