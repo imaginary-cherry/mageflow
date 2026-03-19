@@ -76,7 +76,9 @@ fn migrate_secrets_to_keychain(app: &AppHandle) {
                 if !s.is_empty() {
                     // Only write if keychain doesn't already have a value
                     if read_secret(key).is_none() {
-                        let _ = write_secret(key, s);
+                        if write_secret(key, s).is_err() {
+                            continue;
+                        }
                     }
                     store.delete(*key);
                 }
