@@ -107,20 +107,24 @@ export async function validateCredentials(settings: AppSettings): Promise<Valida
         try {
           const resp = await fetch(healthUrl);
           if (resp.ok) {
-            const data = await resp.json() as {
-              hatchet?: string;
-              redis?: string;
-            };
-            const hatchetError = data.hatchet && data.hatchet !== 'connected' ? `Could not connect to Hatchet: ${data.hatchet}` : undefined;
-            const redisError = data.redis && data.redis !== 'connected' ? `Could not connect to Redis at this URL` : undefined;
+            const data: unknown = await resp.json();
+            const health = typeof data === 'object' && data !== null ? data as Record<string, unknown> : {};
+            const hatchetStatus = typeof health.hatchet === 'string' ? health.hatchet : undefined;
+            const redisStatus = typeof health.redis === 'string' ? health.redis : undefined;
+            const hatchetError = hatchetStatus === 'connected' ? undefined : `Could not connect to Hatchet: ${hatchetStatus ?? 'unknown'}`;
+            const redisError = redisStatus === 'connected' ? undefined : `Could not connect to Redis at this URL`;
             const valid = !hatchetError && !redisError;
-            if (!valid && previousSettings) {
-              await saveSettings(previousSettings);
+            if (!valid) {
+              if (previousSettings) {
+                await saveSettings(previousSettings);
+              } else {
+                await clearSettings();
+              }
             }
             return { valid, hatchetError, redisError };
           }
         } catch (e) {
-          lastErr = e as Error;
+          lastErr = e instanceof Error ? e : new Error(String(e));
         }
       }
 
