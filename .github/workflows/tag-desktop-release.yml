@@ -6,8 +6,7 @@ on:
       - develop
       - main
     paths:
-      - 'frontend/**'
-      - 'libs/mage-voyance/**'
+      - 'frontend/src-tauri/tauri.conf.json'
 
 jobs:
   tag-beta:
