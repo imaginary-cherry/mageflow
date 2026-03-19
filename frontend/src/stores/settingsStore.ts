@@ -26,11 +26,13 @@ export async function loadSettings(): Promise<AppSettings | null> {
   if (!isTauriEnvironment()) {
     // Browser dev fallback: use localStorage
     try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as Partial<AppSettings>;
-      if (parsed.hatchetApiKey && parsed.redisUrl) {
-        return { hatchetApiKey: parsed.hatchetApiKey, redisUrl: parsed.redisUrl };
+      const savedSettings = localStorage.getItem(LS_KEY);
+      if (!savedSettings) return null;
+      const settings = JSON.parse(savedSettings) as Record<string, unknown>;
+      const hatchetApiKey = typeof settings.hatchetApiKey === 'string' ? settings.hatchetApiKey : '';
+      const redisUrl = typeof settings.redisUrl === 'string' ? settings.redisUrl : '';
+      if (hatchetApiKey && redisUrl) {
+        return { hatchetApiKey, redisUrl };
       }
       return null;
     } catch {
