@@ -63,6 +63,16 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   await invoke('save_secret', { key: SECRET_REDIS_URL, value: settings.redisUrl });
 }
 
+export async function clearSettings(): Promise<void> {
+  if (!isTauriEnvironment()) {
+    localStorage.removeItem(LS_KEY);
+    return;
+  }
+
+  await invoke('save_secret', { key: SECRET_HATCHET_API_KEY, value: '' });
+  await invoke('save_secret', { key: SECRET_REDIS_URL, value: '' });
+}
+
 export async function hasSettings(): Promise<boolean> {
   const result = await loadSettings();
   return result !== null;
@@ -131,6 +141,8 @@ export async function validateCredentials(settings: AppSettings): Promise<Valida
       // Validation timed out — restore previous settings
       if (previousSettings) {
         await saveSettings(previousSettings);
+      } else {
+        await clearSettings();
       }
       return {
         valid: false,
