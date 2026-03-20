@@ -6,8 +6,6 @@ TEST-05: dispatch records do not leak between tests (ordering matters — part1 
 TEST-06: adapter.clear() resets dispatch records mid-test
 """
 
-import pytest
-
 import mageflow
 
 
