@@ -132,6 +132,7 @@ async fn spawn_sidecar(app: &AppHandle) {
     };
 
     // Build and launch the sidecar command.
+    // Secrets are passed via env vars (not CLI args) to avoid exposure in process listings.
     let shell = app.shell();
     match shell
         .sidecar("mageflow-server")
@@ -141,10 +142,10 @@ async fn spawn_sidecar(app: &AppHandle) {
             &port.to_string(),
             "--host",
             "127.0.0.1",
-            "--hatchet-api-key",
-            &hatchet_key,
-            "--redis-url",
-            &redis_url,
+        ])
+        .envs([
+            ("HATCHET_API_KEY", &hatchet_key),
+            ("REDIS_URL", &redis_url),
         ])
         .spawn()
     {

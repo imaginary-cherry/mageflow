@@ -1,5 +1,4 @@
 import argparse
-import os
 from multiprocessing import freeze_support
 
 import uvicorn
@@ -12,14 +11,10 @@ def main():
     parser = argparse.ArgumentParser(description="Mageflow Viewer backend server")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--hatchet-api-key", default="")
-    parser.add_argument("--redis-url", default="redis://localhost:6379")
     args = parser.parse_args()
 
-    # Pass credentials via env vars — FastAPI lifespan reads them
-    os.environ["REDIS_URL"] = args.redis_url
-    if args.hatchet_api_key:
-        os.environ["HATCHET_API_KEY"] = args.hatchet_api_key
+    # Secrets (HATCHET_API_KEY, REDIS_URL) are expected as env vars set by the
+    # launcher (Tauri sidecar).  This avoids leaking them in process listings.
 
     # Use dev app — Tauri serves the frontend, server only needs API routes with CORS
     app = create_dev_app()

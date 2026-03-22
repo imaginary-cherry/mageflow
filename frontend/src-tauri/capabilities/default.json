@@ -21,11 +21,7 @@
             "--port",
             { "validator": "^\\d+$" },
             "--host",
-            "127.0.0.1",
-            "--hatchet-api-key",
-            { "validator": "\\S+" },
-            "--redis-url",
-            { "validator": "\\S+" }
+            "127.0.0.1"
           ]
         }
       ]
