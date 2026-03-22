@@ -22,7 +22,7 @@ jobs:
             args: '--target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
             nuitka-macos-arch: 'arm64'
-          - platform: 'macos-13-intel'
+          - platform: 'macos-15-intel'
             args: '--target x86_64-apple-darwin'
             target: 'x86_64-apple-darwin'
             nuitka-macos-arch: 'x86_64'
