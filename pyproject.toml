@@ -2,7 +2,7 @@
 # Each package under libs/ manages its own dependencies independently.
 
 [tool.uv.workspace]
-members = ["libs/mageflow", "libs/third-magic", "libs/mageflow-mcp", "libs/mageflow-e2e"]
+members = ["libs/mageflow", "libs/third-magic", "libs/mageflow-mcp", "libs/mageflow-e2e", "libs/mage-voyance"]
 
 [tool.ruff]
 target-version = "py310"
