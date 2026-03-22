@@ -12,10 +12,13 @@ jobs:
   tag-beta:
     if: github.ref_name == 'develop'
     runs-on: ubuntu-latest
+    environment: publish-tag-app
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Determine tag
         id: tag
@@ -31,10 +34,13 @@ jobs:
   tag-stable:
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    environment: publish-tag-app
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Determine tag
         id: tag
