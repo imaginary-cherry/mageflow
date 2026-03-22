@@ -11,6 +11,15 @@ Desktop app for visualizing mageflow workflows as interactive task graphs.
 
 ## Installation
 
+### Homebrew (macOS)
+
+```bash
+brew install imaginary-cherry/mageflow/mage-voyance        # stable
+brew install imaginary-cherry/mageflow/mage-voyance-beta   # beta
+```
+
+### Direct Download
+
 Download the latest release for your platform from [GitHub Releases](https://github.com/imaginary-cherry/mageflow/releases):
 
 | Platform | Format |

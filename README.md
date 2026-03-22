@@ -123,7 +123,8 @@ A desktop app for visualizing your workflows as interactive task graphs. See the
 
 **Homebrew (macOS):**
 ```bash
-brew install imaginary-cherry/mageflow/mageflow-viewer
+brew install imaginary-cherry/mageflow/mage-voyance        # stable
+brew install imaginary-cherry/mageflow/mage-voyance-beta   # beta
 ```
 
 **Direct download:** [GitHub Releases](https://github.com/imaginary-cherry/mageflow/releases)
