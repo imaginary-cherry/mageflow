@@ -131,6 +131,8 @@ jobs:
             mv "${BIN_DIR}/mageflow-server-temp" "${BIN_DIR}/mageflow-server-${TARGET}"
             chmod +x "${BIN_DIR}/mageflow-server-${TARGET}"
           fi
+          # Clean up Nuitka build artifacts — Tauri's build.rs fails if extra files exist in binaries/
+          rm -rf "${BIN_DIR}/__main__.build" "${BIN_DIR}/__main__.dist" "${BIN_DIR}/__main__.onefile-build"
 
       # --- macOS AD-HOC SIGNING ---
       # Ad-hoc sign the sidecar so macOS allows execution.
@@ -147,15 +149,6 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
-        working-directory: frontend
-
-      - name: Debug - list sidecar binaries
-        shell: bash
-        run: |
-          echo "=== Repo root ==="
-          ls -la frontend/src-tauri/binaries/ || echo "directory not found"
-          echo "=== From frontend ==="
-          ls -la src-tauri/binaries/ || echo "directory not found"
         working-directory: frontend
 
       - name: Build and release with tauri-action
