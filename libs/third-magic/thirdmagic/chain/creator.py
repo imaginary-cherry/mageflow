@@ -1,3 +1,5 @@
+import rapyer
+
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskInputType
 from thirdmagic.signature.retry_cache import (
@@ -34,7 +36,7 @@ async def chain(
         tasks=tasks,
         kwargs=kwargs,
     )
-    async with first_task.apipeline(use_existing_pipe=True):
+    async with rapyer.apipeline(use_existing_pipe=True):
         for task in tasks:
             task.signature_container_id = chain_task_signature.key
         await chain_task_signature.asave()

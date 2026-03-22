@@ -1,0 +1,65 @@
+name: Update Homebrew Cask
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-cask:
+    if: startsWith(github.event.release.tag_name, 'app/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Parse version and channel
+        id: parse
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          # Extract version number (e.g., app/v0.1.0-beta -> 0.1.0)
+          VERSION=$(echo "$TAG" | sed 's|app/v||; s|-beta||')
+          if [[ "$TAG" == *-beta ]]; then
+            CHANNEL="beta"
+            CASK_FILE="Casks/mage-voyance-beta.rb"
+          else
+            CHANNEL="stable"
+            CASK_FILE="Casks/mage-voyance.rb"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "cask_file=$CASK_FILE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download DMG and compute SHA256
+        id: sha
+        run: |
+          TAG="${{ steps.parse.outputs.tag }}"
+          VERSION="${{ steps.parse.outputs.version }}"
+          ASSET="Mageflow.Viewer_${VERSION}_aarch64.dmg"
+          gh release download "$TAG" -p "$ASSET" -D /tmp/cask-assets
+          SHA=$(sha256sum "/tmp/cask-assets/$ASSET" | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update cask formula
+        run: |
+          CASK="${{ steps.parse.outputs.cask_file }}"
+          VERSION="${{ steps.parse.outputs.version }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+          sed -i "s/version \".*\"/version \"$VERSION\"/" "$CASK"
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA\"/" "$CASK"
+
+      - name: Commit and push
+        run: |
+          CHANNEL="${{ steps.parse.outputs.channel }}"
+          VERSION="${{ steps.parse.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "cask: update mage-voyance ${CHANNEL} to ${VERSION}"
+          git push

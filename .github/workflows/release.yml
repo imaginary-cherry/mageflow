@@ -18,21 +18,29 @@ jobs:
       with:
         fetch-depth: 0  # Required to fetch all tags
 
-    - name: Extract version from latest tag
+    - name: Extract version from mageflow pyproject.toml
       id: version
       run: |
-        TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
-        if [ -z "$TAG" ]; then
-          echo "Error: No v* tags found"
+        # Use mageflow's pyproject.toml as the source of truth for the release version,
+        # rather than picking the latest v* tag (which may include non-release milestone tags like v1.0).
+        VERSION=$(grep -m1 '^version' libs/mageflow/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+        if [ -z "$VERSION" ]; then
+          echo "Error: Could not extract version from libs/mageflow/pyproject.toml"
           exit 1
         fi
-        VERSION=${TAG#v}
+
+        # Verify a matching git tag exists for this version
+        TAG="v$VERSION"
+        if ! git tag -l "$TAG" | grep -q "$TAG"; then
+          echo "Error: Tag $TAG not found"
+          exit 1
+        fi
         RELEASE_DATE=$(date +%Y-%m-%d)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
-        echo "Latest tag: $TAG"
-        echo "Extracted version: $VERSION"
+        echo "Version from pyproject.toml: $VERSION"
+        echo "Matching tag: $TAG"
         echo "Release date: $RELEASE_DATE"
 
     - name: Extract release notes

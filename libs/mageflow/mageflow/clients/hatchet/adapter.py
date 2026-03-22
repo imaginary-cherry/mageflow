@@ -168,7 +168,7 @@ class HatchetClientAdapter(BaseClientAdapter):
     ) -> bool:
         finish_retry = (
             task_definition.retries is not None
-            and attempt_num < task_definition.retries
+            and attempt_num <= task_definition.retries
         )
         return finish_retry and not isinstance(e, NonRetryableException)
 

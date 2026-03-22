@@ -111,7 +111,7 @@ async def test__pending_signature__error_exhausted_retries__marks_failed(
 
 
 @pytest.mark.asyncio
-async def test__pending_signature__cancel_error__marks_failed_and_reraises(
+async def test__pending_signature__cancel_error__total_failure_and_reraises(
     adapter_with_lifecycle,
     error_callback_signature,
 ):
@@ -120,8 +120,9 @@ async def test__pending_signature__cancel_error__marks_failed_and_reraises(
         retries=3, error_callbacks=[error_callback_signature]
     )
     ctx = create_mock_hatchet_context(
-        MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=1)
+        MockContextConfig(task_id=signature.key, job_name="test_task", attempt_number=4)
     )
+    adapter_with_lifecycle.should_task_retry.return_value = False
     raising_handler, _ = handler_factory(raises=asyncio.CancelledError())
     message = ContextMessage()
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.4]
+
+### ✨ Added
+
+- **Testing Client (`mageflow.testing`)**: New pytest plugin providing a `TestClientAdapter` for testing mageflow workflows without a live Hatchet or Redis backend.
+  - `mageflow_client` fixture with automatic setup/teardown
+  - Typed dispatch records: `TaskDispatchRecord`, `SwarmDispatchRecord`, `ChainDispatchRecord`
+  - Assertion API: `assert_task_dispatched`, `assert_swarm_dispatched`, `assert_chain_dispatched` with subset and exact matching
+  - Local execution mode for running task handlers in-process
+  - `fakeredis` backend support for dual-backend testing (real Redis vs in-memory)
+  - Configurable via `pyproject.toml` `[tool.mageflow.testing]` section
+- **Integration Tests for Testing Plugin**: User-workflow integration tests covering task, swarm, and chain dispatch scenarios.
+
+
+### 🐛 Fixed
+
+- **Chain Creation Inside `abounded_field`**: Fixed a bug where creating a chain inside an `abounded_field` context failed due to a nested pipeline conflict. The chain creator now correctly reuses the existing Redis pipeline instead of creating a conflicting one.
+- **Fix retry counter**: We now retry total of 4 times for setting retries=3 (like hatchet does by default)
+- **Timeout/Cancellation Retry**: We now retry for timeout as well.
+
+### 🔄 Changed
+
+- **`abounded_field` Moved to `thirdmagic`**: `abounded_field` is now exported from `thirdmagic` instead of being an alias in `mageflow`. This makes it available to `thirdmagic`-only consumers without requiring a `mageflow` dependency.
+
+### 🛠️ Technical Improvements
+
+- **`abounded_field` Test Suite**: Added comprehensive tests covering signatures, chains, swarms, and mixed combinations inside `abounded_field`.
+- **Retry Integration Tests**: Added `retry_timeout_task` worker and test cases verifying retry behavior for both timeout and error scenarios.
+
+
 ## [0.3.3]
 
 ### ✨ Added

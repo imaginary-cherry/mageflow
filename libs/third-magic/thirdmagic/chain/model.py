@@ -24,7 +24,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         return [cls.validate_task_key(item) for item in v]
 
     @property
-    def task_ids(self):
+    def task_ids(self) -> list[RapyerKey]:
         return self.tasks
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):

@@ -1,7 +1,7 @@
 import click
 import uvicorn
 
-from mageflow.visualizer.server import get_static_dir
+from visualizer.server import get_static_dir
 
 
 def validate_static_files_exist() -> bool:
@@ -22,7 +22,7 @@ def task_display(host: str, port: int, dev: bool, reload: bool):
     if dev:
         click.echo(f"Starting development server, proxying to http://localhost:3000")
         uvicorn.run(
-            "mageflow.visualizer.server:create_dev_app",
+            "visualizer.server:create_dev_app",
             host=host,
             port=port,
             reload=reload,
@@ -42,7 +42,7 @@ def task_display(host: str, port: int, dev: bool, reload: bool):
 
         click.echo(f"Starting production server at http://{host}:{port}")
         uvicorn.run(
-            "mageflow.visualizer.server:create_app",
+            "visualizer.server:create_app",
             host=host,
             port=port,
             reload=reload,
