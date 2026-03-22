@@ -102,20 +102,8 @@ jobs:
           output-dir: frontend/src-tauri/binaries/
           output-file: mageflow-server-temp
           macos-target-arch: ${{ matrix.nuitka-macos-arch }}
-          include-package: >-
-            uvicorn,
-            fastapi,
-            anyio,
-            starlette,
-            rapyer,
-            redis,
-            thirdmagic,
-            visualizer,
-            pydantic,
-            grpc,
-            google.protobuf
-          include-package-data: 'hatchet_sdk,rapyer'
-          follow-imports: true
+          include-package: uvicorn,fastapi,anyio,starlette,rapyer,redis,thirdmagic,visualizer,pydantic,grpc,google.protobuf
+          include-package-data: hatchet_sdk,rapyer
 
       # Rename the Nuitka output to the target-triple format that Tauri externalBin expects.
       # Tauri appends the target triple automatically at runtime; the file must be named accordingly.
