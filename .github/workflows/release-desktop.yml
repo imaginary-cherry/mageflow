@@ -1,0 +1,174 @@
+# Builds cross-platform desktop installers when an app/v* tag is pushed.
+# Tags are created automatically by tag-desktop-release.yml on push to main/develop.
+# Restrict manual app/v* tag creation with a GitHub Ruleset to enforce this.
+# macOS: ad-hoc signed (no Apple Developer account). Users open via right-click > Open.
+# Windows: unsigned. Users click "Run anyway" on SmartScreen.
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'app/v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            nuitka-macos-arch: 'arm64'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            nuitka-macos-arch: 'x86_64'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            target: ''
+            nuitka-macos-arch: ''
+          - platform: 'windows-latest'
+            args: ''
+            target: ''
+            nuitka-macos-arch: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Linux requires additional system libraries for WebKit and system tray support.
+      # Pin to ubuntu-22.04 (not ubuntu-latest) to ensure libwebkit2gtk-4.1-dev is available
+      # and to avoid glibc 2.34+ ABI issues on older target systems.
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Install both macOS targets so the same runner handles both arm64 and x86_64 jobs.
+      # The empty string for Linux/Windows is intentional — those runners only need the host target.
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './frontend/src-tauri -> target'
+
+      # --- PYTHON SIDECAR PRE-BUILD ---
+      # The sidecar must be compiled natively on each platform runner and placed in
+      # frontend/src-tauri/binaries/ with the target-triple suffix BEFORE tauri-action runs.
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python sidecar dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e "./libs/mage-voyance[server]"
+
+      # Pin nuitka-version to 4.0.4 to match Phase 1's tested version.
+      # Nuitka-Action@main defaults to latest which may break gRPC/protobuf compatibility.
+      # Upgrade intentionally after verifying hatchet-sdk compatibility.
+      # Note on Windows mode: Using onefile for all platforms initially (simplest path).
+      # If Windows Defender flags the onefile binary (self-extraction to %TEMP%), switch to
+      # standalone mode. Standalone produces a .dist/ directory which requires Tauri bundler
+      # changes to handle a directory rather than a single file — see research Open Question 2.
+      - name: Compile Python sidecar with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: '4.0.4'
+          script-name: libs/mage-voyance/visualizer/__main__.py
+          mode: onefile
+          working-directory: .
+          output-dir: frontend/src-tauri/binaries/
+          output-file: mageflow-server-temp
+          macos-target-arch: ${{ matrix.nuitka-macos-arch }}
+          include-package: >-
+            uvicorn,
+            fastapi,
+            anyio,
+            starlette,
+            rapyer,
+            redis,
+            thirdmagic,
+            visualizer,
+            pydantic,
+            grpc,
+            google.protobuf
+          include-package-data: 'hatchet_sdk,rapyer'
+          follow-imports: true
+
+      # Rename the Nuitka output to the target-triple format that Tauri externalBin expects.
+      # Tauri appends the target triple automatically at runtime; the file must be named accordingly.
+      # Windows fallback: if standalone mode is used later, the .exe may be inside a .dist/ directory.
+      - name: Rename sidecar to target-triple format
+        shell: bash
+        run: |
+          TARGET="${{ matrix.target }}"
+          if [[ -z "$TARGET" ]]; then
+            TARGET=$(rustc --print host-tuple)
+          fi
+          BIN_DIR="frontend/src-tauri/binaries"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            if [[ -f "${BIN_DIR}/mageflow-server-temp.exe" ]]; then
+              mv "${BIN_DIR}/mageflow-server-temp.exe" "${BIN_DIR}/mageflow-server-${TARGET}.exe"
+            elif [[ -d "${BIN_DIR}/mageflow-server-temp.dist" ]]; then
+              # Standalone mode fallback: binary is inside the .dist directory
+              mv "${BIN_DIR}/mageflow-server-temp.dist/mageflow-server-temp.exe" \
+                 "${BIN_DIR}/mageflow-server-${TARGET}.exe"
+            else
+              echo "ERROR: Could not find Nuitka output binary for Windows"
+              exit 1
+            fi
+          else
+            mv "${BIN_DIR}/mageflow-server-temp" "${BIN_DIR}/mageflow-server-${TARGET}"
+            chmod +x "${BIN_DIR}/mageflow-server-${TARGET}"
+          fi
+
+      # --- macOS AD-HOC SIGNING ---
+      # Ad-hoc sign the sidecar so macOS allows execution.
+      # No Apple Developer account needed. Users bypass Gatekeeper via right-click > Open.
+
+      - name: Ad-hoc codesign sidecar binary (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          TARGET="${{ matrix.target }}"
+          SIDECAR="frontend/src-tauri/binaries/mageflow-server-${TARGET}"
+          codesign --force --sign - "$SIDECAR"
+
+      # --- FRONTEND BUILD + TAURI RELEASE ---
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build and release with tauri-action
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Mageflow Viewer ${{ github.ref_name }}'
+          releaseBody: 'Download the installer for your platform from the assets below.'
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+          args: ${{ matrix.args }}

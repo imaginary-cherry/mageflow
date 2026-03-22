@@ -77,6 +77,7 @@ nav:
       - Swarm: api/swarm.md
       - Signature: api/signature.md
       - Configuration: api/config.md
+  - Viewer App: viewer.md
   - Roadmap: roadmap.md
   - Changelog: changelog.md
 

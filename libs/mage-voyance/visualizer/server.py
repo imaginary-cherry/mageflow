@@ -11,7 +11,12 @@ from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from mageflow.visualizer.models import (
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
+from visualizer.models import (
     BatchTasksRequest,
     RootTasksResponse,
     TaskCallbacksResponse,
@@ -19,11 +24,6 @@ from mageflow.visualizer.models import (
     TaskFromServer,
     serialize_task,
 )
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature.model import TaskSignature
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmTaskSignature
 
 
 def get_static_dir() -> Path:

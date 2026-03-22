@@ -1,0 +1,48 @@
+name: Tag Desktop Release
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'frontend/src-tauri/tauri.conf.json'
+
+jobs:
+  tag-beta:
+    if: github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine tag
+        id: tag
+        run: |
+          VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
+          echo "tag=app/v${VERSION}-beta" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag if it doesn't exist
+        uses: ./.github/actions/create-tag
+        with:
+          tag: ${{ steps.tag.outputs.tag }}
+
+  tag-stable:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine tag
+        id: tag
+        run: |
+          VERSION=$(jq -r '.version' frontend/src-tauri/tauri.conf.json)
+          echo "tag=app/v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag if it doesn't exist
+        uses: ./.github/actions/create-tag
+        with:
+          tag: ${{ steps.tag.outputs.tag }}

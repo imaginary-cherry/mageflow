@@ -6,11 +6,10 @@ import click
 import rapyer
 from redis.asyncio import Redis
 
-from mageflow.chain.model import ChainTaskSignature
-from mageflow.signature.model import TaskSignature
-from mageflow.signature.status import SignatureStatus, TaskStatus
-from mageflow.swarm.model import SwarmConfig, SwarmTaskSignature
-from mageflow.swarm.state import PublishState
+from thirdmagic.chain import ChainTaskSignature
+from thirdmagic.signature import SignatureStatus, TaskStatus
+from thirdmagic.swarm import PublishState, SwarmConfig, SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 
 TEST_PREFIX = "test_frontend_"
 

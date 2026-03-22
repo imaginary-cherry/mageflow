@@ -1,0 +1,24 @@
+name: Create Tag
+description: Create and push a git tag if it doesn't already exist
+
+inputs:
+  tag:
+    description: 'Tag name to create'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create tag if it doesn't exist
+      shell: bash
+      run: |
+        TAG="${{ inputs.tag }}"
+        if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+          echo "Tag $TAG already exists on remote — skipping"
+        else
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
+          git push origin "$TAG"
+          echo "Created tag $TAG"
+        fi
