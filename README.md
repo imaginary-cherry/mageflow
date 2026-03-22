@@ -117,6 +117,17 @@ task_signature = await mageflow.sign(
 - **User Workflows** - Multi-step onboarding and registration
 - **Content Processing** - Media processing with multiple stages
 
+## MageFlow Viewer
+
+A desktop app for visualizing your workflows as interactive task graphs. See the [full docs](docs/viewer.md) for details.
+
+**Homebrew (macOS):**
+```bash
+brew install imaginary-cherry/mageflow/mageflow-viewer
+```
+
+**Direct download:** [GitHub Releases](https://github.com/imaginary-cherry/mageflow/releases)
+
 ## Documentation
 
 - [Setup Guide](docs/setup.md)

@@ -15,10 +15,10 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 | Platform | Format |
 |----------|--------|
-| macOS (Apple Silicon) | `.dmg` |
-| macOS (Intel) | `.dmg` |
-| Windows | `.msi` |
-| Linux | `.deb` / `.AppImage` |
+| macOS (Apple Silicon) | [`.dmg`](https://github.com/imaginary-cherry/mageflow/releases/latest) |
+| Windows | [`.msi`](https://github.com/imaginary-cherry/mageflow/releases/latest) |
+| Linux (Debian) | [`.deb`](https://github.com/imaginary-cherry/mageflow/releases/latest) |
+| Linux (Other) | [`.AppImage`](https://github.com/imaginary-cherry/mageflow/releases/latest) |
 
 !!! note "macOS unsigned app"
     The macOS build is currently unsigned. On first launch, right-click the app and select "Open", then confirm in the dialog.
