@@ -159,7 +159,7 @@ jobs:
           tauriScript: npx tauri
           projectPath: ./frontend
           tagName: ${{ github.ref_name }}
-          releaseName: 'Mageflow Viewer ${{ github.ref_name }}'
+          releaseName: 'Mage Voyance ${{ github.ref_name }}'
           releaseBody: 'Download the installer for your platform from the assets below.'
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, 'beta') }}
