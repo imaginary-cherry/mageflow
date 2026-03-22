@@ -149,6 +149,15 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Debug - list sidecar binaries
+        shell: bash
+        run: |
+          echo "=== Repo root ==="
+          ls -la frontend/src-tauri/binaries/ || echo "directory not found"
+          echo "=== From frontend ==="
+          ls -la src-tauri/binaries/ || echo "directory not found"
+        working-directory: frontend
+
       - name: Build and release with tauri-action
         uses: tauri-apps/tauri-action@v0.5.25
         env:
