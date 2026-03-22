@@ -22,7 +22,7 @@ jobs:
             args: '--target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
             nuitka-macos-arch: 'arm64'
-          - platform: 'macos-latest'
+          - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
             target: 'x86_64-apple-darwin'
             nuitka-macos-arch: 'x86_64'
@@ -150,7 +150,7 @@ jobs:
         working-directory: frontend
 
       - name: Build and release with tauri-action
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.5.25
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
