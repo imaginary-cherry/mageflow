@@ -21,9 +21,9 @@ Requirements for Hatchet Workflow Signatures milestone. Each maps to roadmap pha
 
 ### Completion & Error Handling
 
-- [ ] **WFCMP-01**: Success callbacks activate exactly once when all workflow leaf steps complete via `on_success_task`
-- [ ] **WFCMP-02**: Error callbacks activate when any workflow step fails via `on_failure_task`
-- [ ] **WFCMP-03**: If user defines their own `on_failure` handler, mageflow wraps it — both mageflow's error callback and user's handler execute
+- [x] **WFCMP-01**: Success callbacks activate exactly once when all workflow leaf steps complete via `on_success_task`
+- [x] **WFCMP-02**: Error callbacks activate when any workflow step fails via `on_failure_task`
+- [x] **WFCMP-03**: If user defines their own `on_failure` handler, mageflow wraps it — both mageflow's error callback and user's handler execute
 
 ### Dispatch
 
@@ -76,9 +76,9 @@ Requirements for Hatchet Workflow Signatures milestone. Each maps to roadmap pha
 | WFDEC-01 | Phase 4 | Complete |
 | WFDEC-02 | Phase 4 | Complete |
 | WFDEC-03 | Phase 4 | Complete |
-| WFCMP-01 | Phase 4 | Pending |
-| WFCMP-02 | Phase 4 | Pending |
-| WFCMP-03 | Phase 4 | Pending |
+| WFCMP-01 | Phase 4 | Complete |
+| WFCMP-02 | Phase 4 | Complete |
+| WFCMP-03 | Phase 4 | Complete |
 | WFDSP-01 | Phase 4 | Complete |
 | WFDSP-02 | Phase 4 | Complete |
 | WFCPS-01 | Phase 5 | Pending |

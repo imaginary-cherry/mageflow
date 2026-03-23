@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hatchet Workflow Signatures
 status: planning
-stopped_at: Completed 04-decorators-completion-hooks-dispatch/04-01-PLAN.md
-last_updated: "2026-03-23T17:11:34.620Z"
+stopped_at: Completed 04-decorators-completion-hooks-dispatch/04-02-PLAN.md
+last_updated: "2026-03-23T17:17:05.794Z"
 last_activity: 2026-03-23 — Roadmap created, phases 3-6 defined for v1.1
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 | P01 | 10 | 1 | 1 |
 | Phase 03 | P02 | 10 | 2 | 2 |
 | Phase 04-decorators-completion-hooks-dispatch P01 | 20 | 2 tasks | 3 files |
+| Phase 04-decorators-completion-hooks-dispatch P02 | 15 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Key v1.1 decisions locked in during research:
 - [Phase 03 P02]: Used hatchet_adapter fixture pattern to set/restore Signature.ClientAdapter for workflow sign tests — avoids cross-test pollution
 - [Phase 03 P02]: test_workflow_dispatch.py uses session-scoped mageflow plugin fixtures with loop_scope=session
 - [Phase 04-decorators-completion-hooks-dispatch]: workflow() stores raw user-supplied input_validator with retries=None; WorkflowOptions TypedDict added for Unpack compatibility; no adapter changes needed for dispatch
+- [Phase 04-decorators-completion-hooks-dispatch]: Task.fn (not Task._fn) is the correct hatchet-sdk attribute for Task's wrapped function
+- [Phase 04-decorators-completion-hooks-dispatch]: _inject_workflow_hooks() uses decorator API for new hooks, Task.fn replacement for composing with user handlers
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None — research complete at HIGH confidence. All SDK APIs verified against hat
 
 ## Session Continuity
 
-Last session: 2026-03-23T17:11:34.618Z
-Stopped at: Completed 04-decorators-completion-hooks-dispatch/04-01-PLAN.md
+Last session: 2026-03-23T17:17:05.792Z
+Stopped at: Completed 04-decorators-completion-hooks-dispatch/04-02-PLAN.md
 Resume file: None
