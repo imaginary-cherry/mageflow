@@ -273,9 +273,6 @@ class HatchetMageflow(Hatchet):
         **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
         workflows = workflows or []
-        for wf in workflows:
-            if isinstance(wf, MageWorkflow):
-                wf._inject_hooks()
         mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:
