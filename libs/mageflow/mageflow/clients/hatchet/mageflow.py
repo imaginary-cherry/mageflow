@@ -15,7 +15,7 @@ from hatchet_sdk.runnables.types import (
     StickyStrategy,
     TaskDefaults,
 )
-from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone, Workflow
+from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
 from thirdmagic import chain, sign
@@ -56,6 +56,7 @@ from mageflow.swarm.workflows import (
     swarm_item_done,
     swarm_item_failed,
 )
+from mageflow.clients.hatchet.workflow import MageWorkflow
 from mageflow.utils.mageflow import does_task_wants_ctx
 
 Duration = timedelta | str
@@ -140,15 +141,17 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def workflow(self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]) -> Workflow:
-        """Return a native Hatchet Workflow and record a MageflowTaskDefinition.
+    def workflow(self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]) -> MageWorkflow:
+        """Return a MageWorkflow and record a MageflowTaskDefinition.
 
         This is a thin proxy over hatchet.workflow() that:
         - Records a MageflowTaskDefinition with retries=None (no workflow-level retries)
           and the raw input_validator type supplied by the user.
-        - Returns the native Workflow unchanged so callers can use @wf.task() directly.
+        - Returns a MageWorkflow (wrapping the native Workflow) so callers can use
+          @wf.task() directly, and so hooks are self-injected at worker() time.
         """
-        wf = self.hatchet.workflow(name=name, input_validator=input_validator, **kwargs)
+        base_wf = self.hatchet.workflow(name=name, input_validator=input_validator, **kwargs)
+        mage_wf = MageWorkflow(base_wf, mageflow=self)
         self._task_defs.append(
             MageflowTaskDefinition(
                 mageflow_task_name=name,
@@ -157,7 +160,7 @@ class HatchetMageflow(Hatchet):
                 input_validator=input_validator,
             )
         )
-        return wf
+        return mage_wf
 
     def task_decorator(self, func: Callable, hatchet_task, is_idempotent: bool = False):
         param_config = (
@@ -271,56 +274,6 @@ class HatchetMageflow(Hatchet):
             return None
         return await Signature.ClientAdapter.lifecycle_from_signature(None, ctx, task_key)
 
-    def _inject_workflow_hooks(self, workflow: Workflow) -> None:
-        """Inject mageflow lifecycle callbacks into a Workflow's on_success/on_failure slots.
-
-        - If the workflow has no user-defined hook, register a new one that fires
-          the appropriate lifecycle method.
-        - If the workflow already has a user-defined hook, wrap its _fn so that
-          mageflow's callback runs first, then the user's original handler.
-        """
-        # --- on_success_task ---
-        if workflow._on_success_task is None:
-            @workflow.on_success_task()
-            @functools.wraps(lambda input, ctx: None)
-            async def _mageflow_on_success(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    await lifecycle.task_success({})
-        else:
-            original_success_fn = workflow._on_success_task.fn
-
-            @functools.wraps(original_success_fn)
-            async def _composed_success(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    await lifecycle.task_success({})
-                return await original_success_fn(input, ctx)
-
-            workflow._on_success_task.fn = _composed_success
-
-        # --- on_failure_task ---
-        if workflow._on_failure_task is None:
-            @workflow.on_failure_task()
-            @functools.wraps(lambda input, ctx: None)
-            async def _mageflow_on_failure(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    errors = dict(ctx.task_run_errors)
-                    await lifecycle.task_failed(errors, Exception(str(errors)))
-        else:
-            original_failure_fn = workflow._on_failure_task.fn
-
-            @functools.wraps(original_failure_fn)
-            async def _composed_failure(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    errors = dict(ctx.task_run_errors)
-                    await lifecycle.task_failed(errors, Exception(str(errors)))
-                return await original_failure_fn(input, ctx)
-
-            workflow._on_failure_task.fn = _composed_failure
-
     @override
     def worker(
         self,
@@ -331,7 +284,8 @@ class HatchetMageflow(Hatchet):
     ) -> Worker:
         workflows = workflows or []
         for wf in workflows:
-            self._inject_workflow_hooks(wf)
+            if isinstance(wf, MageWorkflow):
+                wf._inject_hooks()
         mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:

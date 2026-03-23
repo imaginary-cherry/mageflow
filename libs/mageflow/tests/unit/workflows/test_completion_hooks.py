@@ -12,6 +12,7 @@ from thirdmagic.consts import TASK_ID_PARAM_NAME
 
 import mageflow
 from mageflow.clients.hatchet.mageflow import HatchetMageflow
+from mageflow.clients.hatchet.workflow import MageWorkflow
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +39,7 @@ def mf(hatchet_mock, redis_client):
 
 @pytest.fixture
 def test_workflow(mf):
-    """Create a simple Workflow via mf.workflow()."""
+    """Create a simple MageWorkflow via mf.workflow()."""
     wf = mf.workflow(name="test-wf")
 
     @wf.task()
@@ -57,7 +58,7 @@ class TestOnSuccessInjection:
         """Workflow with no user hooks gets on_success_task injected."""
         assert test_workflow._on_success_task is None, "Pre-condition: no success hook"
 
-        mf._inject_workflow_hooks(test_workflow)
+        test_workflow._inject_hooks()
 
         assert test_workflow._on_success_task is not None
 
@@ -70,7 +71,7 @@ class TestOnSuccessInjection:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=mock_lifecycle
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key="sig-key-123")
             input_mock = MagicMock()
@@ -86,7 +87,7 @@ class TestOnSuccessInjection:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", mock_lifecycle_from_ctx
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
@@ -105,7 +106,7 @@ class TestOnFailureInjection:
         """Workflow with no user hooks gets on_failure_task injected."""
         assert test_workflow._on_failure_task is None, "Pre-condition: no failure hook"
 
-        mf._inject_workflow_hooks(test_workflow)
+        test_workflow._inject_hooks()
 
         assert test_workflow._on_failure_task is not None
 
@@ -119,7 +120,7 @@ class TestOnFailureInjection:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=mock_lifecycle
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key="sig-key-123", task_run_errors=errors)
             input_mock = MagicMock()
@@ -137,7 +138,7 @@ class TestOnFailureInjection:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", mock_lifecycle_from_ctx
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
@@ -166,7 +167,7 @@ class TestUserHandlerComposition:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=mock_lifecycle
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key="sig-key-456")
             input_mock = MagicMock()
@@ -191,7 +192,7 @@ class TestUserHandlerComposition:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=mock_lifecycle
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key="sig-key-789")
             input_mock = MagicMock()
@@ -213,7 +214,7 @@ class TestUserHandlerComposition:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=None
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
@@ -233,7 +234,7 @@ class TestUserHandlerComposition:
         with patch.object(
             type(mf), "_lifecycle_from_ctx", new_callable=AsyncMock, return_value=None
         ):
-            mf._inject_workflow_hooks(test_workflow)
+            test_workflow._inject_hooks()
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
@@ -248,15 +249,15 @@ class TestUserHandlerComposition:
 
 class TestWorkerIntegration:
     def test_worker_injects_hooks_before_super(self, mf, test_workflow):
-        """worker() calls _inject_workflow_hooks for each workflow before super().worker()."""
+        """worker() calls _inject_hooks() for each MageWorkflow before super().worker()."""
         injected = []
 
-        original_inject = mf._inject_workflow_hooks
-        def spy_inject(wf):
-            injected.append(wf)
+        original_inject = test_workflow._inject_hooks
+        def spy_inject():
+            injected.append(test_workflow)
             # Don't actually inject (would need real Hatchet connection)
 
-        mf._inject_workflow_hooks = spy_inject
+        test_workflow._inject_hooks = spy_inject
 
         with patch.object(HatchetMageflow, "worker", wraps=mf.worker) as worker_spy, \
              patch("mageflow.clients.hatchet.mageflow.HatchetMageflow.init_mageflow_hatchet_tasks", return_value=[]):
@@ -264,7 +265,7 @@ class TestWorkerIntegration:
             with patch("hatchet_sdk.Hatchet.worker", return_value=MagicMock()):
                 mf.worker("test-worker", workflows=[test_workflow])
 
-        # The test workflow should have been passed to _inject_workflow_hooks
+        # The test workflow should have been passed to _inject_hooks
         assert test_workflow in injected
 
 
