@@ -44,9 +44,9 @@ def deep_merge(base: dict, updates: dict) -> dict:
 HatchetTaskType = Callable
 try:
     HAS_HATCHET = True
-    from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
+    from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone, Workflow
 
-    HatchetTaskType = HatchetTaskType | Callable | Standalone
+    HatchetTaskType = HatchetTaskType | Callable | Standalone | Workflow
 except ImportError:
     HAS_HATCHET = False
 

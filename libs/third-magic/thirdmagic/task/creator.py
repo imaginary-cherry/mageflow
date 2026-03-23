@@ -14,6 +14,11 @@ from thirdmagic.task.model import TaskSignature
 from thirdmagic.typing_support import Unpack
 from thirdmagic.utils import HatchetTaskType
 
+try:
+    from hatchet_sdk.runnables.workflow import Workflow as _HatchetWorkflow
+except ImportError:
+    _HatchetWorkflow = None
+
 TaskSignatureConvertible: TypeAlias = RapyerKey | Signature | HatchetTaskType | str
 
 
@@ -32,6 +37,11 @@ async def resolve_signatures(
             identifier_entries.append((i, task))
         elif isinstance(task, str):
             task_names.append((i, task))
+        elif _HatchetWorkflow is not None and isinstance(task, _HatchetWorkflow):
+            # Explicit Workflow branch: routes Workflow objects through from_task()
+            # which correctly calls extract_validator() and task_name() but NOT
+            # extract_retries() (Workflow has no single retries value).
+            hatchet_entries.append((i, task))
         else:
             hatchet_entries.append((i, task))
 
