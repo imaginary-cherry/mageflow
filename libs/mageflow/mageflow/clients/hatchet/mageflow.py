@@ -24,7 +24,6 @@ from thirdmagic.signature import Signature
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
-from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
@@ -32,6 +31,7 @@ from typing_extensions import override
 from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
+from mageflow.clients.hatchet.workflow import MageWorkflow
 from mageflow.clients.inner_task_names import (
     ON_CHAIN_END,
     ON_CHAIN_ERROR,
@@ -56,7 +56,6 @@ from mageflow.swarm.workflows import (
     swarm_item_done,
     swarm_item_failed,
 )
-from mageflow.clients.hatchet.workflow import MageWorkflow
 from mageflow.utils.mageflow import does_task_wants_ctx
 
 Duration = timedelta | str
@@ -141,7 +140,9 @@ class HatchetMageflow(Hatchet):
             )
         )
 
-    def workflow(self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]) -> MageWorkflow:
+    def workflow(
+        self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]
+    ) -> MageWorkflow:
         """Return a MageWorkflow and record a MageflowTaskDefinition.
 
         This is a thin proxy over hatchet.workflow() that:
@@ -150,14 +151,13 @@ class HatchetMageflow(Hatchet):
         - Returns a MageWorkflow (wrapping the native Workflow) so callers can use
           @wf.task() directly, and so hooks are self-injected at worker() time.
         """
-        base_wf = self.hatchet.workflow(name=name, input_validator=input_validator, **kwargs)
+        base_wf = self.hatchet.workflow(
+            name=name, input_validator=input_validator, **kwargs
+        )
         mage_wf = MageWorkflow(base_wf, mageflow=self)
         self._task_defs.append(
             MageflowTaskDefinition(
-                mageflow_task_name=name,
-                task_name=name,
-                retries=None,
-                input_validator=input_validator,
+                mageflow_task_name=name, task_name=name, input_validator=input_validator
             )
         )
         return mage_wf
