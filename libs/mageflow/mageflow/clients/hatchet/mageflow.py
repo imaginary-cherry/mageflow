@@ -264,16 +264,6 @@ class HatchetMageflow(Hatchet):
             swarm_fill_task,
         ]
 
-    async def _lifecycle_from_ctx(self, ctx: Context):
-        """Resolve a SignatureLifecycle from a Hatchet context's additional_metadata.
-
-        Returns None when the context carries no mageflow task ID (vanilla run).
-        """
-        task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME)
-        if not task_key:
-            return None
-        return await Signature.ClientAdapter.lifecycle_from_signature(None, ctx, task_key)
-
     @override
     def worker(
         self,
