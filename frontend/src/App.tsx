@@ -17,6 +17,32 @@ import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
 
+// Shown when saved credentials exist but macOS blocks keychain access (e.g. after app rename/update).
+function KeychainErrorScreen({
+  onReEnter,
+}: {
+  onReEnter: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground gap-4">
+      <h2 className="text-2xl font-semibold">Credential Access Blocked</h2>
+      <p className="text-muted-foreground text-sm max-w-sm text-center">
+        macOS blocked access to your saved credentials, likely after an app update.
+        Re-enter your credentials to continue.
+      </p>
+      <div className="flex gap-3 mt-2">
+        <button
+          type="button"
+          onClick={onReEnter}
+          className="px-4 py-2 rounded-md bg-primary hover:bg-primary/80 text-primary-foreground text-sm font-medium transition-colors"
+        >
+          Re-enter Credentials
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Startup-error screen shown when the backend cannot start or services are unreachable.
 function StartupErrorScreen({
   errorMessage,
@@ -191,7 +217,7 @@ function MainApp({
 
 // Root component — gates all UI on startup phase.
 const App = () => {
-  const { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar } =
+  const { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding } =
     useAppStartup();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -215,6 +241,11 @@ const App = () => {
       {/* Onboarding */}
       {phase === 'onboarding' && (
         <Onboarding onComplete={onOnboardingComplete} />
+      )}
+
+      {/* Keychain access denied */}
+      {phase === 'keychain-error' && (
+        <KeychainErrorScreen onReEnter={goToOnboarding} />
       )}
 
       {/* Startup error */}

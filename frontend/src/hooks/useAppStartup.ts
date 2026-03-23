@@ -5,6 +5,7 @@ import { loadSettings, isTauriEnvironment } from '@/stores/settingsStore';
 export type AppPhase =
   | 'loading-settings'
   | 'onboarding'
+  | 'keychain-error'
   | 'starting-sidecar'
   | 'connecting-hatchet'
   | 'connecting-redis'
@@ -14,6 +15,7 @@ export type AppPhase =
 const PHASE_MESSAGES: Record<AppPhase, string> = {
   'loading-settings': 'Loading settings...',
   'onboarding': 'Loading settings...',
+  'keychain-error': '',
   'starting-sidecar': 'Starting backend...',
   'connecting-hatchet': 'Connecting to Hatchet...',
   'connecting-redis': 'Connecting to Redis...',
@@ -24,6 +26,7 @@ const PHASE_MESSAGES: Record<AppPhase, string> = {
 const TRAY_STATUS_MAP: Record<AppPhase, string> = {
   'loading-settings': 'starting',
   'onboarding': 'starting',
+  'keychain-error': 'disconnected',
   'starting-sidecar': 'starting',
   'connecting-hatchet': 'starting',
   'connecting-redis': 'starting',
@@ -47,6 +50,7 @@ export interface UseAppStartupResult {
   errorMessage: string;
   onOnboardingComplete: () => Promise<void>;
   retrySidecar: () => Promise<void>;
+  goToOnboarding: () => void;
 }
 
 export function useAppStartup(): UseAppStartupResult {
@@ -152,6 +156,19 @@ export function useAppStartup(): UseAppStartupResult {
 
     const settings = await loadSettings();
     if (!settings) {
+      // Distinguish "no credentials" from "keychain access denied"
+      if (isTauriEnvironment()) {
+        try {
+          const health = await invoke<string>('check_keychain_health');
+          if (health.startsWith('denied')) {
+            transitionTo('keychain-error');
+            setErrorMessage(health.slice('denied:'.length));
+            return;
+          }
+        } catch {
+          // Command unavailable — fall through to onboarding
+        }
+      }
       transitionTo('onboarding');
       return;
     }
@@ -239,5 +256,9 @@ export function useAppStartup(): UseAppStartupResult {
     await pollForReady(resolvedPort);
   }, [transitionTo, pollForReady]);
 
-  return { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar };
+  const goToOnboarding = useCallback(() => {
+    transitionTo('onboarding');
+  }, [transitionTo]);
+
+  return { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding };
 }

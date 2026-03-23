@@ -21,9 +21,18 @@ pub struct SidecarPort(pub Mutex<Option<u16>>);
 // Keyring helpers
 // ---------------------------------------------------------------------------
 
-fn read_secret(key: &str) -> Option<String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, key).ok()?;
-    entry.get_password().ok()
+/// Read a secret from the OS keychain.
+/// - `Ok(Some(value))` — secret exists and was read successfully.
+/// - `Ok(None)` — no entry exists for this key (first launch).
+/// - `Err(msg)` — entry may exist but access was denied (e.g. after app rename).
+fn read_secret(key: &str) -> Result<Option<String>, String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, key)
+        .map_err(|e| format!("keyring init error: {e}"))?;
+    match entry.get_password() {
+        Ok(s) => Ok(Some(s)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("keyring access error: {e}")),
+    }
 }
 
 fn write_secret(key: &str, value: &str) -> Result<(), String> {
@@ -51,13 +60,30 @@ fn save_secret(key: String, value: String) -> Result<(), String> {
 
 #[tauri::command]
 fn load_secret(key: String) -> Result<Option<String>, String> {
-    Ok(read_secret(&key))
+    read_secret(&key)
 }
 
 #[tauri::command]
 fn delete_secret(key: String) -> Result<(), String> {
     delete_secret_entry(&key);
     Ok(())
+}
+
+/// Check whether the keychain is accessible.
+/// Returns `"ok"` (credentials readable), `"empty"` (no entries), or `"denied:<detail>"`.
+#[tauri::command]
+fn check_keychain_health() -> String {
+    let hatchet = read_secret(SECRET_HATCHET_API_KEY);
+    let redis = read_secret(SECRET_REDIS_URL);
+
+    match (&hatchet, &redis) {
+        // Both readable (even if empty/None — that just means first launch)
+        (Ok(Some(h)), Ok(Some(r))) if !h.is_empty() && !r.is_empty() => "ok".to_string(),
+        // At least one access denied
+        (Err(e), _) | (_, Err(e)) => format!("denied:{e}"),
+        // No entries or empty values
+        _ => "empty".to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +101,7 @@ fn migrate_secrets_to_keychain(app: &AppHandle) {
             if let Some(s) = val.as_str() {
                 if !s.is_empty() {
                     // Only write if keychain doesn't already have a value
-                    if read_secret(key).is_none() {
+                    if matches!(read_secret(key), Ok(None)) {
                         if write_secret(key, s).is_err() {
                             continue;
                         }
@@ -117,16 +143,24 @@ async fn spawn_sidecar(app: &AppHandle) {
 
     // Read credentials from the OS keychain.
     let hatchet_key = match read_secret(SECRET_HATCHET_API_KEY) {
-        Some(s) if !s.is_empty() => s,
-        _ => {
+        Ok(Some(s)) if !s.is_empty() => s,
+        Ok(_) => {
             println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_HATCHET_API_KEY);
+            return;
+        }
+        Err(e) => {
+            eprintln!("[sidecar] keychain access denied for {}: {}", SECRET_HATCHET_API_KEY, e);
             return;
         }
     };
     let redis_url = match read_secret(SECRET_REDIS_URL) {
-        Some(s) if !s.is_empty() => s,
-        _ => {
+        Ok(Some(s)) if !s.is_empty() => s,
+        Ok(_) => {
             println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_REDIS_URL);
+            return;
+        }
+        Err(e) => {
+            eprintln!("[sidecar] keychain access denied for {}: {}", SECRET_REDIS_URL, e);
             return;
         }
     };
@@ -241,6 +275,7 @@ pub fn run() {
             save_secret,
             load_secret,
             delete_secret,
+            check_keychain_health,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
