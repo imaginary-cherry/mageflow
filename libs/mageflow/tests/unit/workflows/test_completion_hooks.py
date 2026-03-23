@@ -74,7 +74,7 @@ class TestOnSuccessInjection:
 
             ctx = make_mock_ctx(task_key="sig-key-123")
             input_mock = MagicMock()
-            await test_workflow._on_success_task._fn(input_mock, ctx)
+            await test_workflow._on_success_task.fn(input_mock, ctx)
 
         mock_lifecycle.task_success.assert_awaited_once_with({})
 
@@ -90,7 +90,7 @@ class TestOnSuccessInjection:
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
-            result = await test_workflow._on_success_task._fn(input_mock, ctx)
+            result = await test_workflow._on_success_task.fn(input_mock, ctx)
 
         # lifecycle was fetched but returned None — no further calls
         assert result is None
@@ -123,7 +123,7 @@ class TestOnFailureInjection:
 
             ctx = make_mock_ctx(task_key="sig-key-123", task_run_errors=errors)
             input_mock = MagicMock()
-            await test_workflow._on_failure_task._fn(input_mock, ctx)
+            await test_workflow._on_failure_task.fn(input_mock, ctx)
 
         mock_lifecycle.task_failed.assert_awaited_once()
         call_args = mock_lifecycle.task_failed.call_args
@@ -141,7 +141,7 @@ class TestOnFailureInjection:
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
-            result = await test_workflow._on_failure_task._fn(input_mock, ctx)
+            result = await test_workflow._on_failure_task.fn(input_mock, ctx)
 
         assert result is None
 
@@ -170,7 +170,7 @@ class TestUserHandlerComposition:
 
             ctx = make_mock_ctx(task_key="sig-key-456")
             input_mock = MagicMock()
-            await test_workflow._on_failure_task._fn(input_mock, ctx)
+            await test_workflow._on_failure_task.fn(input_mock, ctx)
 
         # Both must have been called
         mock_lifecycle.task_failed.assert_awaited_once()
@@ -195,7 +195,7 @@ class TestUserHandlerComposition:
 
             ctx = make_mock_ctx(task_key="sig-key-789")
             input_mock = MagicMock()
-            await test_workflow._on_success_task._fn(input_mock, ctx)
+            await test_workflow._on_success_task.fn(input_mock, ctx)
 
         # Both must have been called
         mock_lifecycle.task_success.assert_awaited_once()
@@ -217,7 +217,7 @@ class TestUserHandlerComposition:
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
-            await test_workflow._on_failure_task._fn(input_mock, ctx)
+            await test_workflow._on_failure_task.fn(input_mock, ctx)
 
         assert user_fn_called == ["user"]
 
@@ -237,7 +237,7 @@ class TestUserHandlerComposition:
 
             ctx = make_mock_ctx(task_key=None)
             input_mock = MagicMock()
-            await test_workflow._on_success_task._fn(input_mock, ctx)
+            await test_workflow._on_success_task.fn(input_mock, ctx)
 
         assert user_fn_called == ["user"]
 
@@ -286,12 +286,10 @@ class TestLifecycleFromCtx:
         ctx = make_mock_ctx(task_key="sig-key-abc")
         mock_lifecycle = AsyncMock()
 
-        with patch.object(
-            mageflow.Mageflow, "_lifecycle_from_ctx", wraps=mf._lifecycle_from_ctx
-        ):
-            pass  # Just verify the method exists and is callable
+        # Verify the method exists on HatchetMageflow
+        assert hasattr(mf, "_lifecycle_from_ctx"), "HatchetMageflow must have _lifecycle_from_ctx"
 
-        # Actually test the delegation
+        # Test the delegation via adapter mock
         fake_adapter = AsyncMock()
         fake_adapter.lifecycle_from_signature = AsyncMock(return_value=mock_lifecycle)
 

@@ -24,6 +24,7 @@ from thirdmagic.signature import Signature
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
+from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.task_def import MageflowTaskDefinition
 from thirdmagic.utils import HatchetTaskType
 from typing_extensions import override
@@ -260,6 +261,66 @@ class HatchetMageflow(Hatchet):
             swarm_fill_task,
         ]
 
+    async def _lifecycle_from_ctx(self, ctx: Context):
+        """Resolve a SignatureLifecycle from a Hatchet context's additional_metadata.
+
+        Returns None when the context carries no mageflow task ID (vanilla run).
+        """
+        task_key = ctx.additional_metadata.get(TASK_ID_PARAM_NAME)
+        if not task_key:
+            return None
+        return await Signature.ClientAdapter.lifecycle_from_signature(None, ctx, task_key)
+
+    def _inject_workflow_hooks(self, workflow: Workflow) -> None:
+        """Inject mageflow lifecycle callbacks into a Workflow's on_success/on_failure slots.
+
+        - If the workflow has no user-defined hook, register a new one that fires
+          the appropriate lifecycle method.
+        - If the workflow already has a user-defined hook, wrap its _fn so that
+          mageflow's callback runs first, then the user's original handler.
+        """
+        # --- on_success_task ---
+        if workflow._on_success_task is None:
+            @workflow.on_success_task()
+            @functools.wraps(lambda input, ctx: None)
+            async def _mageflow_on_success(input, ctx: Context):
+                lifecycle = await self._lifecycle_from_ctx(ctx)
+                if lifecycle is not None:
+                    await lifecycle.task_success({})
+        else:
+            original_success_fn = workflow._on_success_task.fn
+
+            @functools.wraps(original_success_fn)
+            async def _composed_success(input, ctx: Context):
+                lifecycle = await self._lifecycle_from_ctx(ctx)
+                if lifecycle is not None:
+                    await lifecycle.task_success({})
+                return await original_success_fn(input, ctx)
+
+            workflow._on_success_task.fn = _composed_success
+
+        # --- on_failure_task ---
+        if workflow._on_failure_task is None:
+            @workflow.on_failure_task()
+            @functools.wraps(lambda input, ctx: None)
+            async def _mageflow_on_failure(input, ctx: Context):
+                lifecycle = await self._lifecycle_from_ctx(ctx)
+                if lifecycle is not None:
+                    errors = dict(ctx.task_run_errors)
+                    await lifecycle.task_failed(errors, Exception(str(errors)))
+        else:
+            original_failure_fn = workflow._on_failure_task.fn
+
+            @functools.wraps(original_failure_fn)
+            async def _composed_failure(input, ctx: Context):
+                lifecycle = await self._lifecycle_from_ctx(ctx)
+                if lifecycle is not None:
+                    errors = dict(ctx.task_run_errors)
+                    await lifecycle.task_failed(errors, Exception(str(errors)))
+                return await original_failure_fn(input, ctx)
+
+            workflow._on_failure_task.fn = _composed_failure
+
     @override
     def worker(
         self,
@@ -268,6 +329,9 @@ class HatchetMageflow(Hatchet):
         lifespan: LifespanFn | None = None,
         **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
+        workflows = workflows or []
+        for wf in workflows:
+            self._inject_workflow_hooks(wf)
         mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:
