@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.workflow import Workflow
@@ -11,19 +11,14 @@ from pydantic import BaseModel
 from thirdmagic.task import TaskSignature
 from thirdmagic.utils import deep_merge
 
-if TYPE_CHECKING:
-    from mageflow.clients.hatchet.mageflow import HatchetMageflow
-
 
 class MageWorkflow(Workflow):
     """
     We patch the Workflow class to add Mageflow-specific hooks.
     """
 
-    def __init__(self, base_workflow: Workflow, mageflow: "HatchetMageflow"):
+    def __init__(self, base_workflow: Workflow):
         super().__init__(config=base_workflow.config, client=base_workflow.client)
-        self.__dict__.update(base_workflow.__dict__)
-        self._mageflow = mageflow
 
     def on_success_task(self, *args, **kwargs):
         def wrapper(func):
