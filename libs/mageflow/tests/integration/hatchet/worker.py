@@ -290,6 +290,72 @@ async def retry_cache_durable_task(
     return results
 
 
+chain_test_wf = hatchet.workflow(name="chain-test-wf", input_validator=ContextMessage)
+
+
+@chain_test_wf.task()
+async def chain_wf_step(input, ctx: Context):
+    return {"wf_result": "ok"}
+
+
+chain_test_wf_fail = hatchet.workflow(
+    name="chain-test-wf-fail", input_validator=ContextMessage
+)
+
+
+@chain_test_wf_fail.task()
+async def chain_wf_fail_step(input, ctx: Context):
+    raise MageflowTestError("Workflow step failed")
+
+
+chain_test_wf_hooks = hatchet.workflow(
+    name="chain-test-wf-hooks", input_validator=ContextMessage
+)
+
+
+@chain_test_wf_hooks.task()
+async def chain_wf_hooks_step(input, ctx: Context):
+    return {"wf_result": "hooks_ok"}
+
+
+@chain_test_wf_hooks.on_success_task()
+async def chain_wf_hooks_success(input, ctx: Context):
+    # User's success handler — mageflow composes with this via Task.fn replacement
+    await TaskSignature.Meta.redis.set(
+        f"user-hook-success:{ctx.workflow_run_id}", "fired"
+    )
+
+
+@chain_test_wf_hooks.on_failure_task()
+async def chain_wf_hooks_failure(input, ctx: Context):
+    # User's failure handler — mageflow composes with this via Task.fn replacement
+    await TaskSignature.Meta.redis.set(
+        f"user-hook-failure:{ctx.workflow_run_id}", "fired"
+    )
+
+
+chain_test_wf_hooks_fail = hatchet.workflow(
+    name="chain-test-wf-hooks-fail", input_validator=ContextMessage
+)
+
+
+@chain_test_wf_hooks_fail.task()
+async def chain_wf_hooks_fail_step(input, ctx: Context):
+    raise MageflowTestError("Workflow step failed with hooks")
+
+
+@chain_test_wf_hooks_fail.on_success_task()
+async def chain_wf_hooks_fail_success(input, ctx: Context):
+    pass  # Should not fire
+
+
+@chain_test_wf_hooks_fail.on_failure_task()
+async def chain_wf_hooks_fail_failure(input, ctx: Context):
+    await TaskSignature.Meta.redis.set(
+        f"user-hook-failure:{ctx.workflow_run_id}", "fired"
+    )
+
+
 workflows = [
     task1,
     task2,
@@ -312,6 +378,10 @@ workflows = [
     accept_msg_results,
     create_signatures_for_ttl_test,
     retry_cache_durable_task,
+    chain_test_wf,
+    chain_test_wf_fail,
+    chain_test_wf_hooks,
+    chain_test_wf_hooks_fail,
 ]
 
 
