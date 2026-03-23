@@ -42,7 +42,7 @@ jobs:
         run: |
           TAG="${{ steps.parse.outputs.tag }}"
           VERSION="${{ steps.parse.outputs.version }}"
-          ASSET="Mageflow.Viewer_${VERSION}_aarch64.dmg"
+          ASSET="Mage.Voyance_${VERSION}_aarch64.dmg"
           gh release download "$TAG" -p "$ASSET" -D /tmp/cask-assets
           SHA=$(sha256sum "/tmp/cask-assets/$ASSET" | awk '{print $1}')
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"

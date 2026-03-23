@@ -60,7 +60,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold">Mageflow Viewer</CardTitle>
+          <CardTitle className="text-2xl font-bold">Mage Voyance</CardTitle>
           <CardDescription>
             Connect to your infrastructure to get started.
           </CardDescription>

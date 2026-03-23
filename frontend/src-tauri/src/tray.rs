@@ -32,7 +32,7 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let tray = TrayIconBuilder::with_id("main")
         .icon(icon)
         .menu(&menu)
-        .tooltip("Mageflow Viewer - starting")
+        .tooltip("Mage Voyance - starting")
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
@@ -83,7 +83,7 @@ pub fn update_tray_icon(app: &AppHandle, status: &str) {
         _ => include_bytes!("../icons/tray-red.png"),
     };
 
-    let tooltip = format!("Mageflow Viewer - {}", status);
+    let tooltip = format!("Mage Voyance - {}", status);
 
     if let Some(tray) = app.tray_by_id("main") {
         if let Ok(icon) = png_to_image(icon_bytes) {

@@ -10,7 +10,7 @@ export default function SplashScreen({ statusMessage }: SplashScreenProps) {
       <div className="flex flex-col items-center gap-6">
         {/* App name / branding */}
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
-          Mageflow Viewer
+          Mage Voyance
         </h1>
 
         {/* Animated spinner */}
