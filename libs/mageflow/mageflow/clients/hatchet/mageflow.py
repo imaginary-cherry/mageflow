@@ -13,8 +13,9 @@ from hatchet_sdk.runnables.types import (
     ConcurrencyLimitStrategy,
     DefaultFilter,
     StickyStrategy,
+    TaskDefaults,
 )
-from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
+from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone, Workflow
 from hatchet_sdk.worker.worker import LifespanFn
 from redis.asyncio import Redis
 from thirdmagic import chain, sign
@@ -80,6 +81,19 @@ class TaskOptions(TypedDict, total=False):
     default_additional_metadata: dict[str, Any] | None
 
 
+class WorkflowOptions(TypedDict, total=False):
+    description: str | None
+    on_events: list[str] | None
+    on_crons: list[str] | None
+    version: str | None
+    sticky: StickyStrategy | None
+    default_priority: int
+    concurrency: int | ConcurrencyExpression | list[ConcurrencyExpression] | None
+    task_defaults: TaskDefaults
+    default_filters: list[DefaultFilter] | None
+    default_additional_metadata: dict[str, Any] | None
+
+
 class WorkerOptions(TypedDict, total=False):
     slots: int
     durable_slots: int
@@ -124,6 +138,25 @@ class HatchetMageflow(Hatchet):
                 input_validator=Signature.ClientAdapter.extract_validator(task),
             )
         )
+
+    def workflow(self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]) -> Workflow:
+        """Return a native Hatchet Workflow and record a MageflowTaskDefinition.
+
+        This is a thin proxy over hatchet.workflow() that:
+        - Records a MageflowTaskDefinition with retries=None (no workflow-level retries)
+          and the raw input_validator type supplied by the user.
+        - Returns the native Workflow unchanged so callers can use @wf.task() directly.
+        """
+        wf = self.hatchet.workflow(name=name, input_validator=input_validator, **kwargs)
+        self._task_defs.append(
+            MageflowTaskDefinition(
+                mageflow_task_name=name,
+                task_name=name,
+                retries=None,
+                input_validator=input_validator,
+            )
+        )
+        return wf
 
     def task_decorator(self, func: Callable, hatchet_task, is_idempotent: bool = False):
         param_config = (
