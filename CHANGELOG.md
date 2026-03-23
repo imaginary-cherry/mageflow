@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5]
+
+### ✨ Added
+
+- **Signing Hatchet Workflows (`MageWorkflow`)**: Native Hatchet `Workflow` objects can now be tracked by mageflow's signature lifecycle, enabling status callbacks (success/failure) without wrapping tasks in mageflow decorators.
+
+
 ## [0.3.4]
 
 ### ✨ Added
