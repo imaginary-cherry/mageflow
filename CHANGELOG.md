@@ -1,6 +1,6 @@
 # Changelog
 
-## [app/v0.1.1]
+## [0.3.5]
 
 ### 🐛 Fixed
 
