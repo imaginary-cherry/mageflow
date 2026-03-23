@@ -1,15 +1,29 @@
-from __future__ import annotations
-
 import functools
 import inspect
-from typing import Any
+from datetime import timedelta
+from typing import Any, TypedDict, Unpack
 
 from hatchet_sdk import Context
+from hatchet_sdk.rate_limit import RateLimit
+from hatchet_sdk.runnables.types import ConcurrencyExpression
 from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel
 from thirdmagic.task import TaskSignature
 from thirdmagic.utils import deep_merge
+
+Duration = timedelta | str
+
+
+class LifecycleTaskOptions(TypedDict, total=False):
+    name: str | None
+    schedule_timeout: Duration
+    execution_timeout: Duration
+    retries: int
+    rate_limits: list[RateLimit] | None
+    backoff_factor: float | None
+    backoff_max_seconds: int | None
+    concurrency: int | list[ConcurrencyExpression] | None
 
 
 class MageWorkflow(Workflow):
@@ -20,7 +34,9 @@ class MageWorkflow(Workflow):
     def __init__(self, base_workflow: Workflow):
         super().__init__(config=base_workflow.config, client=base_workflow.client)
 
-    def on_success_task(self, *args, **kwargs):
+    def on_success_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
+        parent_decorator = super().on_success_task(**kwargs)
+
         def wrapper(func):
             @functools.wraps(func)
             async def task_wrapper(
@@ -34,11 +50,13 @@ class MageWorkflow(Workflow):
                 return await func(msg, ctx, *task_args, **task_kwargs)
 
             task_wrapper.__signature__ = inspect.signature(func)
-            return task_wrapper
+            return parent_decorator(task_wrapper)
 
         return wrapper
 
-    def on_failure_task(self, *args, **kwargs):
+    def on_failure_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
+        parent_decorator = super().on_failure_task(**kwargs)
+
         def wrapper(func):
             @functools.wraps(func)
             async def task_wrapper(
@@ -55,7 +73,7 @@ class MageWorkflow(Workflow):
                 return await func(msg, ctx, *task_args, **task_kwargs)
 
             task_wrapper.__signature__ = inspect.signature(func)
-            return task_wrapper
+            return parent_decorator(task_wrapper)
 
         return wrapper
 
