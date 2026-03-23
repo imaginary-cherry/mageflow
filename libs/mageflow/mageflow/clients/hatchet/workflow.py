@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import functools
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from hatchet_sdk import Context
 from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel
+from thirdmagic.task import TaskSignature
 from thirdmagic.utils import deep_merge
 
 if TYPE_CHECKING:
@@ -14,64 +16,53 @@ if TYPE_CHECKING:
 
 
 class MageWorkflow(Workflow):
-    """Workflow subclass that self-injects mageflow lifecycle hooks.
-
-    Created by HatchetMageflow.workflow(). Hooks are injected when
-    _inject_hooks() is called (typically by HatchetMageflow.worker()).
+    """
+    We patch the Workflow class to add Mageflow-specific hooks.
     """
 
     def __init__(self, base_workflow: Workflow, mageflow: "HatchetMageflow"):
-        # Copy all state from the base workflow
         super().__init__(config=base_workflow.config, client=base_workflow.client)
         self.__dict__.update(base_workflow.__dict__)
         self._mageflow = mageflow
 
-    async def _lifecycle_from_ctx(self, ctx: Context):
-        return await self._mageflow._lifecycle_from_ctx(ctx)
+    def on_success_task(self, *args, **kwargs):
+        def wrapper(func):
+            @functools.wraps(func)
+            async def task_wrapper(
+                msg: BaseModel, ctx: Context, *task_args, **task_kwargs
+            ):
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(msg, ctx)
+                is_normal_run = lifecycle.is_vanilla_run()
+                if not is_normal_run:
+                    await lifecycle.task_success(msg)
 
-    def _inject_hooks(self) -> None:
-        """Inject mageflow lifecycle callbacks into on_success/on_failure slots."""
-        # --- on_success_task ---
-        if self._on_success_task is None:
-            @self.on_success_task()
-            @functools.wraps(lambda input, ctx: None)
-            async def _mageflow_on_success(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    await lifecycle.task_success({})
-        else:
-            original_success_fn = self._on_success_task.fn
+                return await func(msg, ctx, *task_args, **task_kwargs)
 
-            @functools.wraps(original_success_fn)
-            async def _composed_success(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    await lifecycle.task_success({})
-                return await original_success_fn(input, ctx)
+            task_wrapper.__signature__ = inspect.signature(func)
+            return task_wrapper
 
-            self._on_success_task.fn = _composed_success
+        return wrapper
 
-        # --- on_failure_task ---
-        if self._on_failure_task is None:
-            @self.on_failure_task()
-            @functools.wraps(lambda input, ctx: None)
-            async def _mageflow_on_failure(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    errors = dict(ctx.task_run_errors)
-                    await lifecycle.task_failed(errors, Exception(str(errors)))
-        else:
-            original_failure_fn = self._on_failure_task.fn
+    def on_failure_task(self, *args, **kwargs):
+        def wrapper(func):
+            @functools.wraps(func)
+            async def task_wrapper(
+                msg: BaseModel, ctx: Context, *task_args, **task_kwargs
+            ):
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(msg, ctx)
+                is_normal_run = lifecycle.is_vanilla_run()
+                if not is_normal_run:
+                    await lifecycle.task_failed(
+                        msg.model_dump(mode="json", exclude_unset=True),
+                        Exception(str(msg)),
+                    )
 
-            @functools.wraps(original_failure_fn)
-            async def _composed_failure(input, ctx: Context):
-                lifecycle = await self._lifecycle_from_ctx(ctx)
-                if lifecycle is not None:
-                    errors = dict(ctx.task_run_errors)
-                    await lifecycle.task_failed(errors, Exception(str(errors)))
-                return await original_failure_fn(input, ctx)
+                return await func(msg, ctx, *task_args, **task_kwargs)
 
-            self._on_failure_task.fn = _composed_failure
+            task_wrapper.__signature__ = inspect.signature(func)
+            return task_wrapper
+
+        return wrapper
 
 
 class MageflowWorkflow(Workflow):
