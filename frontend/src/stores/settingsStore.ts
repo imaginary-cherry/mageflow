@@ -73,10 +73,6 @@ export async function clearSettings(): Promise<void> {
   await invoke('save_secret', { key: SECRET_REDIS_URL, value: '' });
 }
 
-export async function hasSettings(): Promise<boolean> {
-  const result = await loadSettings();
-  return result !== null;
-}
 
 export async function validateCredentials(settings: AppSettings): Promise<ValidationResult> {
   // When not in Tauri environment (browser dev mode), skip validation
