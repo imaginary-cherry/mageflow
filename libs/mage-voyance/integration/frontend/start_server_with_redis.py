@@ -40,7 +40,7 @@ def main(port: int):
 
         print(f"Starting FastAPI server on port {port}...", file=sys.stderr)
         uvicorn.run(
-            "mageflow.visualizer.server:create_dev_app",
+            "visualizer.server:create_dev_app",
             factory=True,
             host="127.0.0.1",
             port=port,

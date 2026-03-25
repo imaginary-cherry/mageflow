@@ -1,10 +1,11 @@
 import pytest
 
 from integration.frontend.seed_test_data import TEST_PREFIX
+from visualizer.models import ConnectionStatus, HealthResponse
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_health_endpoint_returns_ok(test_client):
+async def test_health_endpoint_returns_connected(test_client):
     # Arrange
     client, _ = test_client
 
@@ -13,7 +14,9 @@ async def test_health_endpoint_returns_ok(test_client):
 
     # Assert
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    health = HealthResponse.model_validate(response.json())
+    assert health.hatchet == ConnectionStatus.CONNECTED
+    assert health.redis == ConnectionStatus.CONNECTED
 
 
 @pytest.mark.asyncio(loop_scope="session")
