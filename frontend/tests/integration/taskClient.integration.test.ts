@@ -1,7 +1,7 @@
 import { describe, it, expect, inject, beforeAll, afterAll } from 'vitest'
 import { HttpTaskClient } from '@/services/httpTaskClient'
 import type { TaskClient } from '@/services/types'
-import { seedTestData, cleanupTestData, projectRoot } from './setup/seedManager'
+import { seedTestData, cleanupTestData, mageVoyanceRoot } from './setup/seedManager'
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -15,11 +15,11 @@ describe('TaskClient integration', () => {
   beforeAll(async () => {
     const serverUrl = inject('serverUrl')
     client = new HttpTaskClient(serverUrl)
-    await seedTestData(projectRoot)
+    await seedTestData(mageVoyanceRoot)
   })
 
   afterAll(async () => {
-    await cleanupTestData(projectRoot)
+    await cleanupTestData(mageVoyanceRoot)
   })
 
   it('getRootTaskIds returns seeded root tasks', async () => {

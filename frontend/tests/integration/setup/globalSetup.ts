@@ -1,7 +1,7 @@
 import type { TestProject } from "vitest/node";
 import type { ChildProcess } from "child_process";
 import { startServer, waitForServer } from "./serverManager.js";
-import { projectRoot } from "./seedManager.js";
+import { projectRoot, mageVoyanceRoot } from "./seedManager.js";
 
 let serverProcess: ChildProcess | null = null;
 
@@ -16,7 +16,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const healthUrl = `${serverUrl}/api/health`;
 
   console.log(`Starting Redis container and FastAPI server on port ${port}...`);
-  serverProcess = await startServer(port, projectRoot);
+  serverProcess = await startServer(port, mageVoyanceRoot, projectRoot);
 
   try {
     await waitForServer(healthUrl, serverProcess, 30000);

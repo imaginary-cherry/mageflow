@@ -24,7 +24,7 @@ function findPython(projectRoot: string): string {
   return "python";
 }
 
-export async function startServer(port: number, projectRoot: string): Promise<ChildProcess> {
+export async function startServer(port: number, cwd: string, projectRoot: string): Promise<ChildProcess> {
   const inUse = await checkPortInUse(port);
   if (inUse) {
     throw new Error(
@@ -36,12 +36,12 @@ export async function startServer(port: number, projectRoot: string): Promise<Ch
     findPython(projectRoot),
     [
       "-m",
-      "tests.integration.frontend.start_server_with_redis",
+      "integration.frontend.start_server_with_redis",
       "--port",
       port.toString(),
     ],
     {
-      cwd: projectRoot,
+      cwd,
       env: process.env,
       stdio: ["ignore", "inherit", "pipe"],
     }
