@@ -19,31 +19,25 @@ permissions:
   security-events: write
 
 jobs:
-  pip-audit:
+  osv-scan-scheduled:
     name: Dependency Vulnerability Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.3"
+    with:
+      scan-args: |-
+        -r
+        --config=osv-scanner.toml
+        ./
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install tools
-        run: |
-          pip install pip-audit
-          pip install uv
-
-      - name: Export and audit dependencies
-        run: |
-          uv export --no-dev --no-hashes -o requirements-audit.txt
-          # Replace these lines with pip-audit --strict -r requirements-audit.txt after you upload thirdmagic
-          grep -v "^-e \.\|^thirdmagic" requirements-audit.txt > requirements-audit-filtered.txt
-          # Exclude pygments==2.19.2 — no fix available for CVE-2026-4539 (LOW severity, ReDoS in AdlLexer).
-          # Renovate will open a PR when a patched version is released; remove this line then.
-          grep -v "^pygments==2\.19\.2" requirements-audit-filtered.txt > requirements-audit-clean.txt
-          pip-audit --strict -r requirements-audit-clean.txt
+  osv-scan-pr:
+    name: Dependency Vulnerability Scan (PR)
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@v2.3.3"
+    with:
+      scan-args: |-
+        -r
+        --config=osv-scanner.toml
+        ./
 
 
   secrets-scan:
@@ -65,7 +59,7 @@ jobs:
   summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [pip-audit, secrets-scan]
+    needs: [osv-scan-scheduled, osv-scan-pr, secrets-scan]
     if: always()
     steps:
       - name: Check results
@@ -73,10 +67,16 @@ jobs:
           echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.pip-audit.result }}" == "success" ]; then
-            echo "✅ pip-audit: Passed" >> $GITHUB_STEP_SUMMARY
+          # One of the osv-scan jobs will be skipped depending on the event type
+          OSV_RESULT="${{ needs.osv-scan-scheduled.result }}"
+          if [ "$OSV_RESULT" == "skipped" ]; then
+            OSV_RESULT="${{ needs.osv-scan-pr.result }}"
+          fi
+
+          if [ "$OSV_RESULT" == "success" ]; then
+            echo "✅ OSV scan: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ pip-audit: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ OSV scan: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
@@ -87,6 +87,7 @@ jobs:
 
       - name: Fail if any check failed
         if: |
-          needs.pip-audit.result == 'failure' ||
+          (needs.osv-scan-scheduled.result == 'failure') ||
+          (needs.osv-scan-pr.result == 'failure') ||
           needs.secrets-scan.result == 'failure'
         run: exit 1
