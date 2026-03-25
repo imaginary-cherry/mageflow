@@ -27,6 +27,18 @@ export default defineConfig({
           include: ["tests/integration/**/*.integration.test.ts"],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "component-integration",
+          environment: "jsdom",
+          globals: true,
+          testTimeout: 30000,
+          setupFiles: ["./src/test/setup.ts"],
+          globalSetup: ["./tests/integration/setup/globalSetup.ts"],
+          include: ["tests/integration/**/*.component.test.tsx"],
+        },
+      },
     ],
   },
   resolve: {
