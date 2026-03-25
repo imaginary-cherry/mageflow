@@ -18,6 +18,8 @@ from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from visualizer.models import (
     BatchTasksRequest,
+    ConnectionStatus,
+    HealthResponse,
     RootTasksResponse,
     TaskCallbacksResponse,
     TaskChildrenResponse,
@@ -119,8 +121,18 @@ async def lifespan(app: FastAPI):
 
 def register_api_routes(app: FastAPI):
     @app.get("/api/health")
-    async def health():
-        return {"status": "ok"}
+    async def health() -> HealthResponse:
+        redis_status = ConnectionStatus.DISCONNECTED
+        try:
+            if await TaskSignature.Meta.redis.ping():
+                redis_status = ConnectionStatus.CONNECTED
+        except Exception:
+            pass
+
+        return HealthResponse(
+            hatchet=redis_status,
+            redis=redis_status,
+        )
 
     @app.get("/api/workflows")
     async def get_tasks():
