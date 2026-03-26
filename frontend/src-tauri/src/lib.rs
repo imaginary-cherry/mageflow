@@ -2,6 +2,8 @@ mod crypto;
 mod tray;
 
 use std::sync::Mutex;
+use rand::Rng;
+use rand::distributions::Alphanumeric;
 use tauri::{AppHandle, Manager, RunEvent, State};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
@@ -15,6 +17,7 @@ const SECRET_REDIS_URL: &str = "redisUrl";
 
 pub struct SidecarState(pub Mutex<Option<CommandChild>>);
 pub struct SidecarPort(pub Mutex<Option<u16>>);
+pub struct IpcTokenState(pub Mutex<Option<String>>);
 
 // ---------------------------------------------------------------------------
 // Tauri secret commands (encrypted file via crypto module)
@@ -100,6 +103,24 @@ fn check_keychain_health(app: AppHandle) -> String {
         Ok(None) => "empty".to_string(),
         Err(e) => format!("denied:{e}"),
     }
+}
+
+// ---------------------------------------------------------------------------
+// IPC token generation
+// ---------------------------------------------------------------------------
+
+fn generate_ipc_token() -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect()
+}
+
+#[tauri::command]
+fn get_ipc_token(state: State<IpcTokenState>) -> Result<String, String> {
+    let guard = state.0.lock().unwrap();
+    guard.clone().ok_or_else(|| "IPC token not yet generated".to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +281,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(SidecarState(Mutex::new(None)))
         .manage(SidecarPort(Mutex::new(None)))
+        .manage(IpcTokenState(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -280,6 +302,7 @@ pub fn run() {
             load_secret,
             delete_secret,
             check_keychain_health,
+            get_ipc_token,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -295,4 +318,31 @@ pub fn run() {
             }
             _ => {}
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_ipc_token_length() {
+        let token = generate_ipc_token();
+        assert_eq!(token.len(), 64, "Token must be exactly 64 characters");
+    }
+
+    #[test]
+    fn test_generate_ipc_token_alphanumeric() {
+        let token = generate_ipc_token();
+        assert!(
+            token.chars().all(|c| c.is_ascii_alphanumeric()),
+            "All characters must be alphanumeric, got: {token}"
+        );
+    }
+
+    #[test]
+    fn test_generate_ipc_token_unique() {
+        let token1 = generate_ipc_token();
+        let token2 = generate_ipc_token();
+        assert_ne!(token1, token2, "Two generated tokens must differ");
+    }
 }
