@@ -35,11 +35,11 @@
 
 ### Frontend & UX
 
-- [ ] **UX-01**: First-run setup UI for entering Redis URL and Hatchet token
-- [ ] **UX-02**: Credential validation (test connectivity) before saving
-- [ ] **UX-03**: Subsequent launches load secrets silently — no prompts
-- [ ] **UX-04**: Health endpoint reflects actual connection status after secret-based initialization
-- [ ] **UX-05**: Connection failure surfaces actionable error with "check credentials" guidance
+- [x] **UX-01**: First-run setup UI for entering Redis URL and Hatchet token
+- [x] **UX-02**: Credential validation (test connectivity) before saving
+- [x] **UX-03**: Subsequent launches load secrets silently — no prompts
+- [x] **UX-04**: Health endpoint reflects actual connection status after secret-based initialization
+- [x] **UX-05**: Connection failure surfaces actionable error with "check credentials" guidance
 
 ### Integration Tests
 
@@ -93,11 +93,11 @@
 | AUTH-02 | Phase 2 | Complete |
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
-| UX-01 | Phase 3 | Pending |
-| UX-02 | Phase 3 | Pending |
-| UX-03 | Phase 3 | Pending |
-| UX-04 | Phase 3 | Pending |
-| UX-05 | Phase 3 | Pending |
+| UX-01 | Phase 3 | Complete |
+| UX-02 | Phase 3 | Complete |
+| UX-03 | Phase 3 | Complete |
+| UX-04 | Phase 3 | Complete |
+| UX-05 | Phase 3 | Complete |
 | TEST-01 | Phase 3 | Pending |
 | TEST-02 | Phase 3 | Pending |
 
