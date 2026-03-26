@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner, toast } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -16,32 +16,6 @@ import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
-
-// Shown when saved credentials exist but macOS blocks keychain access (e.g. after app rename/update).
-function KeychainErrorScreen({
-  onReEnter,
-}: {
-  onReEnter: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground gap-4">
-      <h2 className="text-2xl font-semibold">Credential Access Blocked</h2>
-      <p className="text-muted-foreground text-sm max-w-sm text-center">
-        macOS blocked access to your saved credentials, likely after an app update.
-        Re-enter your credentials to continue.
-      </p>
-      <div className="flex gap-3 mt-2">
-        <button
-          type="button"
-          onClick={onReEnter}
-          className="px-4 py-2 rounded-md bg-primary hover:bg-primary/80 text-primary-foreground text-sm font-medium transition-colors"
-        >
-          Re-enter Credentials
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // Startup-error screen shown when the backend cannot start or services are unreachable.
 function StartupErrorScreen({
@@ -80,18 +54,23 @@ function StartupErrorScreen({
 // Main app content once startup is complete.
 function MainApp({
   port,
+  ipcToken,
   onOpenSettings,
   settingsOpen,
   setSettingsOpen,
   retrySidecar,
 }: {
   port: number;
+  ipcToken: string;
   onOpenSettings: () => void;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
   retrySidecar: () => Promise<void>;
 }) {
-  const taskClient = useRef(new HttpTaskClient(`http://127.0.0.1:${port}`)).current;
+  const taskClient = useMemo(
+    () => new HttpTaskClient(`http://127.0.0.1:${port}`, ipcToken),
+    [port, ipcToken],
+  );
 
   // Post-launch health banner state
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -128,7 +107,7 @@ function MainApp({
           setSettingsOpen(true);
         });
       } catch {
-        // listen unavailable — fall through to polling
+        // listen unavailable -- fall through to polling
       }
     }
 
@@ -208,16 +187,16 @@ function MainApp({
             </main>
           </div>
 
-          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSave={retrySidecar} />
         </TooltipProvider>
       </TaskClientProvider>
     </QueryClientProvider>
   );
 }
 
-// Root component — gates all UI on startup phase.
+// Root component -- gates all UI on startup phase.
 const App = () => {
-  const { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding } =
+  const { phase, port, ipcToken, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding } =
     useAppStartup();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -243,11 +222,6 @@ const App = () => {
         <Onboarding onComplete={onOnboardingComplete} />
       )}
 
-      {/* Keychain access denied */}
-      {phase === 'keychain-error' && (
-        <KeychainErrorScreen onReEnter={goToOnboarding} />
-      )}
-
       {/* Startup error */}
       {phase === 'startup-error' && (
         <StartupErrorScreen
@@ -259,10 +233,10 @@ const App = () => {
 
       {/* Startup error also shows settings dialog */}
       {phase === 'startup-error' && (
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSave={retrySidecar} />
       )}
 
-      {/* Main UI — fades in when ready */}
+      {/* Main UI -- fades in when ready */}
       <div
         className={`transition-opacity duration-500 ease-in-out ${
           phase === 'ready' ? 'opacity-100' : 'opacity-0 pointer-events-none fixed inset-0'
@@ -271,6 +245,7 @@ const App = () => {
         {phase === 'ready' && (
           <MainApp
             port={port}
+            ipcToken={ipcToken}
             onOpenSettings={() => setSettingsOpen(true)}
             settingsOpen={settingsOpen}
             setSettingsOpen={setSettingsOpen}
