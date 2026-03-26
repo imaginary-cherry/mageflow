@@ -74,34 +74,20 @@ fn delete_secret(app: AppHandle, key: String) -> Result<(), String> {
     }
 }
 
-/// Check whether the encrypted secrets store is accessible.
-/// Returns `"ok"` (credentials present), `"empty"` (no entries or missing keys),
-/// or `"denied:<detail>"`.
 #[tauri::command]
-fn check_keychain_health(app: AppHandle) -> String {
-    let data_dir = match app.path().app_data_dir() {
-        Ok(d) => d,
-        Err(e) => return format!("denied:{e}"),
-    };
+fn load_all_secrets(app: AppHandle) -> Result<Option<String>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let secrets_path = data_dir.join("secrets.bin");
     match crypto::load_secrets_from_file(&secrets_path) {
         Ok(Some(secrets)) => {
-            let has_hatchet = secrets
-                .get("hatchetApiKey")
-                .and_then(|v| v.as_str())
-                .map_or(false, |s| !s.is_empty());
-            let has_redis = secrets
-                .get("redisUrl")
-                .and_then(|v| v.as_str())
-                .map_or(false, |s| !s.is_empty());
-            if has_hatchet && has_redis {
-                "ok".to_string()
-            } else {
-                "empty".to_string()
-            }
+            let json = serde_json::Value::Object(secrets).to_string();
+            Ok(Some(json))
         }
-        Ok(None) => "empty".to_string(),
-        Err(e) => format!("denied:{e}"),
+        Ok(None) => Ok(None),
+        Err(_) => {
+            let _ = std::fs::remove_file(&secrets_path);
+            Ok(None)
+        }
     }
 }
 
@@ -362,7 +348,7 @@ pub fn run() {
             save_secret,
             load_secret,
             delete_secret,
-            check_keychain_health,
+            load_all_secrets,
             get_ipc_token,
         ])
         .build(tauri::generate_context!())

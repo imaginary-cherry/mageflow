@@ -20,18 +20,18 @@
 
 ### Secret Delivery
 
-- [ ] **DLVR-01**: Secrets delivered to Python sidecar via stdin pipe (never CLI args or env vars)
-- [ ] **DLVR-02**: Python sidecar blocks all service initialization until secrets received from stdin
-- [ ] **DLVR-03**: Sidecar emits readiness signal on stdout after successful initialization
-- [ ] **DLVR-04**: Tauri waits for sidecar readiness signal with configurable timeout
-- [ ] **DLVR-05**: Startup timeout produces actionable error in UI
+- [x] **DLVR-01**: Secrets delivered to Python sidecar via stdin pipe (never CLI args or env vars)
+- [x] **DLVR-02**: Python sidecar blocks all service initialization until secrets received from stdin
+- [x] **DLVR-03**: Sidecar emits readiness signal on stdout after successful initialization
+- [x] **DLVR-04**: Tauri waits for sidecar readiness signal with configurable timeout
+- [x] **DLVR-05**: Startup timeout produces actionable error in UI
 
 ### IPC Authentication
 
-- [ ] **AUTH-01**: Ephemeral IPC token generated per app launch (64-char alphanumeric)
-- [ ] **AUTH-02**: Token passed to sidecar via stdin alongside secrets
-- [ ] **AUTH-03**: FastAPI middleware validates X-IPC-Token header on every request
-- [ ] **AUTH-04**: Requests without valid token rejected with 403
+- [x] **AUTH-01**: Ephemeral IPC token generated per app launch (64-char alphanumeric)
+- [x] **AUTH-02**: Token passed to sidecar via stdin alongside secrets
+- [x] **AUTH-03**: FastAPI middleware validates X-IPC-Token header on every request
+- [x] **AUTH-04**: Requests without valid token rejected with 403
 
 ### Frontend & UX
 
@@ -84,15 +84,15 @@
 | STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Complete |
 | STOR-05 | Phase 1 | Complete |
-| DLVR-01 | Phase 2 | Pending |
-| DLVR-02 | Phase 2 | Pending |
-| DLVR-03 | Phase 2 | Pending |
-| DLVR-04 | Phase 2 | Pending |
-| DLVR-05 | Phase 2 | Pending |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
+| DLVR-01 | Phase 2 | Complete |
+| DLVR-02 | Phase 2 | Complete |
+| DLVR-03 | Phase 2 | Complete |
+| DLVR-04 | Phase 2 | Complete |
+| DLVR-05 | Phase 2 | Complete |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
 | UX-01 | Phase 3 | Pending |
 | UX-02 | Phase 3 | Pending |
 | UX-03 | Phase 3 | Pending |

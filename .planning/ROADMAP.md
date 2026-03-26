@@ -13,7 +13,7 @@ This roadmap delivers a complete overhaul of how Mage Voyance stores, delivers, 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Encrypted Secret Storage & Security Foundation** - Patch shell plugin CVE, build AES-256-GCM encrypted storage with machine-derived key (completed 2026-03-26)
-- [ ] **Phase 2: Secret Delivery & IPC Authentication** - Stdin-based secret delivery to sidecar with startup synchronization and ephemeral token auth on all endpoints
+- [x] **Phase 2: Secret Delivery & IPC Authentication** - Stdin-based secret delivery to sidecar with startup synchronization and ephemeral token auth on all endpoints (completed 2026-03-26)
 - [ ] **Phase 3: Frontend Integration & Validation** - First-run setup UI, silent subsequent launches, health feedback, and end-to-end integration tests
 
 ## Phase Details
@@ -47,8 +47,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Python sidecar stdin reader, auth middleware, readiness signal, and tests
-- [ ] 02-02-PLAN.md — Rust-side token generation, stdin delivery, readiness wait, IPC token state
+- [x] 02-01-PLAN.md — Python sidecar stdin reader, auth middleware, readiness signal, and tests
+- [x] 02-02-PLAN.md — Rust-side token generation, stdin delivery, readiness wait, IPC token state
 
 ### Phase 3: Frontend Integration & Validation
 **Goal**: Users experience a complete credential lifecycle -- first-run setup with validation, silent subsequent launches, live connection health feedback -- verified by end-to-end integration tests
@@ -60,11 +60,11 @@ Plans:
   3. The health endpoint reflects actual connection status after secret-based initialization, and connection failures show actionable "check credentials" guidance
   4. Integration test passes: app connects successfully when valid credentials exist
   5. Integration test passes: app shows first-run setup flow when no credentials exist
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Rewire production code: remove keychain, simplify to save-restart-verify, add IPC token to HttpTaskClient
+- [ ] 03-02-PLAN.md — Install MSW, create test helpers, implement all test stubs for TEST-01 and TEST-02
 
 ## Progress
 
@@ -74,5 +74,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Encrypted Secret Storage & Security Foundation | 2/2 | Complete    | 2026-03-26 |
-| 2. Secret Delivery & IPC Authentication | 0/2 | Not started | - |
-| 3. Frontend Integration & Validation | 0/TBD | Not started | - |
+| 2. Secret Delivery & IPC Authentication | 2/2 | Complete    | 2026-03-26 |
+| 3. Frontend Integration & Validation | 0/2 | Not started | - |
