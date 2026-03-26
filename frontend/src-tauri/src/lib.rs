@@ -1,3 +1,4 @@
+mod crypto;
 mod tray;
 
 use std::sync::Mutex;
