@@ -5,9 +5,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager, RunEvent, State};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
-use tauri_plugin_store::StoreExt;
 
-const KEYRING_SERVICE: &str = "dev.mageflow.viewer";
 const SECRET_HATCHET_API_KEY: &str = "hatchetApiKey";
 const SECRET_REDIS_URL: &str = "redisUrl";
 
@@ -19,100 +17,89 @@ pub struct SidecarState(pub Mutex<Option<CommandChild>>);
 pub struct SidecarPort(pub Mutex<Option<u16>>);
 
 // ---------------------------------------------------------------------------
-// Keyring helpers
-// ---------------------------------------------------------------------------
-
-/// Read a secret from the OS keychain.
-/// - `Ok(Some(value))` — secret exists and was read successfully.
-/// - `Ok(None)` — no entry exists for this key (first launch).
-/// - `Err(msg)` — entry may exist but access was denied (e.g. after app rename).
-fn read_secret(key: &str) -> Result<Option<String>, String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, key)
-        .map_err(|e| format!("keyring init error: {e}"))?;
-    match entry.get_password() {
-        Ok(s) => Ok(Some(s)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(format!("keyring access error: {e}")),
-    }
-}
-
-fn write_secret(key: &str, value: &str) -> Result<(), String> {
-    let entry =
-        keyring::Entry::new(KEYRING_SERVICE, key).map_err(|e| format!("keyring error: {e}"))?;
-    entry
-        .set_password(value)
-        .map_err(|e| format!("keyring set error: {e}"))
-}
-
-fn delete_secret_entry(key: &str) {
-    if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, key) {
-        let _ = entry.delete_credential();
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Tauri keyring commands
+// Tauri secret commands (encrypted file via crypto module)
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-fn save_secret(key: String, value: String) -> Result<(), String> {
-    write_secret(&key, &value)
-}
-
-#[tauri::command]
-fn load_secret(key: String) -> Result<Option<String>, String> {
-    read_secret(&key)
-}
-
-#[tauri::command]
-fn delete_secret(key: String) -> Result<(), String> {
-    delete_secret_entry(&key);
-    Ok(())
-}
-
-/// Check whether the keychain is accessible.
-/// Returns `"ok"` (credentials readable), `"empty"` (no entries), or `"denied:<detail>"`.
-#[tauri::command]
-fn check_keychain_health() -> String {
-    let hatchet = read_secret(SECRET_HATCHET_API_KEY);
-    let redis = read_secret(SECRET_REDIS_URL);
-
-    match (&hatchet, &redis) {
-        // Both readable (even if empty/None — that just means first launch)
-        (Ok(Some(h)), Ok(Some(r))) if !h.is_empty() && !r.is_empty() => "ok".to_string(),
-        // At least one access denied
-        (Err(e), _) | (_, Err(e)) => format!("denied:{e}"),
-        // No entries or empty values
-        _ => "empty".to_string(),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// One-time migration: settings.json store → OS keychain
-// ---------------------------------------------------------------------------
-
-fn migrate_secrets_to_keychain(app: &AppHandle) {
-    let store = match app.store("settings.json") {
-        Ok(s) => s,
-        Err(_) => return, // no store yet — nothing to migrate
+fn save_secret(app: AppHandle, key: String, value: String) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let secrets_path = data_dir.join("secrets.bin");
+    let mut secrets = match crypto::load_secrets_from_file(&secrets_path) {
+        Ok(Some(s)) => s,
+        Ok(None) => serde_json::Map::new(),
+        Err(_) => {
+            let _ = std::fs::remove_file(&secrets_path);
+            serde_json::Map::new()
+        }
     };
+    secrets.insert(key, serde_json::Value::String(value));
+    crypto::save_secrets_to_file(&secrets_path, &secrets)
+}
 
-    for key in &[SECRET_HATCHET_API_KEY, SECRET_REDIS_URL] {
-        if let Some(val) = store.get(*key) {
-            if let Some(s) = val.as_str() {
-                if !s.is_empty() {
-                    // Only write if keychain doesn't already have a value
-                    if matches!(read_secret(key), Ok(None)) {
-                        if write_secret(key, s).is_err() {
-                            continue;
-                        }
-                    }
-                    store.delete(*key);
-                }
-            }
+#[tauri::command]
+fn load_secret(app: AppHandle, key: String) -> Result<Option<String>, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let secrets_path = data_dir.join("secrets.bin");
+    match crypto::load_secrets_from_file(&secrets_path) {
+        Ok(Some(secrets)) => Ok(secrets.get(&key).and_then(|v| v.as_str()).map(String::from)),
+        Ok(None) => Ok(None),
+        Err(_) => {
+            let _ = std::fs::remove_file(&secrets_path);
+            Ok(None)
         }
     }
-    let _ = store.save();
+}
+
+#[tauri::command]
+fn delete_secret(app: AppHandle, key: String) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let secrets_path = data_dir.join("secrets.bin");
+    let mut secrets = match crypto::load_secrets_from_file(&secrets_path) {
+        Ok(Some(s)) => s,
+        Ok(None) => return Ok(()),
+        Err(_) => {
+            let _ = std::fs::remove_file(&secrets_path);
+            return Ok(());
+        }
+    };
+    secrets.remove(&key);
+    if secrets.is_empty() {
+        let _ = std::fs::remove_file(&secrets_path);
+        Ok(())
+    } else {
+        crypto::save_secrets_to_file(&secrets_path, &secrets)
+    }
+}
+
+/// Check whether the encrypted secrets store is accessible.
+/// Returns `"ok"` (credentials present), `"empty"` (no entries or missing keys),
+/// or `"denied:<detail>"`.
+#[tauri::command]
+fn check_keychain_health(app: AppHandle) -> String {
+    let data_dir = match app.path().app_data_dir() {
+        Ok(d) => d,
+        Err(e) => return format!("denied:{e}"),
+    };
+    let secrets_path = data_dir.join("secrets.bin");
+    match crypto::load_secrets_from_file(&secrets_path) {
+        Ok(Some(secrets)) => {
+            let has_hatchet = secrets
+                .get("hatchetApiKey")
+                .and_then(|v| v.as_str())
+                .map_or(false, |s| !s.is_empty());
+            let has_redis = secrets
+                .get("redisUrl")
+                .and_then(|v| v.as_str())
+                .map_or(false, |s| !s.is_empty());
+            if has_hatchet && has_redis {
+                "ok".to_string()
+            } else {
+                "empty".to_string()
+            }
+        }
+        Ok(None) => "empty".to_string(),
+        Err(e) => format!("denied:{e}"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,26 +129,49 @@ async fn spawn_sidecar(app: &AppHandle) {
         *guard = Some(port);
     }
 
-    // Read credentials from the OS keychain.
-    let hatchet_key = match read_secret(SECRET_HATCHET_API_KEY) {
-        Ok(Some(s)) if !s.is_empty() => s,
-        Ok(_) => {
-            println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_HATCHET_API_KEY);
-            return;
-        }
+    // Read credentials from the encrypted secrets file.
+    let data_dir = match app.path().app_data_dir() {
+        Ok(d) => d,
         Err(e) => {
-            eprintln!("[sidecar] keychain access denied for {}: {}", SECRET_HATCHET_API_KEY, e);
+            eprintln!("[sidecar] Cannot resolve app data dir: {e}");
             return;
         }
     };
-    let redis_url = match read_secret(SECRET_REDIS_URL) {
-        Ok(Some(s)) if !s.is_empty() => s,
-        Ok(_) => {
-            println!("[sidecar] {} not in keychain — skipping spawn until settings are saved", SECRET_REDIS_URL);
+    let secrets_path = data_dir.join("secrets.bin");
+    let secrets = match crypto::load_secrets_from_file(&secrets_path) {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            println!("[sidecar] No secrets file — skipping spawn until settings are saved");
             return;
         }
         Err(e) => {
-            eprintln!("[sidecar] keychain access denied for {}: {}", SECRET_REDIS_URL, e);
+            eprintln!("[sidecar] Failed to load secrets: {e}");
+            // Corrupt file — remove it so next save starts fresh
+            let _ = std::fs::remove_file(&secrets_path);
+            return;
+        }
+    };
+
+    let hatchet_key = match secrets
+        .get(SECRET_HATCHET_API_KEY)
+        .and_then(|v| v.as_str())
+    {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            println!(
+                "[sidecar] {} not in secrets — skipping spawn until settings are saved",
+                SECRET_HATCHET_API_KEY
+            );
+            return;
+        }
+    };
+    let redis_url = match secrets.get(SECRET_REDIS_URL).and_then(|v| v.as_str()) {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            println!(
+                "[sidecar] {} not in secrets — skipping spawn until settings are saved",
+                SECRET_REDIS_URL
+            );
             return;
         }
     };
@@ -172,12 +182,7 @@ async fn spawn_sidecar(app: &AppHandle) {
     match shell
         .sidecar("mageflow-server")
         .expect("Failed to create sidecar command")
-        .args([
-            "--port",
-            &port.to_string(),
-            "--host",
-            "127.0.0.1",
-        ])
+        .args(["--port", &port.to_string(), "--host", "127.0.0.1"])
         .envs([
             ("HATCHET_API_KEY", &hatchet_key),
             ("REDIS_URL", &redis_url),
@@ -253,7 +258,6 @@ fn set_tray_status(app: AppHandle, status: String) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_store::Builder::new().build())
         .manage(SidecarState(Mutex::new(None)))
         .manage(SidecarPort(Mutex::new(None)))
         .setup(|app| {
@@ -264,7 +268,6 @@ pub fn run() {
                         .build(),
                 )?;
             }
-            migrate_secrets_to_keychain(app.handle());
             tray::create_tray(app.handle())?;
             Ok(())
         })

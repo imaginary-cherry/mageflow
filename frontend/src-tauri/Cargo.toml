@@ -24,9 +24,7 @@ log = "0.4"
 tauri = { version = "2.10.3", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2.2"
-tauri-plugin-store = "2"
 image = { version = "0.25", default-features = false, features = ["png"] }
-keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 aes-gcm = "0.10"
 hkdf = "0.12"
 sha2 = "0.10"
