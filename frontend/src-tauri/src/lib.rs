@@ -136,10 +136,44 @@ fn find_free_port() -> u16 {
 }
 
 // ---------------------------------------------------------------------------
+// Sidecar readiness handshake
+// ---------------------------------------------------------------------------
+
+async fn wait_for_ready(
+    rx: &mut tokio::sync::mpsc::Receiver<tauri_plugin_shell::process::CommandEvent>,
+) -> Result<(), String> {
+    use tauri_plugin_shell::process::CommandEvent;
+    while let Some(event) = rx.recv().await {
+        match event {
+            CommandEvent::Stdout(line) => {
+                let text = String::from_utf8_lossy(&line);
+                if text.trim() == "READY" {
+                    return Ok(());
+                }
+                // Log non-READY stdout for debugging (but never secrets)
+                println!("[sidecar:stdout] {}", text.trim());
+            }
+            CommandEvent::Stderr(line) => {
+                let text = String::from_utf8_lossy(&line);
+                eprintln!("[sidecar:stderr] {}", text.trim());
+            }
+            CommandEvent::Terminated(payload) => {
+                return Err(format!(
+                    "Sidecar terminated before becoming ready (code: {:?})",
+                    payload.code
+                ));
+            }
+            _ => {}
+        }
+    }
+    Err("Sidecar stdout channel closed before READY signal".to_string())
+}
+
+// ---------------------------------------------------------------------------
 // Sidecar spawn
 // ---------------------------------------------------------------------------
 
-async fn spawn_sidecar(app: &AppHandle) {
+async fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
     let port = find_free_port();
 
     // Store the port immediately so the frontend can read it even if spawn is
@@ -151,75 +185,102 @@ async fn spawn_sidecar(app: &AppHandle) {
     }
 
     // Read credentials from the encrypted secrets file.
-    let data_dir = match app.path().app_data_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("[sidecar] Cannot resolve app data dir: {e}");
-            return;
-        }
-    };
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Cannot resolve app data dir: {e}"))?;
     let secrets_path = data_dir.join("secrets.bin");
     let secrets = match crypto::load_secrets_from_file(&secrets_path) {
         Ok(Some(s)) => s,
         Ok(None) => {
             println!("[sidecar] No secrets file — skipping spawn until settings are saved");
-            return;
+            return Ok(());
         }
         Err(e) => {
             eprintln!("[sidecar] Failed to load secrets: {e}");
             // Corrupt file — remove it so next save starts fresh
             let _ = std::fs::remove_file(&secrets_path);
-            return;
+            return Err(format!("Failed to load secrets: {e}"));
         }
     };
 
-    let hatchet_key = match secrets
+    // Validate required secrets exist before attempting spawn.
+    let has_hatchet = secrets
         .get(SECRET_HATCHET_API_KEY)
         .and_then(|v| v.as_str())
-    {
-        Some(s) if !s.is_empty() => s.to_string(),
-        _ => {
-            println!(
-                "[sidecar] {} not in secrets — skipping spawn until settings are saved",
-                SECRET_HATCHET_API_KEY
-            );
-            return;
-        }
-    };
-    let redis_url = match secrets.get(SECRET_REDIS_URL).and_then(|v| v.as_str()) {
-        Some(s) if !s.is_empty() => s.to_string(),
-        _ => {
-            println!(
-                "[sidecar] {} not in secrets — skipping spawn until settings are saved",
-                SECRET_REDIS_URL
-            );
-            return;
-        }
-    };
+        .map_or(false, |s| !s.is_empty());
+    let has_redis = secrets
+        .get(SECRET_REDIS_URL)
+        .and_then(|v| v.as_str())
+        .map_or(false, |s| !s.is_empty());
+    if !has_hatchet || !has_redis {
+        println!("[sidecar] Required secrets missing — skipping spawn until settings are saved");
+        return Ok(());
+    }
 
-    // Build and launch the sidecar command.
-    // Secrets are passed via env vars (not CLI args) to avoid exposure in process listings.
+    // Generate ephemeral IPC token for this launch.
+    let ipc_token = generate_ipc_token();
+
+    // Build and launch the sidecar command (no env vars — secrets via stdin).
     let shell = app.shell();
-    match shell
+    let (mut rx, mut child) = shell
         .sidecar("mageflow-server")
         .expect("Failed to create sidecar command")
         .args(["--port", &port.to_string(), "--host", "127.0.0.1"])
-        .envs([
-            ("HATCHET_API_KEY", &hatchet_key),
-            ("REDIS_URL", &redis_url),
-        ])
         .spawn()
+        .map_err(|e| format!("Failed to spawn mageflow-server: {e}"))?;
+
+    // Write secrets + IPC token to sidecar stdin as a single JSON line.
+    let payload = serde_json::json!({
+        "secrets": secrets,
+        "ipc_token": &ipc_token,
+    });
+    let mut line = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
+    line.push('\n');
+    child
+        .write(line.as_bytes())
+        .map_err(|e| format!("Failed to write secrets to sidecar stdin: {e}"))?;
+    println!("[sidecar] Secrets delivered via stdin");
+
+    // Wait for READY signal with 30-second timeout.
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        wait_for_ready(&mut rx),
+    )
+    .await
     {
-        Ok((_, child)) => {
-            println!("[sidecar] Spawned mageflow-server on port {}", port);
-            let state = app.state::<SidecarState>();
-            let mut guard = state.0.lock().unwrap();
-            *guard = Some(child);
+        Ok(Ok(())) => println!("[sidecar] Ready on port {port}"),
+        Ok(Err(e)) => {
+            eprintln!("[sidecar] Failed to start: {e}");
+            let _ = child.kill();
+            return Err(e);
         }
-        Err(e) => {
-            eprintln!("[sidecar] Failed to spawn mageflow-server: {}", e);
+        Err(_) => {
+            let msg = format!(
+                "Sidecar did not become ready within 30 seconds. \
+                 Check Redis connectivity and credentials."
+            );
+            eprintln!("[sidecar] {msg}");
+            let _ = child.kill();
+            return Err(msg);
         }
     }
+
+    // Store the IPC token in managed state for frontend access.
+    {
+        let token_state = app.state::<IpcTokenState>();
+        let mut guard = token_state.0.lock().unwrap();
+        *guard = Some(ipc_token);
+    }
+
+    // Store the child process handle.
+    {
+        let state = app.state::<SidecarState>();
+        let mut guard = state.0.lock().unwrap();
+        *guard = Some(child);
+    }
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +317,7 @@ fn get_sidecar_status(state: State<SidecarState>) -> String {
 #[tauri::command]
 async fn restart_sidecar(app: AppHandle) -> Result<u16, String> {
     kill_sidecar(&app);
-    spawn_sidecar(&app).await;
+    spawn_sidecar(&app).await?;
     let state = app.state::<SidecarPort>();
     let guard = state.0.lock().unwrap();
     guard.ok_or_else(|| "Sidecar port not assigned after restart".to_string())
@@ -310,7 +371,9 @@ pub fn run() {
             RunEvent::Ready => {
                 let app = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    spawn_sidecar(&app).await;
+                    if let Err(e) = spawn_sidecar(&app).await {
+                        eprintln!("[sidecar] Startup error: {e}");
+                    }
                 });
             }
             RunEvent::ExitRequested { .. } | RunEvent::Exit => {
