@@ -43,8 +43,8 @@
 
 ### Integration Tests
 
-- [ ] **TEST-01**: Integration test verifying successful connection when valid credentials exist in DB
-- [ ] **TEST-02**: Integration test verifying correct behavior when no credentials exist (first-run flow)
+- [x] **TEST-01**: Integration test verifying successful connection when valid credentials exist in DB
+- [x] **TEST-02**: Integration test verifying correct behavior when no credentials exist (first-run flow)
 
 ## v2 Requirements
 
@@ -98,8 +98,8 @@
 | UX-03 | Phase 3 | Complete |
 | UX-04 | Phase 3 | Complete |
 | UX-05 | Phase 3 | Complete |
-| TEST-01 | Phase 3 | Pending |
-| TEST-02 | Phase 3 | Pending |
+| TEST-01 | Phase 3 | Complete |
+| TEST-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
