@@ -44,11 +44,11 @@ Plans:
   3. If the sidecar fails to become ready within the timeout, an actionable error is surfaced (not a silent hang)
   4. Every sidecar HTTP endpoint rejects requests without a valid X-IPC-Token header with 403
   5. Secrets never appear in process arguments, environment variables, or application logs
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Python sidecar stdin reader, auth middleware, readiness signal, and tests
+- [ ] 02-02-PLAN.md — Rust-side token generation, stdin delivery, readiness wait, IPC token state
 
 ### Phase 3: Frontend Integration & Validation
 **Goal**: Users experience a complete credential lifecycle -- first-run setup with validation, silent subsequent launches, live connection health feedback -- verified by end-to-end integration tests
@@ -74,5 +74,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Encrypted Secret Storage & Security Foundation | 2/2 | Complete    | 2026-03-26 |
-| 2. Secret Delivery & IPC Authentication | 0/TBD | Not started | - |
+| 2. Secret Delivery & IPC Authentication | 0/2 | Not started | - |
 | 3. Frontend Integration & Validation | 0/TBD | Not started | - |
