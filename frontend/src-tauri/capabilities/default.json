@@ -11,6 +11,7 @@
     "store:allow-get",
     "store:allow-set",
     "store:allow-save",
+    "shell:deny-open",
     {
       "identifier": "shell:allow-execute",
       "allow": [
