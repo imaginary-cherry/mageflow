@@ -66,7 +66,7 @@ class SignatureKeysResult(BaseModel):
 
 
 class SignatureKeyWithWF(SignatureKeysResult):
-    workflow_id: str
+    workflow_run_id: str
 
 
 class MageflowTestError(Exception):

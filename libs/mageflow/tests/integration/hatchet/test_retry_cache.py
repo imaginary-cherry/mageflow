@@ -1,20 +1,25 @@
+import asyncio
+
 import pytest
 from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import ContextMessage, SignatureKeyWithWF
-from tests.integration.hatchet.worker import retry_cache_durable_task
+from tests.integration.hatchet.worker import (
+    concurrent_cache_isolation_task,
+    retry_cache_durable_task,
+)
 
 
 async def _assert_retry_cache_idempotency(results: SignatureKeyWithWF):
-    workflow_id = results.workflow_id
+    workflow_run_id = results.workflow_run_id
 
     # Assert - get the keys stored by each attempt from Redis
     attempt_1_raw = await TaskSignature.Meta.redis.json().get(  # type: ignore[misc]
-        f"retry-cache-test:{workflow_id}:attempt-1"
+        f"retry-cache-test:{workflow_run_id}:attempt-1"
     )
     attempt_2_raw = await TaskSignature.Meta.redis.json().get(  # type: ignore[misc]
-        f"retry-cache-test:{workflow_id}:attempt-2"
+        f"retry-cache-test:{workflow_run_id}:attempt-2"
     )
 
     assert attempt_1_raw is not None, "Attempt 1 keys not found in Redis"
