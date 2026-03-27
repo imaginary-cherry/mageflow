@@ -1,10 +1,11 @@
 import asyncio
 
 import pytest
+from thirdmagic.signature.retry_cache import SignatureRetryCache
 from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage, SignatureKeyWithWF
+from tests.integration.hatchet.models import CacheIsolationMessage, ContextMessage, SignatureKeyWithWF
 from tests.integration.hatchet.worker import (
     concurrent_cache_isolation_task,
     retry_cache_durable_task,
@@ -68,3 +69,44 @@ async def test__retry_cache__task_retry__no_duplicate_signatures(
     results = await retry_cache_durable_task.aio_run(msg, options=trigger_options)
 
     await _assert_retry_cache_idempotency(results)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test__retry_cache__concurrent_runs__no_cache_collision(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+):
+    # Arrange - each run gets a different sig_count so the cached signatures
+    # are structurally different, proving cache isolation
+    hatchet = hatchet_client_init.hatchet
+
+    sig1 = await hatchet.asign(concurrent_cache_isolation_task)
+    sig2 = await hatchet.asign(concurrent_cache_isolation_task)
+    msg1 = CacheIsolationMessage(sig_count=1)
+    msg2 = CacheIsolationMessage(sig_count=2)
+
+    # Act - trigger both concurrently and wait for completion
+    ref1, ref2 = await asyncio.gather(
+        sig1.aio_run_no_wait(msg1, options=trigger_options),
+        sig2.aio_run_no_wait(msg2, options=trigger_options),
+    )
+
+    # Wait for both tasks to have executed at least once (cache gets populated)
+    await asyncio.sleep(10)
+
+    # Assert - fetch the retry cache entries directly from Redis via the rapyer model
+    cache1 = await SignatureRetryCache.afind_one(ref1.workflow_run_id)
+    cache2 = await SignatureRetryCache.afind_one(ref2.workflow_run_id)
+
+    assert cache1 is not None, "Run 1 cache not found in Redis"
+    assert cache2 is not None, "Run 2 cache not found in Redis"
+
+    # Each run should have its own cache with a different number of signature ids
+    assert len(cache1.signature_ids) == 1, "Run 1 cache should have 1 signature"
+    assert len(cache2.signature_ids) == 2, "Run 2 cache should have 2 signatures"
+
+    # No overlap — caches are fully isolated, no cross-contamination
+    assert set(cache1.signature_ids).isdisjoint(set(cache2.signature_ids))
+    assert cache1.key != cache2.key
