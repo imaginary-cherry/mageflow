@@ -215,7 +215,8 @@ def register_api_routes(app: FastAPI):
         try:
             await TaskSignature.resume_from_key(task_id)
             return Response(status_code=status.HTTP_202_ACCEPTED)
-        except KeyNotFound:
+        # TODO - fix in the resume_from_key need to be reconsider in future issue
+        except (KeyNotFound, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Task {task_id} not found",
