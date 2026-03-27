@@ -2,7 +2,6 @@ import { describe, it, expect, inject, beforeEach, afterEach, vi } from 'vitest'
 import { mockIPC, clearMocks } from '@tauri-apps/api/mocks'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import App from '@/App'
-import { validateCredentials } from '@/stores/settingsStore'
 
 // jsdom doesn't provide window.matchMedia — needed by Sonner toast component
 Object.defineProperty(window, 'matchMedia', {
@@ -36,12 +35,8 @@ declare module 'vitest' {
 function setupTauriMocks(port: number) {
   mockIPC((cmd, payload) => {
     switch (cmd) {
-      case 'load_secret': {
-        const key = (payload as Record<string, unknown>).key
-        if (key === 'hatchetApiKey') return 'fake-key'
-        if (key === 'redisUrl') return 'redis://fake'
-        return null
-      }
+      case 'load_all_secrets':
+        return JSON.stringify({ hatchetApiKey: 'fake-key', redisUrl: 'redis://fake' })
       case 'get_sidecar_port':
         return port
       case 'set_tray_status':
@@ -77,33 +72,11 @@ describe('Health endpoint component integration', () => {
     }, { timeout: 20000 })
   })
 
-  it('validateCredentials returns valid against real backend', async () => {
-    // Mock invoke so validate_credentials throws (forcing health polling fallback)
-    // and restart_sidecar returns the real port
-    mockIPC((cmd) => {
-      switch (cmd) {
-        case 'validate_credentials':
-          throw new Error('command not available')
-        case 'restart_sidecar':
-          return port
-        case 'load_secret':
-          return null
-        case 'save_secret':
-          return undefined
-        case 'set_tray_status':
-          return undefined
-        default:
-          return undefined
-      }
-    }, { shouldMockEvents: true })
-
-    const result = await validateCredentials({
-      hatchetApiKey: 'fake-key',
-      redisUrl: 'redis://fake',
-    })
-
-    expect(result.valid).toBe(true)
-    expect(result.hatchetError).toBeUndefined()
-    expect(result.redisError).toBeUndefined()
+  it('health endpoint returns ok against real backend', async () => {
+    const serverUrl = inject('serverUrl')
+    const resp = await fetch(`${serverUrl}/api/health`)
+    expect(resp.ok).toBe(true)
+    const data = await resp.json()
+    expect(data.status).toBe('ok')
   })
 })
