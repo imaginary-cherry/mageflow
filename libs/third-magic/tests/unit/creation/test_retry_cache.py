@@ -37,13 +37,13 @@ def _restore_retry_cache_ctx():
 @pytest.mark.asyncio
 async def test__setup_retry_cache__first_attempt__returns_not_retry():
     # Arrange
-    expected_cache = SignatureRetryCache(workflow_id="wf-123")
+    expected_cache = SignatureRetryCache(workflow_run_id="wf-123")
 
     # Act
     state = await setup_retry_cache("wf-123", attempt_number=1)
 
     # Assert
-    assert state.workflow_id == "wf-123"
+    assert state.workflow_run_id == "wf-123"
     assert state.is_retry is False
     assert state.cache == expected_cache
     assert state.index == 0
@@ -52,7 +52,7 @@ async def test__setup_retry_cache__first_attempt__returns_not_retry():
 @pytest.mark.asyncio
 async def test__setup_retry_cache__retry_no_cache_in_redis__returns_retry():
     # Arrange
-    cache = SignatureRetryCache(workflow_id="wf-no-cache")
+    cache = SignatureRetryCache(workflow_run_id="wf-no-cache")
 
     # Act
     state = await setup_retry_cache("wf-no-cache", attempt_number=2)
@@ -65,7 +65,7 @@ async def test__setup_retry_cache__retry_no_cache_in_redis__returns_retry():
 @pytest.mark.asyncio
 async def test__setup_retry_cache__retry_with_cache_in_redis__returns_retry_with_cache():
     # Arrange
-    cache = SignatureRetryCache(workflow_id="wf-cached")
+    cache = SignatureRetryCache(workflow_run_id="wf-cached")
     cache.pk = "wf-cached"
     await cache.asave()
 
@@ -75,7 +75,7 @@ async def test__setup_retry_cache__retry_with_cache_in_redis__returns_retry_with
     # Assert
     assert state.is_retry is True
     assert state.cache is not None
-    assert state.cache.workflow_id == "wf-cached"
+    assert state.cache.workflow_run_id == "wf-cached"
 
 
 # --- cache_signature / get_cached_signature round-trip ---
@@ -114,10 +114,10 @@ async def test__cache_and_get__round_trip__returns_same_signature(hatchet_mock):
 @pytest.mark.asyncio
 async def test__get_cached_signature__index_out_of_range__returns_none():
     # Arrange
-    cache = SignatureRetryCache(workflow_id="wf-empty")
+    cache = SignatureRetryCache(workflow_run_id="wf-empty")
     cache.pk = "wf-empty"
     await cache.asave()
-    state = RetryCacheState(workflow_id="wf-empty", is_retry=True, cache=cache, index=0)
+    state = RetryCacheState(workflow_run_id="wf-empty", is_retry=True, cache=cache, index=0)
     retry_cache_ctx.set(state)
 
     # Act
@@ -155,10 +155,10 @@ async def test__get_cached_signature__signature_deleted__returns_none(hatchet_mo
 @pytest.mark.asyncio
 async def test__teardown__deletes_cache_from_redis(redis_client):
     # Arrange
-    cache = SignatureRetryCache(workflow_id="wf-td")
+    cache = SignatureRetryCache(workflow_run_id="wf-td")
     cache.pk = "wf-td"
     await cache.asave()
-    state = RetryCacheState(workflow_id="wf-td", is_retry=False, cache=cache)
+    state = RetryCacheState(workflow_run_id="wf-td", is_retry=False, cache=cache)
 
     # Act
     await teardown_retry_cache(state)

@@ -54,7 +54,7 @@ def handle_task_callback(
             cache_state = None
             if is_idempotent:
                 cache_state = await setup_retry_cache(
-                    ctx.workflow_id, ctx.attempt_number
+                    ctx.workflow_run_id, ctx.attempt_number
                 )
                 cache_token = retry_cache_ctx.set(cache_state)
 

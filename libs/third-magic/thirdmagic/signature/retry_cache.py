@@ -14,7 +14,7 @@ T = TypeVar("T", bound=Signature)
 
 
 class SignatureRetryCache(AtomicRedisModel):
-    workflow_id: Key[str] = ""
+    workflow_run_id: Key[str] = ""
     signature_ids: RedisList[RapyerKey] = Field(default_factory=list)
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
@@ -22,7 +22,7 @@ class SignatureRetryCache(AtomicRedisModel):
 
 @dataclass
 class RetryCacheState:
-    workflow_id: str
+    workflow_run_id: str
     is_retry: bool
     cache: SignatureRetryCache
     index: int = 0
@@ -33,15 +33,15 @@ retry_cache_ctx: ContextVar[Optional[RetryCacheState]] = ContextVar(
 )
 
 
-async def setup_retry_cache(workflow_id: str, attempt_number: int) -> RetryCacheState:
+async def setup_retry_cache(workflow_run_id: str, attempt_number: int) -> RetryCacheState:
     is_retry = attempt_number > 1
     cache = None
     if is_retry:
-        cache = await SignatureRetryCache.afind_one(workflow_id)
+        cache = await SignatureRetryCache.afind_one(workflow_run_id)
     if cache is None:
-        cache = SignatureRetryCache(workflow_id=workflow_id)
+        cache = SignatureRetryCache(workflow_run_id=workflow_run_id)
         await cache.asave()
-    return RetryCacheState(workflow_id=workflow_id, is_retry=is_retry, cache=cache)
+    return RetryCacheState(workflow_run_id=workflow_run_id, is_retry=is_retry, cache=cache)
 
 
 async def teardown_retry_cache(state: RetryCacheState):
