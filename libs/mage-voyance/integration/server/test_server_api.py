@@ -1,5 +1,10 @@
 import pytest
-from visualizer.models import TaskCallbacksResponse, TaskFromServer
+from visualizer.models import (
+    ConnectionStatus,
+    HealthResponse,
+    TaskCallbacksResponse,
+    TaskFromServer,
+)
 
 from integration.frontend.seed_test_data import TEST_PREFIX
 
@@ -10,9 +15,6 @@ _ALIAS_TO_FIELD = {"children_ids": "subtask_ids", "metadata": "kwargs"}
 def parse_task(data: dict) -> TaskFromServer:
     remapped = {_ALIAS_TO_FIELD.get(k, k): v for k, v in data.items()}
     return TaskFromServer(**remapped)
-
-
-from visualizer.models import ConnectionStatus, HealthResponse
 
 
 @pytest.mark.asyncio(loop_scope="session")
