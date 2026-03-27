@@ -273,12 +273,12 @@ async def retry_cache_durable_task(
         swarm_key=swarm_sig.key,
         swarm_sub_task_keys=[swarm_sub1.key, swarm_sub2.key],
         publish_state_key=swarm_sig.publishing_state_id,
-        workflow_id=ctx.workflow_id,
+        workflow_run_id=ctx.workflow_run_id,
     )
     all_keys = results.model_dump(mode="json")
 
     # Store keys in Redis for test verification, keyed by attempt number
-    attempt_key = f"retry-cache-test:{ctx.workflow_id}:attempt-{ctx.attempt_number}"
+    attempt_key = f"retry-cache-test:{ctx.workflow_run_id}:attempt-{ctx.attempt_number}"
     await TaskSignature.Meta.redis.json().set(attempt_key, "$", all_keys)  # type: ignore[misc]
 
     if ctx.attempt_number == 1:
