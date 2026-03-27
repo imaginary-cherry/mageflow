@@ -19,6 +19,7 @@ class HealthResponse(BaseModel):
     hatchet: ConnectionStatus
     redis: ConnectionStatus
 
+
 STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
     SignatureStatus.PENDING: "pending",
     SignatureStatus.ACTIVE: "running",

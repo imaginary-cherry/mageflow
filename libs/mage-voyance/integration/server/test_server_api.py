@@ -1,5 +1,4 @@
 import pytest
-
 from integration.frontend.seed_test_data import TEST_PREFIX
 from visualizer.models import TaskCallbacksResponse, TaskFromServer
 
@@ -10,6 +9,8 @@ _ALIAS_TO_FIELD = {"children_ids": "subtask_ids", "metadata": "kwargs"}
 def parse_task(data: dict) -> TaskFromServer:
     remapped = {_ALIAS_TO_FIELD.get(k, k): v for k, v in data.items()}
     return TaskFromServer(**remapped)
+
+
 from visualizer.models import ConnectionStatus, HealthResponse
 
 
@@ -164,7 +165,11 @@ async def test_batch_fetch_mixed_signature_types(test_client):
     # Assert
     assert response.status_code == 200
     tasks = [parse_task(t) for t in response.json()]
-    assert {t.type for t in tasks} == {"TaskSignature", "ChainTaskSignature", "SwarmTaskSignature"}
+    assert {t.type for t in tasks} == {
+        "TaskSignature",
+        "ChainTaskSignature",
+        "SwarmTaskSignature",
+    }
     assert {t.id for t in tasks} == set(requested_ids)
 
 

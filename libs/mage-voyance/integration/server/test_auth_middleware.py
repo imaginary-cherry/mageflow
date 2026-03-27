@@ -3,7 +3,6 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from visualizer.server import add_ipc_auth_middleware, register_api_routes
 
 

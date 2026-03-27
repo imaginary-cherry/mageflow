@@ -5,7 +5,6 @@ import sys
 from multiprocessing import freeze_support
 
 import uvicorn
-
 from visualizer.server import create_dev_app
 
 

@@ -1,4 +1,5 @@
 """Tests for lifespan startup — rapyer.init_rapyer called with Redis client."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
