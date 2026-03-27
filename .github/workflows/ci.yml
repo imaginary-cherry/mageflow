@@ -326,6 +326,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Create sidecar stub for build
+        run: |
+          mkdir -p frontend/src-tauri/binaries
+          touch frontend/src-tauri/binaries/mageflow-server-x86_64-unknown-linux-gnu
+
       - name: Run Rust tests
         working-directory: frontend/src-tauri
         run: cargo test
