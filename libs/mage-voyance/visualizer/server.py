@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
@@ -107,7 +108,7 @@ async def fetch_tasks_batch(task_ids: list[str]) -> list[TaskFromServer]:
         tasks = await rapyer.afind(*task_ids)
     except (KeyNotFound, RapyerModelDoesntExistError):
         return []
-    return [serialize_task(task) for task in tasks if isinstance(task, TaskSignature)]
+    return [serialize_task(task) for task in tasks if isinstance(task, Signature)]
 
 
 @asynccontextmanager
