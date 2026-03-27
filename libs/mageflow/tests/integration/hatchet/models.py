@@ -69,5 +69,9 @@ class SignatureKeyWithWF(SignatureKeysResult):
     workflow_run_id: str
 
 
+class CacheIsolationMessage(ContextMessage):
+    sig_count: int = 1
+
+
 class MageflowTestError(Exception):
     pass

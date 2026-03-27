@@ -25,6 +25,7 @@ from hatchet_sdk.config import HealthcheckConfig
 import mageflow
 from mageflow import MageflowConfig, SignatureTTLConfig, TTLConfig
 from tests.integration.hatchet.models import (
+    CacheIsolationMessage,
     CommandMessageWithResult,
     ContextMessage,
     MageflowTestError,
@@ -290,6 +291,22 @@ async def retry_cache_durable_task(
     return results
 
 
+@hatchet.durable_task(
+    name="concurrent_cache_isolation_task",
+    input_validator=CacheIsolationMessage,
+    retries=3,
+    execution_timeout=timedelta(seconds=60),
+)
+async def concurrent_cache_isolation_task(msg: CacheIsolationMessage):
+    # Create a number of signatures based on the message — each run instance
+    # sends a different count so we can verify the caches are distinct
+    tasks = [task1, task2, task3]
+    task_keys = []
+    for i in range(msg.sig_count):
+        sig = await hatchet.asign(tasks[i % len(tasks)])
+        task_keys.append(sig.key)
+
+
 workflows = [
     task1,
     task2,
@@ -312,6 +329,7 @@ workflows = [
     accept_msg_results,
     create_signatures_for_ttl_test,
     retry_cache_durable_task,
+    concurrent_cache_isolation_task,
 ]
 
 
