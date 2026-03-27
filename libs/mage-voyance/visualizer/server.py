@@ -10,6 +10,13 @@ from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import Signature
+from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.swarm.model import SwarmTaskSignature
+from thirdmagic.task import TaskSignature
 from visualizer.models import (
     BatchTasksRequest,
     ConnectionStatus,
@@ -20,13 +27,6 @@ from visualizer.models import (
     TaskFromServer,
     serialize_task,
 )
-
-from thirdmagic.chain.model import ChainTaskSignature
-from thirdmagic.container import ContainerTaskSignature
-from thirdmagic.signature.model import Signature
-from thirdmagic.signature.status import SignatureStatus
-from thirdmagic.swarm.model import SwarmTaskSignature
-from thirdmagic.task import TaskSignature
 
 
 def get_static_dir() -> Path:

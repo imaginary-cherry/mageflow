@@ -1,6 +1,7 @@
 import pytest
-from integration.frontend.seed_test_data import TEST_PREFIX
 from visualizer.models import TaskCallbacksResponse, TaskFromServer
+
+from integration.frontend.seed_test_data import TEST_PREFIX
 
 # serialization_alias is output-only; remap JSON keys to field names for parsing
 _ALIAS_TO_FIELD = {"children_ids": "subtask_ids", "metadata": "kwargs"}

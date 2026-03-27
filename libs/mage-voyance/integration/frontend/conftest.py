@@ -5,6 +5,10 @@ import httpx
 import pytest_asyncio
 import rapyer
 from fastapi import FastAPI
+from redis.asyncio import Redis
+from testcontainers.redis import RedisContainer
+from visualizer.server import register_api_routes
+
 from integration.frontend.seed_test_data import (
     CallbackTestData,
     ChainTestData,
@@ -15,9 +19,6 @@ from integration.frontend.seed_test_data import (
     seed_swarm_task,
     seed_task_with_callbacks,
 )
-from redis.asyncio import Redis
-from testcontainers.redis import RedisContainer
-from visualizer.server import register_api_routes
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

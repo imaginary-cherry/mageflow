@@ -1,5 +1,6 @@
 import click
 import uvicorn
+
 from visualizer.server import get_static_dir
 
 
