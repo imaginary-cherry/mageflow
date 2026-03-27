@@ -253,7 +253,7 @@ jobs:
 
       - name: Run Integration Tests
         working-directory: libs/mage-voyance
-        run: pytest integration/frontend -v
+        run: pytest integration -v
 
   frontend-tests:
     name: Frontend Tests
