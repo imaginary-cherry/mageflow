@@ -92,7 +92,7 @@ async def fetch_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
         task = await rapyer.aget(task_id)
     except KeyNotFound:
         return None
-    if not isinstance(task, TaskSignature):
+    if not isinstance(task, Signature):
         return None
 
     return TaskCallbacksResponse(
@@ -114,7 +114,9 @@ async def fetch_tasks_batch(task_ids: list[str]) -> list[TaskFromServer]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     secrets = getattr(app.state, "secrets", None) or {}
-    redis_url = secrets.get("redisUrl", os.getenv("REDIS_URL", "redis://localhost:6379"))
+    redis_url = secrets.get(
+        "redisUrl", os.getenv("REDIS_URL", "redis://localhost:6379")
+    )
     redis_client = Redis.from_url(redis_url, decode_responses=True)
     await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
     yield
@@ -245,7 +247,9 @@ def create_app(secrets: dict | None = None, ipc_token: str | None = None) -> Fas
     return app
 
 
-def create_dev_app(secrets: dict | None = None, ipc_token: str | None = None) -> FastAPI:
+def create_dev_app(
+    secrets: dict | None = None, ipc_token: str | None = None
+) -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
     app.state.secrets = secrets or {
         "redisUrl": os.getenv("REDIS_URL", "redis://localhost:6379"),
