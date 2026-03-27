@@ -87,18 +87,17 @@ async def test__retry_cache__concurrent_runs__no_cache_collision(
     msg1 = CacheIsolationMessage(sig_count=1)
     msg2 = CacheIsolationMessage(sig_count=2)
 
-    # Act - trigger both concurrently and wait for completion
-    ref1, ref2 = await asyncio.gather(
-        sig1.aio_run_no_wait(msg1, options=trigger_options),
-        sig2.aio_run_no_wait(msg2, options=trigger_options),
+    # Act - trigger both concurrently
+    res1, res2 = await asyncio.gather(
+        sig1.aio_run(msg1, options=trigger_options),
+        sig2.aio_run(msg2, options=trigger_options),
     )
 
-    # Wait for both tasks to have executed at least once (cache gets populated)
-    await asyncio.sleep(10)
-
     # Assert - fetch the retry cache entries directly from Redis via the rapyer model
-    cache1 = await SignatureRetryCache.afind_one(ref1.workflow_run_id)
-    cache2 = await SignatureRetryCache.afind_one(ref2.workflow_run_id)
+    wf_run_id_1 = res1.workflow_run_id
+    wf_run_id_2 = res2.workflow_run_id
+    cache1 = await SignatureRetryCache.afind_one(wf_run_id_1)
+    cache2 = await SignatureRetryCache.afind_one(wf_run_id_2)
 
     assert cache1 is not None, "Run 1 cache not found in Redis"
     assert cache2 is not None, "Run 2 cache not found in Redis"
