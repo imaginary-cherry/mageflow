@@ -122,37 +122,56 @@ fn find_free_port() -> u16 {
 }
 
 // ---------------------------------------------------------------------------
-// Sidecar readiness handshake
+// Sidecar readiness — poll /api/health until 200 OK
 // ---------------------------------------------------------------------------
 
-async fn wait_for_ready(
-    rx: &mut tokio::sync::mpsc::Receiver<tauri_plugin_shell::process::CommandEvent>,
-) -> Result<(), String> {
-    use tauri_plugin_shell::process::CommandEvent;
-    while let Some(event) = rx.recv().await {
-        match event {
-            CommandEvent::Stdout(line) => {
-                let text = String::from_utf8_lossy(&line);
-                if text.trim() == "READY" {
-                    return Ok(());
-                }
-                // Log non-READY stdout for debugging (but never secrets)
-                println!("[sidecar:stdout] {}", text.trim());
+async fn poll_health(port: u16) -> Result<(), String> {
+    let url = format!("http://127.0.0.1:{port}/api/health");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+    let mut last_err = String::from("Health endpoint not reachable");
+    for _ in 0..60 {
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        match client.get(&url).send().await {
+            Ok(resp) if resp.status().is_success() => return Ok(()),
+            Ok(resp) => {
+                last_err = format!("Health returned {}", resp.status());
             }
-            CommandEvent::Stderr(line) => {
-                let text = String::from_utf8_lossy(&line);
-                eprintln!("[sidecar:stderr] {}", text.trim());
+            Err(e) => {
+                last_err = e.to_string();
             }
-            CommandEvent::Terminated(payload) => {
-                return Err(format!(
-                    "Sidecar terminated before becoming ready (code: {:?})",
-                    payload.code
-                ));
-            }
-            _ => {}
         }
     }
-    Err("Sidecar stdout channel closed before READY signal".to_string())
+    Err(format!("Sidecar health check failed after 30s: {last_err}"))
+}
+
+/// Drain sidecar stdout/stderr events for logging (runs in background).
+fn spawn_event_logger(
+    mut rx: tokio::sync::mpsc::Receiver<tauri_plugin_shell::process::CommandEvent>,
+) {
+    use tauri_plugin_shell::process::CommandEvent;
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(line) => {
+                    let text = String::from_utf8_lossy(&line);
+                    println!("[sidecar:stdout] {}", text.trim());
+                }
+                CommandEvent::Stderr(line) => {
+                    let text = String::from_utf8_lossy(&line);
+                    eprintln!("[sidecar:stderr] {}", text.trim());
+                }
+                CommandEvent::Terminated(payload) => {
+                    eprintln!("[sidecar] Terminated (code: {:?})", payload.code);
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +228,7 @@ async fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
 
     // Build and launch the sidecar command (no env vars — secrets via stdin).
     let shell = app.shell();
-    let (mut rx, mut child) = shell
+    let (rx, mut child) = shell
         .sidecar("mageflow-server")
         .expect("Failed to create sidecar command")
         .args(["--port", &port.to_string(), "--host", "127.0.0.1"])
@@ -228,29 +247,16 @@ async fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to write secrets to sidecar stdin: {e}"))?;
     println!("[sidecar] Secrets delivered via stdin");
 
-    // Wait for READY signal with 30-second timeout.
-    match tokio::time::timeout(
-        std::time::Duration::from_secs(30),
-        wait_for_ready(&mut rx),
-    )
-    .await
-    {
-        Ok(Ok(())) => println!("[sidecar] Ready on port {port}"),
-        Ok(Err(e)) => {
-            eprintln!("[sidecar] Failed to start: {e}");
-            let _ = child.kill();
-            return Err(e);
-        }
-        Err(_) => {
-            let msg = format!(
-                "Sidecar did not become ready within 30 seconds. \
-                 Check Redis connectivity and credentials."
-            );
-            eprintln!("[sidecar] {msg}");
-            let _ = child.kill();
-            return Err(msg);
-        }
+    // Drain sidecar stdout/stderr in background for logging.
+    spawn_event_logger(rx);
+
+    // Poll health endpoint until sidecar is ready.
+    if let Err(e) = poll_health(port).await {
+        eprintln!("[sidecar] {e}");
+        let _ = child.kill();
+        return Err(e);
     }
+    println!("[sidecar] Ready on port {port}");
 
     // Store the IPC token in managed state for frontend access.
     {

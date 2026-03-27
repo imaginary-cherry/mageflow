@@ -116,7 +116,6 @@ async def lifespan(app: FastAPI):
     redis_url = secrets.get("redisUrl", os.getenv("REDIS_URL", "redis://localhost:6379"))
     redis_client = Redis.from_url(redis_url, decode_responses=True)
     await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
-    print("READY", flush=True)
     yield
     await rapyer.teardown_rapyer()
 
