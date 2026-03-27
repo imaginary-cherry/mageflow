@@ -77,6 +77,6 @@ describe('Health endpoint component integration', () => {
     const resp = await fetch(`${serverUrl}/api/health`)
     expect(resp.ok).toBe(true)
     const data = await resp.json()
-    expect(data.status).toBe('ok')
+    expect(data.redis).toBe('connected')
   })
 })
