@@ -57,10 +57,10 @@ async def test__durable_task__first_attempt__cache_created(
     # Act
     result = await handler(message, ctx)
 
-    # Assert - cache should exist in Redis with the created signature
+    # Assert - cache should have a short TTL after success (torn down via aset_ttl)
     cache_key = f"SignatureRetryCache:{workflow_run_id}"
-    # Cache is torn down on success, so it should NOT exist after success
-    assert not await redis_client.exists(cache_key)
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -180,9 +180,10 @@ async def test__durable_task__success__cache_deleted(
     # Act
     await handler(message, ctx)
 
-    # Assert - cache should be cleaned up after success
+    # Assert - cache should have a short TTL after success (torn down via aset_ttl)
     cache_key = f"SignatureRetryCache:{workflow_run_id}"
-    assert not await redis_client.exists(cache_key)
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -244,16 +245,16 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
     handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
-    # Act - CancelledError should propagate even when cache.adelete() fails
+    # Act - CancelledError should propagate even when cache.aset_ttl() fails
     with patch.object(
         SignatureRetryCache,
-        "adelete",
+        "aset_ttl",
         new_callable=AsyncMock,
         side_effect=ConnectionError("Redis unavailable"),
-    ) as mock_adelete:
+    ) as mock_aset_ttl:
         with pytest.raises(asyncio.CancelledError):
             await handler(message, ctx)
-        mock_adelete.assert_awaited_once()
+        mock_aset_ttl.assert_awaited_once()
 
 
 # --- Non-durable task: cache is NOT created ---
@@ -366,9 +367,10 @@ async def test__vanilla_task__error_no_retry__cache_deleted(
     with pytest.raises(ValueError, match="Fatal error"):
         await handler(message, ctx)
 
-    # Assert - cache should be deleted since no retry will happen
+    # Assert - cache should have a short TTL since no retry will happen
     cache_key = f"SignatureRetryCache:{workflow_run_id}"
-    assert not await redis_client.exists(cache_key)
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -511,10 +513,11 @@ async def test__durable_task__no_task_id__no_cache(
     # Act
     result = await handler(message, ctx)
 
-    # Assert - vanilla run returns direct result, no cache
+    # Assert - vanilla run returns direct result, cache gets short TTL on teardown
     assert result == "done"
     cache_key = f"SignatureRetryCache:{workflow_run_id}"
-    assert not await redis_client.exists(cache_key)
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 # --- Contextvar cleanup: cache context reset after handler completes ---
