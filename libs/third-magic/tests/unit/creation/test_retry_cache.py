@@ -153,10 +153,9 @@ async def test__get_cached_signature__signature_deleted__returns_none(hatchet_mo
 
 
 @pytest.mark.asyncio
-async def test__teardown__deletes_cache_from_redis(redis_client):
+async def test__teardown__sets_ttl_on_cache(redis_client):
     # Arrange
-    cache = SignatureRetryCache(workflow_run_id="wf-td")
-    cache.pk = "wf-td"
+    cache = SignatureRetryCache(workflow_id="wf-td")
     await cache.asave()
     state = RetryCacheState(workflow_run_id="wf-td", is_retry=False, cache=cache)
 
@@ -164,7 +163,8 @@ async def test__teardown__deletes_cache_from_redis(redis_client):
     await teardown_retry_cache(state)
 
     # Assert
-    assert not await redis_client.exists(cache.key)
+    ttl = await redis_client.ttl(cache.key)
+    assert 0 < ttl <= 300
 
 
 # --- sign() integration with cache ---
