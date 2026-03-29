@@ -202,8 +202,6 @@ export function useAppStartup(): UseAppStartupResult {
     }
     setPort(resolvedPort);
 
-    await fetchIpcToken();
-
     try {
       await pollForReady(resolvedPort);
     } catch (err) {
@@ -215,7 +213,12 @@ export function useAppStartup(): UseAppStartupResult {
         transitionTo('startup-error', msg);
         setErrorMessage(msg);
       }
+      return;
     }
+
+    // Fetch IPC token after health checks pass — the Rust side stores the token
+    // only after its own poll_health completes inside spawn_sidecar.
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
   useEffect(() => {
@@ -255,8 +258,6 @@ export function useAppStartup(): UseAppStartupResult {
 
     setPort(resolvedPort);
 
-    await fetchIpcToken();
-
     // Let HealthCheckError propagate to Onboarding component for inline errors
     try {
       await pollForReady(resolvedPort);
@@ -267,7 +268,10 @@ export function useAppStartup(): UseAppStartupResult {
       const msg = err instanceof Error ? err.message : 'Startup failed';
       transitionTo('startup-error', msg);
       setErrorMessage(msg);
+      return;
     }
+
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
   const retrySidecar = useCallback(async () => {
@@ -289,8 +293,6 @@ export function useAppStartup(): UseAppStartupResult {
     }
     setPort(resolvedPort);
 
-    await fetchIpcToken();
-
     try {
       await pollForReady(resolvedPort);
     } catch (err) {
@@ -302,7 +304,10 @@ export function useAppStartup(): UseAppStartupResult {
         transitionTo('startup-error', msg);
         setErrorMessage(msg);
       }
+      return;
     }
+
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
   const goToOnboarding = useCallback(() => {
