@@ -31,11 +31,11 @@ Retry (attempt 2+):
   chain([a, b])   → returns cached ChainTaskSignature
 ```
 
-The cache is keyed by workflow ID and stored in Redis with a 24-hour TTL. It is automatically cleaned up when the task finishes — either on success or on final failure (no more retries).
+The cache is keyed by workflow run ID and stored in Redis with a 24-hour TTL. Each run of a workflow gets its own isolated cache, so concurrent tasks within the same workflow don't collide. The cache is automatically cleaned up when the task finishes — either on success or on final failure (no more retries).
 
 ## Automatic for Durable Tasks
 
-Idempotency is enabled automatically for all durable tasks. No configuration needed.
+Idempotency is enabled by default for all durable tasks.
 
 ```python
 @hatchet.durable_task()
@@ -49,6 +49,24 @@ async def my_task(msg):
 ```
 
 Regular (non-durable) tasks do **not** use the retry cache.
+
+## Disabling Idempotency
+
+To disable the retry cache globally, set `use_idempotency=False` in your [`MageflowConfig`](../api/config.md):
+
+```python
+from mageflow import Mageflow, MageflowConfig
+
+config = MageflowConfig(use_idempotency=False)
+
+client = Mageflow(
+    hatchet_client=hatchet,
+    redis_client="redis://localhost:6379",
+    config=config,
+)
+```
+
+With idempotency disabled, durable tasks behave like regular tasks on retry — signatures are recreated from scratch.
 
 ## Signature Order Matters
 
