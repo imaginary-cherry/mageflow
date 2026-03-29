@@ -53,5 +53,5 @@ jobs:
           fi
 
       - name: Fail if any check failed
-        if: needs.secrets-scan.result == 'failure'
+        if: needs.secrets-scan.result != 'success'
         run: exit 1
