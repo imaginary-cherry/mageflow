@@ -46,7 +46,7 @@ async def setup_retry_cache(workflow_run_id: str, attempt_number: int) -> RetryC
 
 async def teardown_retry_cache(state: RetryCacheState):
     try:
-        await state.cache.adelete()
+        await state.cache.aset_ttl(5 * 60)
     except Exception:
         pass
 
