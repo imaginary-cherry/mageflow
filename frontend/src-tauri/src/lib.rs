@@ -250,6 +250,15 @@ async fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
     // Drain sidecar stdout/stderr in background for logging.
     spawn_event_logger(rx);
 
+    // Store the IPC token before polling health so the frontend can fetch it
+    // as soon as it detects the sidecar port — avoids a race where the frontend
+    // finishes its own health polling before this function stores the token.
+    {
+        let token_state = app.state::<IpcTokenState>();
+        let mut guard = token_state.0.lock().unwrap();
+        *guard = Some(ipc_token);
+    }
+
     // Poll health endpoint until sidecar is ready.
     if let Err(e) = poll_health(port).await {
         eprintln!("[sidecar] {e}");
@@ -257,13 +266,6 @@ async fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
         return Err(e);
     }
     println!("[sidecar] Ready on port {port}");
-
-    // Store the IPC token in managed state for frontend access.
-    {
-        let token_state = app.state::<IpcTokenState>();
-        let mut guard = token_state.0.lock().unwrap();
-        *guard = Some(ipc_token);
-    }
 
     // Store the child process handle.
     {
