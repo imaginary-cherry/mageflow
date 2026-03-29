@@ -91,9 +91,7 @@ async def test__retry_cache__concurrent_runs__no_cache_collision(
         concurrent_cache_isolation_task.aio_run_no_wait(msg1, options=trigger_options),
         concurrent_cache_isolation_task.aio_run_no_wait(msg2, options=trigger_options),
     )
-    await asyncio.gather(
-        res1.aio_result(), res2.aio_result()
-    )
+    await asyncio.gather(res1.aio_result(), res2.aio_result())
 
     # Assert - fetch the retry cache entries directly from Redis via the rapyer model
     wf_run_id_1 = res1.workflow_run_id

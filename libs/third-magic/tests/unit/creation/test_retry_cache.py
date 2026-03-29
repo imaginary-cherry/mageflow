@@ -117,7 +117,9 @@ async def test__get_cached_signature__index_out_of_range__returns_none():
     cache = SignatureRetryCache(workflow_run_id="wf-empty")
     cache.pk = "wf-empty"
     await cache.asave()
-    state = RetryCacheState(workflow_run_id="wf-empty", is_retry=True, cache=cache, index=0)
+    state = RetryCacheState(
+        workflow_run_id="wf-empty", is_retry=True, cache=cache, index=0
+    )
     retry_cache_ctx.set(state)
 
     # Act
