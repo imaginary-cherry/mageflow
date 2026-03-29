@@ -161,7 +161,9 @@ class HatchetMageflow(Hatchet):
         hatchet_task = super().durable_task(name=name, **kwargs)
 
         decorator = functools.partial(
-            self.task_decorator, hatchet_task=hatchet_task, is_idempotent=True
+            self.task_decorator,
+            hatchet_task=hatchet_task,
+            is_idempotent=self.mageflow_config.use_idempotency,
         )
 
         return decorator
