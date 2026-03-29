@@ -5,7 +5,11 @@ from thirdmagic.signature.retry_cache import SignatureRetryCache
 from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import CacheIsolationMessage, ContextMessage, SignatureKeyWithWF
+from tests.integration.hatchet.models import (
+    CacheIsolationMessage,
+    ContextMessage,
+    SignatureKeyWithWF,
+)
 from tests.integration.hatchet.worker import (
     concurrent_cache_isolation_task,
     retry_cache_durable_task,
