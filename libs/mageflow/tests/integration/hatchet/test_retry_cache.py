@@ -82,19 +82,17 @@ async def test__retry_cache__concurrent_runs__no_cache_collision(
     ctx_metadata,
     trigger_options,
 ):
-    # Arrange - each run gets a different sig_count so the cached signatures
-    # are structurally different, proving cache isolation
-    hatchet = hatchet_client_init.hatchet
-
-    sig1 = await hatchet.asign(concurrent_cache_isolation_task)
-    sig2 = await hatchet.asign(concurrent_cache_isolation_task)
+    # Arrange
     msg1 = CacheIsolationMessage(sig_count=1)
     msg2 = CacheIsolationMessage(sig_count=2)
 
     # Act - trigger both concurrently
     res1, res2 = await asyncio.gather(
-        sig1.aio_run(msg1, options=trigger_options),
-        sig2.aio_run(msg2, options=trigger_options),
+        concurrent_cache_isolation_task.aio_run_no_wait(msg1, options=trigger_options),
+        concurrent_cache_isolation_task.aio_run_no_wait(msg2, options=trigger_options),
+    )
+    await asyncio.gather(
+        res1.aio_result(), res2.aio_result()
     )
 
     # Assert - fetch the retry cache entries directly from Redis via the rapyer model
