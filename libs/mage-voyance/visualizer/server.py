@@ -252,10 +252,7 @@ def create_dev_app(
     secrets: dict | None = None, ipc_token: str | None = None
 ) -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
-    app.state.secrets = secrets or {
-        "redisUrl": os.getenv("REDIS_URL", "redis://localhost:6379"),
-        "hatchetApiKey": os.getenv("HATCHET_API_KEY", ""),
-    }
+    app.state.secrets = secrets
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
