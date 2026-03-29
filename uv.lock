@@ -993,7 +993,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "mageflow"
-version = "0.3.4"
+version = "0.3.5"
 source = { editable = "libs/mageflow" }
 dependencies = [
     { name = "thirdmagic" },
@@ -1997,7 +1997,7 @@ redis = [
 
 [[package]]
 name = "thirdmagic"
-version = "0.0.5"
+version = "0.0.6"
 source = { editable = "libs/third-magic" }
 dependencies = [
     { name = "pydantic" },
