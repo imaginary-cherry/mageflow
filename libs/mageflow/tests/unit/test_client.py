@@ -1,13 +1,21 @@
 import asyncio
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from hatchet_sdk import Context, Hatchet
 from redis import Redis
 
+from mageflow.callbacks import AcceptParams
 from mageflow.client import HatchetMageflow
 from tests.integration.hatchet.models import ContextMessage
+
+
+@pytest.fixture
+def mock_handle_task_callback():
+    with patch("mageflow.clients.hatchet.mageflow.handle_task_callback") as mock_htc:
+        mock_htc.return_value = lambda fn: fn
+        yield mock_htc
 
 
 @pytest.fixture
@@ -106,3 +114,23 @@ async def test_stagger_execution_calls_func_without_ctx_when_func_does_not_want_
 
     # Assert
     assert received_args == [mock_message]
+
+
+def test_task_passes_is_idempotent_false(orch, mock_handle_task_callback):
+    @orch.task(name="regular-task")
+    async def regular(msg):
+        pass
+
+    mock_handle_task_callback.assert_called_once_with(
+        AcceptParams.NO_CTX, send_signature=False, is_idempotent=False
+    )
+
+
+def test_durable_task_passes_is_idempotent_true(orch, mock_handle_task_callback):
+    @orch.durable_task(name="durable-task")
+    async def durable(msg):
+        pass
+
+    mock_handle_task_callback.assert_called_once_with(
+        AcceptParams.NO_CTX, send_signature=False, is_idempotent=True
+    )

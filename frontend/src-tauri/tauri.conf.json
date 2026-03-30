@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Mageflow Viewer",
+  "productName": "Mage Voyance",
   "version": "0.1.0",
   "identifier": "dev.mageflow.viewer",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Mageflow Viewer",
+        "title": "Mage Voyance",
         "width": 1200,
         "height": 800,
         "resizable": true,

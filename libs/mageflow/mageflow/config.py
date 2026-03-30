@@ -33,6 +33,7 @@ class TTLConfig:
 class MageflowConfig:
     ttl: TTLConfig = field(default_factory=TTLConfig)
     param_config: AcceptParams = AcceptParams.NO_CTX
+    use_idempotency: bool = True
 
 
 def apply_ttl_config(ttl_config: TTLConfig):

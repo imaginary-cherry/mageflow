@@ -18,7 +18,7 @@ runs:
         else
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a "$TAG" -m "Release Mageflow Viewer $TAG"
+          git tag -a "$TAG" -m "Release Mage Voyance $TAG"
           git push origin "$TAG"
           echo "Created tag $TAG"
         fi

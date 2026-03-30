@@ -8,12 +8,16 @@ jobs:
   update-cask:
     if: startsWith(github.event.release.tag_name, 'app/v')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    environment: update-cask
     steps:
-      - uses: actions/checkout@v4
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
         with:
-          ref: main
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: homebrew-mageflow
 
       - name: Parse version and channel
         id: parse
@@ -38,12 +42,18 @@ jobs:
         run: |
           TAG="${{ steps.parse.outputs.tag }}"
           VERSION="${{ steps.parse.outputs.version }}"
-          ASSET="Mageflow.Viewer_${VERSION}_aarch64.dmg"
+          ASSET="Mage.Voyance_${VERSION}_aarch64.dmg"
           gh release download "$TAG" -p "$ASSET" -D /tmp/cask-assets
           SHA=$(sha256sum "/tmp/cask-assets/$ASSET" | awk '{print $1}')
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-mageflow
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Update cask formula
         run: |
