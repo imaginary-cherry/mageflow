@@ -46,7 +46,7 @@ try:
     HAS_HATCHET = True
     from hatchet_sdk.runnables.workflow import Standalone, BaseWorkflow
 
-    HatchetTaskType = HatchetTaskType | Callable | Standalone, BaseWorkflow
+    HatchetTaskType = HatchetTaskType | Callable | Standalone | BaseWorkflow
 except ImportError:
     HAS_HATCHET = False
 
