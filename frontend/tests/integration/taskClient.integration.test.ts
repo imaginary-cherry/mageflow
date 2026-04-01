@@ -1,4 +1,4 @@
-import { describe, it, expect, inject, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, inject, beforeEach, afterEach } from 'vitest'
 import { HttpTaskClient } from '@/services/httpTaskClient'
 import type { TaskClient } from '@/services/types'
 import { seedTestData, cleanupTestData, mageVoyanceRoot } from './setup/seedManager'
@@ -12,13 +12,13 @@ declare module 'vitest' {
 describe('TaskClient integration', () => {
   let client: TaskClient
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const serverUrl = inject('serverUrl')
     client = new HttpTaskClient(serverUrl)
     await seedTestData(mageVoyanceRoot)
   })
 
-  afterAll(async () => {
+  afterEach(async () => {
     await cleanupTestData(mageVoyanceRoot)
   })
 

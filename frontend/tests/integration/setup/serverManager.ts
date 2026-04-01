@@ -24,7 +24,17 @@ function findPython(projectRoot: string): string {
   return "python";
 }
 
-export async function startServer(port: number, cwd: string, projectRoot: string): Promise<ChildProcess> {
+/**
+ * Start the real sidecar entry point (visualizer.__main__) with secrets
+ * delivered via stdin, matching how Tauri delivers them in the packaged app.
+ */
+export async function startSidecar(
+  port: number,
+  cwd: string,
+  projectRoot: string,
+  redisUrl: string,
+  ipcToken?: string | null,
+): Promise<ChildProcess> {
   const inUse = await checkPortInUse(port);
   if (inUse) {
     throw new Error(
@@ -34,18 +44,21 @@ export async function startServer(port: number, cwd: string, projectRoot: string
 
   const serverProcess = spawn(
     findPython(projectRoot),
-    [
-      "-m",
-      "integration.frontend.start_server_with_redis",
-      "--port",
-      port.toString(),
-    ],
+    ["-m", "visualizer", "--port", port.toString(), "--host", "127.0.0.1"],
     {
       cwd,
       env: process.env,
-      stdio: ["ignore", "inherit", "pipe"],
+      stdio: ["pipe", "inherit", "pipe"],
     }
   );
+
+  const payload = JSON.stringify({
+    secrets: { redisUrl, hatchetApiKey: "" },
+    ipc_token: ipcToken ?? null,
+  }) + "\n";
+
+  serverProcess.stdin?.write(payload);
+  serverProcess.stdin?.end();
 
   return serverProcess;
 }
