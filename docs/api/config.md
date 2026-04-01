@@ -16,12 +16,14 @@ Top-level configuration for MageFlow. Passed to the [`Mageflow` client](client.m
 class MageflowConfig:
     ttl: TTLConfig = TTLConfig()
     param_config: AcceptParams = AcceptParams.NO_CTX
+    use_idempotency: bool = True
 ```
 
 **Fields:**
 
 - `ttl` ([TTLConfig](#ttlconfig)): TTL settings for signatures
 - `param_config` ([AcceptParams](#acceptparams)): Default parameter mode for task callbacks
+- `use_idempotency` (bool): Enable the [signature retry cache](../documentation/idempotency.md) for durable tasks (default: `True`). Set to `False` to disable idempotency globally.
 
 **Example:**
 
@@ -32,6 +34,7 @@ from mageflow.callbacks import AcceptParams
 config = MageflowConfig(
     ttl=TTLConfig(active_ttl=3600),
     param_config=AcceptParams.NO_CTX,
+    use_idempotency=False,  # disable retry cache for durable tasks
 )
 
 client = Mageflow(

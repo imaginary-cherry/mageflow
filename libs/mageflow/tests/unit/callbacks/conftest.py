@@ -20,6 +20,7 @@ class MockContextConfig:
     job_name: str = "test_task"
     attempt_number: int = 1
     workflow_id: str = "wf-123"
+    workflow_run_id: str = "wfr-123"
     task_id: str | None = None
     cancel_raises: bool = False
 
@@ -37,6 +38,7 @@ def create_mock_hatchet_context(config: MockContextConfig = None):
     ctx.workflow_name = config.job_name
     ctx.attempt_number = config.attempt_number
     ctx.workflow_id = config.workflow_id
+    ctx.workflow_run_id = config.workflow_run_id
     ctx.log = MagicMock()
 
     metadata = {}

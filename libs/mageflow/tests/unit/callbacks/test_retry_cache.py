@@ -37,13 +37,13 @@ async def test__durable_task__first_attempt__cache_created(
 ):
     # Arrange
     signature, _ = await task_signature_factory()
-    workflow_id = "wf-cache-created"
+    workflow_run_id = "wfr-cache-created"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -57,10 +57,10 @@ async def test__durable_task__first_attempt__cache_created(
     # Act
     result = await handler(message, ctx)
 
-    # Assert - cache should exist in Redis with the created signature
-    cache_key = f"SignatureRetryCache:{workflow_id}"
-    # Cache is torn down on success, so it should NOT exist after success
-    assert not await redis_client.exists(cache_key)
+    # Assert - cache should have a short TTL after success (torn down via aset_ttl)
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -70,13 +70,13 @@ async def test__durable_task__first_attempt_error_with_retry__cache_persists(
 ):
     # Arrange
     signature, _ = await task_signature_factory(retries=3)
-    workflow_id = "wf-cache-persists"
+    workflow_run_id = "wfr-cache-persists"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -99,7 +99,7 @@ async def test__durable_task__first_attempt_error_with_retry__cache_persists(
         await handler(message, ctx)
 
     # Verify the cache contains the created signature
-    cache = await SignatureRetryCache.aget(workflow_id)
+    cache = await SignatureRetryCache.aget(workflow_run_id)
     assert len(cache.signature_ids) == 1
     assert cache.signature_ids[0] == created_sig_key
 
@@ -110,7 +110,7 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
     redis_client,
 ):
     # Arrange - simulate first attempt that cached a signature
-    workflow_id = "wf-retry-returns-cached"
+    workflow_run_id = "wfr-retry-returns-cached"
 
     # Create the signature that would have been created on first attempt
     original_sig = await TaskSignature.from_task_name(
@@ -118,8 +118,8 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
     )
 
     # Pre-populate cache
-    cache = SignatureRetryCache(workflow_id=workflow_id)
-    cache.pk = workflow_id
+    cache = SignatureRetryCache(workflow_run_id=workflow_run_id)
+    cache.pk = workflow_run_id
     cache.signature_ids.append(original_sig.key)
     await cache.asave()
 
@@ -130,7 +130,7 @@ async def test__durable_task__retry_attempt__returns_cached_signature(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -160,13 +160,13 @@ async def test__durable_task__success__cache_deleted(
 ):
     # Arrange
     signature, _ = await task_signature_factory()
-    workflow_id = "wf-success-cleanup"
+    workflow_run_id = "wfr-success-cleanup"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -180,9 +180,10 @@ async def test__durable_task__success__cache_deleted(
     # Act
     await handler(message, ctx)
 
-    # Assert - cache should be cleaned up after success
-    cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
+    # Assert - cache should have a short TTL after success (torn down via aset_ttl)
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -192,13 +193,13 @@ async def test__durable_task__cancel_error_not_yet_finished__cache_not_deleted(
 ):
     # Arrange
     signature, _ = await task_signature_factory(retries=3)
-    workflow_id = "wf-cancel-cleanup"
+    workflow_run_id = "wfr-cancel-cleanup"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=4,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
     adapter_with_lifecycle.should_task_retry.return_value = True
@@ -215,7 +216,7 @@ async def test__durable_task__cancel_error_not_yet_finished__cache_not_deleted(
         await handler(message, ctx)
 
     # Assert - cache should be deleted even though retries are configured
-    cache_key = f"SignatureRetryCache:{workflow_id}"
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
     assert await redis_client.exists(cache_key)
 
 
@@ -226,13 +227,13 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
 ):
     # Arrange
     signature, _ = await task_signature_factory(retries=1)
-    workflow_id = "wf-cancel-delete-fail"
+    workflow_run_id = "wfr-cancel-delete-fail"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
     adapter_with_lifecycle.should_task_retry.return_value = False
@@ -244,16 +245,16 @@ async def test__durable_task__cancel_error_with_delete_failure__raises_cancel_er
     handler = handle_task_callback(is_idempotent=True)(user_func)
     message = ContextMessage()
 
-    # Act - CancelledError should propagate even when cache.adelete() fails
+    # Act - CancelledError should propagate even when cache.aset_ttl() fails
     with patch.object(
         SignatureRetryCache,
-        "adelete",
+        "aset_ttl",
         new_callable=AsyncMock,
         side_effect=ConnectionError("Redis unavailable"),
-    ) as mock_adelete:
+    ) as mock_aset_ttl:
         with pytest.raises(asyncio.CancelledError):
             await handler(message, ctx)
-        mock_adelete.assert_awaited_once()
+        mock_aset_ttl.assert_awaited_once()
 
 
 # --- Non-durable task: cache is NOT created ---
@@ -266,13 +267,13 @@ async def test__non_durable_task__no_cache_created(
 ):
     # Arrange
     signature, _ = await task_signature_factory()
-    workflow_id = "wf-no-cache"
+    workflow_run_id = "wfr-no-cache"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -287,7 +288,7 @@ async def test__non_durable_task__no_cache_created(
     await handler(message, ctx)
 
     # Assert - no cache should exist for non-durable tasks
-    cache_key = f"SignatureRetryCache:{workflow_id}"
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
     assert not await redis_client.exists(cache_key)
 
 
@@ -297,12 +298,12 @@ async def test__non_durable_task__retry_creates_new_signatures(
     redis_client,
 ):
     # Arrange - pre-populate cache (shouldn't be used by non-durable)
-    workflow_id = "wf-non-durable-retry"
+    workflow_run_id = "wfr-non-durable-retry"
     original_sig = await TaskSignature.from_task_name(
         "test_task", model_validators=ContextMessage
     )
-    cache = SignatureRetryCache(workflow_id=workflow_id)
-    cache.pk = workflow_id
+    cache = SignatureRetryCache(workflow_run_id=workflow_run_id)
+    cache.pk = workflow_run_id
     cache.signature_ids.append(original_sig.key)
     await cache.asave()
 
@@ -312,7 +313,7 @@ async def test__non_durable_task__retry_creates_new_signatures(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -345,13 +346,13 @@ async def test__vanilla_task__error_no_retry__cache_deleted(
 ):
     # Arrange - no retries, so should_task_retry returns False
     await task_signature_factory(retries=0)
-    workflow_id = "wf-vanilla-error-no-retry"
+    workflow_run_id = "wfr-vanilla-error-no-retry"
     adapter_with_lifecycle.should_task_retry.return_value = False
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=None,
             job_name="test_task",
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -366,9 +367,10 @@ async def test__vanilla_task__error_no_retry__cache_deleted(
     with pytest.raises(ValueError, match="Fatal error"):
         await handler(message, ctx)
 
-    # Assert - cache should be deleted since no retry will happen
-    cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
+    # Assert - cache should have a short TTL since no retry will happen
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 @pytest.mark.asyncio
@@ -378,12 +380,12 @@ async def test__vanilla_task__cancel_error_with_retries__cache_not_deleted(
 ):
     # Arrange
     await task_signature_factory(retries=3)
-    workflow_id = "wf-vanilla-cancel"
+    workflow_run_id = "wfr-vanilla-cancel"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=None,
             job_name="test_task",
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -399,7 +401,7 @@ async def test__vanilla_task__cancel_error_with_retries__cache_not_deleted(
         await handler(message, ctx)
 
     # Assert - cache should be deleted even though retries are configured
-    cache_key = f"SignatureRetryCache:{workflow_id}"
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
     assert await redis_client.exists(cache_key)
 
 
@@ -410,14 +412,14 @@ async def test__vanilla_task__error_with_retry__cache_persists(
 ):
     # Arrange - retries available, so should_task_retry returns True
     await task_signature_factory(retries=3)
-    workflow_id = "wf-vanilla-error-with-retry"
+    workflow_run_id = "wfr-vanilla-error-with-retry"
     adapter_with_lifecycle.should_task_retry.return_value = True
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=None,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -438,7 +440,7 @@ async def test__vanilla_task__error_with_retry__cache_persists(
         await handler(message, ctx)
 
     # Assert - cache should persist for retry
-    cache = await SignatureRetryCache.aget(workflow_id)
+    cache = await SignatureRetryCache.aget(workflow_run_id)
     assert len(cache.signature_ids) == 1
     assert cache.signature_ids[0] == created_sig_key
 
@@ -452,14 +454,14 @@ async def test__durable_task__retry_no_cache__creates_fresh_signatures(
     redis_client,
 ):
     # Arrange - no cache in Redis
-    workflow_id = "wf-no-cache-retry"
+    workflow_run_id = "wfr-no-cache-retry"
     signature, _ = await task_signature_factory(retries=3)
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -492,12 +494,12 @@ async def test__durable_task__no_task_id__no_cache(
 ):
     # Arrange - no task_id means vanilla run, cache should not activate
     await task_signature_factory()
-    workflow_id = "wf-vanilla-durable"
+    workflow_run_id = "wfr-vanilla-durable"
     ctx = create_mock_hatchet_context(
         MockContextConfig(
             task_id=None,
             job_name="test_task",
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -511,10 +513,11 @@ async def test__durable_task__no_task_id__no_cache(
     # Act
     result = await handler(message, ctx)
 
-    # Assert - vanilla run returns direct result, no cache
+    # Assert - vanilla run returns direct result, cache gets short TTL on teardown
     assert result == "done"
-    cache_key = f"SignatureRetryCache:{workflow_id}"
-    assert not await redis_client.exists(cache_key)
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
+    ttl = await redis_client.ttl(cache_key)
+    assert 0 < ttl <= 5 * 60
 
 
 # --- Contextvar cleanup: cache context reset after handler completes ---
@@ -530,7 +533,7 @@ async def test__durable_task__contextvar_reset_after_success(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
-            workflow_id="wf-ctx-reset",
+            workflow_run_id="wfr-ctx-reset",
         )
     )
     returning_handler, _ = handler_factory(return_value="ok", durable=True)
@@ -553,7 +556,7 @@ async def test__durable_task__contextvar_reset_after_error(
         MockContextConfig(
             task_id=signature.key,
             job_name="test_task",
-            workflow_id="wf-ctx-reset-err",
+            workflow_run_id="wfr-ctx-reset-err",
         )
     )
     raising_handler, _ = handler_factory(raises=ValueError("err"), durable=True)
@@ -576,7 +579,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
     redis_client,
 ):
     # Arrange - first attempt: create multiple signatures
-    workflow_id = "wf-multi-order"
+    workflow_run_id = "wfr-multi-order"
     signature, _ = await task_signature_factory(retries=3)
 
     first_attempt_keys = []
@@ -594,7 +597,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
     message = ContextMessage()
@@ -603,7 +606,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
         await handler1(message, ctx1)
 
     # Verify cache has 3 entries
-    cache_key = f"SignatureRetryCache:{workflow_id}"
+    cache_key = f"SignatureRetryCache:{workflow_run_id}"
     assert await redis_client.exists(cache_key)
 
     # Arrange - second attempt: signatures should come from cache in order
@@ -625,7 +628,7 @@ async def test__durable_task__multiple_signatures_cached_in_order(
             task_id=signature2.key,
             job_name="test_task_2",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -645,7 +648,7 @@ async def test__durable_task__mixed_signatures_in_pipeline__all_cached_in_order(
     redis_client,
 ):
     # Arrange - first attempt: create mixed signature types inside a pipeline
-    workflow_id = "wf-mixed-pipeline"
+    workflow_run_id = "wfr-mixed-pipeline"
     signature, _ = await task_signature_factory(retries=3)
 
     first_attempt_keys = []
@@ -668,7 +671,7 @@ async def test__durable_task__mixed_signatures_in_pipeline__all_cached_in_order(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
     message = ContextMessage()
@@ -677,7 +680,7 @@ async def test__durable_task__mixed_signatures_in_pipeline__all_cached_in_order(
         await handler1(message, ctx1)
 
     # Verify cache has 3 entries in correct order
-    cache = await SignatureRetryCache.aget(workflow_id)
+    cache = await SignatureRetryCache.aget(workflow_run_id)
     assert len(cache.signature_ids) == 3
     assert cache.signature_ids == first_attempt_keys
 
@@ -704,7 +707,7 @@ async def test__durable_task__mixed_signatures_in_pipeline__all_cached_in_order(
             task_id=signature2.key,
             job_name="test_task_2",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 
@@ -724,7 +727,7 @@ async def test__durable_task__crash_mid_pipeline__cache_unchanged(
     redis_client,
 ):
     # Arrange - first attempt: create one signature outside any extra pipeline
-    workflow_id = "wf-crash-pipeline"
+    workflow_run_id = "wfr-crash-pipeline"
     signature, _ = await task_signature_factory(retries=3)
 
     pre_crash_key = None
@@ -749,7 +752,7 @@ async def test__durable_task__crash_mid_pipeline__cache_unchanged(
             task_id=signature.key,
             job_name="test_task",
             attempt_number=1,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
     message = ContextMessage()
@@ -758,7 +761,7 @@ async def test__durable_task__crash_mid_pipeline__cache_unchanged(
         await handler1(message, ctx1)
 
     # Assert - cache should have only 1 entry (the pre-crash signature)
-    cache = await SignatureRetryCache.aget(workflow_id)
+    cache = await SignatureRetryCache.aget(workflow_run_id)
     assert len(cache.signature_ids) == 1
     assert cache.signature_ids[0] == pre_crash_key
 
@@ -780,7 +783,7 @@ async def test__durable_task__crash_mid_pipeline__cache_unchanged(
             task_id=signature2.key,
             job_name="test_task_2",
             attempt_number=2,
-            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
         )
     )
 

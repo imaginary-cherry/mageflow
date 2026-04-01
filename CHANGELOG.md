@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.5]
+## [0.3.6]
 
 ### 🐛 Fixed
 
@@ -10,6 +10,12 @@
 
 - **App Renamed to Mage Voyance**: Product name changed from "Mageflow Viewer" to "Mage Voyance" across the Tauri config, tray tooltip, onboarding, splash screen, and Homebrew cask.
 
+
+## [0.3.5]
+
+### 🐛 Fixed
+
+- **Retry Cache Key Collision**: Fixed a bug where `SignatureRetryCache` the same cache object for all instances of the same task, now each task run has different cache instance.
 
 ## [0.3.4]
 
