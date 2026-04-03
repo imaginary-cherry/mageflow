@@ -70,9 +70,11 @@ describe('TaskGraph with IPC auth integration', () => {
   })
 
   afterEach(async () => {
-    await cleanupTestData(mageVoyanceRoot)
-    clearMocks()
+    // cleanup() must run BEFORE clearMocks() so React unmount effects
+    // (which call Tauri unlisten functions) execute while mocks are still active.
     cleanup()
+    clearMocks()
+    await cleanupTestData(mageVoyanceRoot)
   })
 
   it('renders task nodes when IPC token is valid', async () => {
@@ -108,5 +110,9 @@ describe('TaskGraph with IPC auth integration', () => {
     expect(screen.queryByText('basic_test_task')).not.toBeInTheDocument()
     expect(screen.queryByText(/test_chain/)).not.toBeInTheDocument()
     expect(screen.queryByText(/test_swarm/)).not.toBeInTheDocument()
+
+    // Let the rejected 403 promise settle before teardown so it's caught
+    // by the store's try/catch rather than surfacing as an unhandled rejection.
+    await new Promise(resolve => setTimeout(resolve, 100))
   })
 })
