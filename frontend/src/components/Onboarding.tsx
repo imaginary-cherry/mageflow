@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { validateCredentials, saveSettings } from '@/stores/settingsStore';
+import { saveSettings } from '@/stores/settingsStore';
+import { HealthCheckError } from '@/hooks/useAppStartup';
 
 const settingsSchema = z.object({
   hatchetApiKey: z.string().min(1, 'Hatchet API key is required'),
@@ -22,7 +23,7 @@ const settingsSchema = z.object({
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface OnboardingProps {
-  onComplete: () => void;
+  onComplete: () => Promise<void>;
 }
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
@@ -39,18 +40,25 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const onSubmit = async (values: SettingsFormValues) => {
     setIsValidating(true);
     try {
-      const result = await validateCredentials(values);
-      if (!result.valid) {
-        if (result.hatchetError) {
-          form.setError('hatchetApiKey', { message: result.hatchetError });
-        }
-        if (result.redisError) {
-          form.setError('redisUrl', { message: result.redisError });
-        }
-        return;
-      }
       await saveSettings(values);
-      onComplete();
+      await onComplete();
+      // If onComplete succeeds, health check passed -- app transitions to ready
+    } catch (err) {
+      if (err instanceof HealthCheckError) {
+        // Per user decision: show per-service errors inline on the form
+        if (err.hatchetError) {
+          form.setError('hatchetApiKey', { message: err.hatchetError });
+        }
+        if (err.redisError) {
+          form.setError('redisUrl', { message: err.redisError });
+        }
+        // Credentials remain saved per user decision
+      }
+      // For non-HealthCheckError (e.g. sidecar spawn failure), the error
+      // message is generic -- show it on the first field as a fallback
+      else if (err instanceof Error) {
+        form.setError('hatchetApiKey', { message: err.message });
+      }
     } finally {
       setIsValidating(false);
     }

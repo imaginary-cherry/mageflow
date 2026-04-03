@@ -5,7 +5,7 @@ from pathlib import Path
 import rapyer
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from rapyer.errors.base import KeyNotFound, RapyerModelDoesntExistError
 from redis.asyncio import Redis
@@ -13,11 +13,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.signature.model import Signature
 from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
 from visualizer.models import (
     BatchTasksRequest,
+    ConnectionStatus,
+    HealthResponse,
     RootTasksResponse,
     TaskCallbacksResponse,
     TaskChildrenResponse,
@@ -89,7 +92,7 @@ async def fetch_task_callbacks(task_id: str) -> TaskCallbacksResponse | None:
         task = await rapyer.aget(task_id)
     except KeyNotFound:
         return None
-    if not isinstance(task, TaskSignature):
+    if not isinstance(task, Signature):
         return None
 
     return TaskCallbacksResponse(
@@ -105,22 +108,59 @@ async def fetch_tasks_batch(task_ids: list[str]) -> list[TaskFromServer]:
         tasks = await rapyer.afind(*task_ids)
     except (KeyNotFound, RapyerModelDoesntExistError):
         return []
-    return [serialize_task(task) for task in tasks if isinstance(task, TaskSignature)]
+    return [serialize_task(task) for task in tasks if isinstance(task, Signature)]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    secrets = getattr(app.state, "secrets", None) or {}
+    redis_url = secrets.get(
+        "redisUrl", os.getenv("REDIS_URL", "redis://localhost:6379")
+    )
     redis_client = Redis.from_url(redis_url, decode_responses=True)
     await rapyer.init_rapyer(redis_client, prefer_normal_json_dump=True)
     yield
     await rapyer.teardown_rapyer()
 
 
+def add_ipc_auth_middleware(app: FastAPI, ipc_token: str | None) -> None:
+    """Add IPC token authentication middleware to the app.
+
+    If ipc_token is None (dev mode), no middleware is applied.
+    Health endpoint is always exempt from token checks.
+    """
+    if ipc_token is None:
+        return
+
+    @app.middleware("http")
+    async def ipc_auth_middleware(request: Request, call_next):
+        # Health endpoint is exempt from token auth
+        if request.url.path == "/api/health":
+            return await call_next(request)
+
+        token = request.headers.get("x-ipc-token")
+        if token != ipc_token:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid or missing IPC token"},
+            )
+        return await call_next(request)
+
+
 def register_api_routes(app: FastAPI):
     @app.get("/api/health")
-    async def health():
-        return {"status": "ok"}
+    async def health() -> HealthResponse:
+        redis_status = ConnectionStatus.DISCONNECTED
+        try:
+            if await TaskSignature.Meta.redis.ping():
+                redis_status = ConnectionStatus.CONNECTED
+        except Exception:
+            pass
+
+        return HealthResponse(
+            hatchet=redis_status,
+            redis=redis_status,
+        )
 
     @app.get("/api/workflows")
     async def get_tasks():
@@ -175,15 +215,23 @@ def register_api_routes(app: FastAPI):
         try:
             await TaskSignature.resume_from_key(task_id)
             return Response(status_code=status.HTTP_202_ACCEPTED)
-        except KeyNotFound:
+        # TODO - fix in the resume_from_key need to be reconsider in future issue
+        except (KeyNotFound, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Task {task_id} not found",
             )
 
 
-def create_app() -> FastAPI:
+def create_app(secrets: dict | None = None, ipc_token: str | None = None) -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer", lifespan=lifespan)
+    app.state.secrets = secrets or {
+        "redisUrl": os.getenv("REDIS_URL", "redis://localhost:6379"),
+        "hatchetApiKey": os.getenv("HATCHET_API_KEY", ""),
+    }
+
+    add_ipc_auth_middleware(app, ipc_token)
+
     static_dir = get_static_dir()
     index_file = static_dir / "index.html"
 
@@ -200,13 +248,17 @@ def create_app() -> FastAPI:
     return app
 
 
-def create_dev_app() -> FastAPI:
+def create_dev_app(
+    secrets: dict | None = None, ipc_token: str | None = None
+) -> FastAPI:
     app = FastAPI(title="Mageflow Task Visualizer (Dev)", lifespan=lifespan)
+    app.state.secrets = secrets
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    add_ipc_auth_middleware(app, ipc_token)
     register_api_routes(app)
     return app

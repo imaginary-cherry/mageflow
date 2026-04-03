@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,6 +8,17 @@ from thirdmagic.signature.status import SignatureStatus
 from thirdmagic.task import TaskSignature
 
 TaskStatus = Literal["pending", "running", "paused", "cancelled", "completed", "failed"]
+
+
+class ConnectionStatus(StrEnum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+
+
+class HealthResponse(BaseModel):
+    hatchet: ConnectionStatus
+    redis: ConnectionStatus
+
 
 STATUS_MAPPING: dict[SignatureStatus, TaskStatus] = {
     SignatureStatus.PENDING: "pending",
