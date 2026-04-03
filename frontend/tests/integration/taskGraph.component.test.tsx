@@ -1,4 +1,4 @@
-import { describe, it, expect, inject, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, inject, beforeEach, afterEach, afterAll, vi } from 'vitest'
 import { mockIPC, clearMocks } from '@tauri-apps/api/mocks'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import App from '@/App'
@@ -75,6 +75,13 @@ describe('TaskGraph with IPC auth integration', () => {
     cleanup()
     clearMocks()
     await cleanupTestData(mageVoyanceRoot)
+  })
+
+  // In-flight async operations (Tauri listen(), fetch for loadRootTaskIds, etc.)
+  // may still be pending after afterEach. Give them time to settle before jsdom
+  // is torn down, otherwise they hit "ReferenceError: window is not defined".
+  afterAll(async () => {
+    await new Promise(resolve => setTimeout(resolve, 500))
   })
 
   it('renders task nodes when IPC token is valid', async () => {
