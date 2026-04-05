@@ -31,6 +31,8 @@ def _task_error_info(wf: V1TaskSummary) -> str:
 
 
 def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
+    if wf.workflow_name is None:
+        return False
     task_name = wf.workflow_name.removeprefix(hatchet.namespace)
     return task_name.startswith(MAGEFLOW_TASK_INITIALS)
 
