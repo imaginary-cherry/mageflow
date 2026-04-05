@@ -1,20 +1,30 @@
+import asyncio
+
 import pytest
+from thirdmagic.signature.retry_cache import SignatureRetryCache
 from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage, SignatureKeyWithWF
-from tests.integration.hatchet.worker import retry_cache_durable_task
+from tests.integration.hatchet.models import (
+    CacheIsolationMessage,
+    ContextMessage,
+    SignatureKeyWithWF,
+)
+from tests.integration.hatchet.worker import (
+    concurrent_cache_isolation_task,
+    retry_cache_durable_task,
+)
 
 
 async def _assert_retry_cache_idempotency(results: SignatureKeyWithWF):
-    workflow_id = results.workflow_id
+    workflow_run_id = results.workflow_run_id
 
     # Assert - get the keys stored by each attempt from Redis
     attempt_1_raw = await TaskSignature.Meta.redis.json().get(  # type: ignore[misc]
-        f"retry-cache-test:{workflow_id}:attempt-1"
+        f"retry-cache-test:{workflow_run_id}:attempt-1"
     )
     attempt_2_raw = await TaskSignature.Meta.redis.json().get(  # type: ignore[misc]
-        f"retry-cache-test:{workflow_id}:attempt-2"
+        f"retry-cache-test:{workflow_run_id}:attempt-2"
     )
 
     assert attempt_1_raw is not None, "Attempt 1 keys not found in Redis"
@@ -63,3 +73,39 @@ async def test__retry_cache__task_retry__no_duplicate_signatures(
     results = await retry_cache_durable_task.aio_run(msg, options=trigger_options)
 
     await _assert_retry_cache_idempotency(results)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test__retry_cache__concurrent_runs__no_cache_collision(
+    hatchet_client_init: HatchetInitData,
+    test_ctx,
+    ctx_metadata,
+    trigger_options,
+):
+    # Arrange
+    msg1 = CacheIsolationMessage(sig_count=1)
+    msg2 = CacheIsolationMessage(sig_count=2)
+
+    # Act - trigger both concurrently
+    res1, res2 = await asyncio.gather(
+        concurrent_cache_isolation_task.aio_run_no_wait(msg1, options=trigger_options),
+        concurrent_cache_isolation_task.aio_run_no_wait(msg2, options=trigger_options),
+    )
+    await asyncio.gather(res1.aio_result(), res2.aio_result())
+
+    # Assert - fetch the retry cache entries directly from Redis via the rapyer model
+    wf_run_id_1 = res1.workflow_run_id
+    wf_run_id_2 = res2.workflow_run_id
+    cache1 = await SignatureRetryCache.afind_one(wf_run_id_1)
+    cache2 = await SignatureRetryCache.afind_one(wf_run_id_2)
+
+    assert cache1 is not None, "Run 1 cache not found in Redis"
+    assert cache2 is not None, "Run 2 cache not found in Redis"
+
+    # Each run should have its own cache with a different number of signature ids
+    assert len(cache1.signature_ids) == 1, "Run 1 cache should have 1 signature"
+    assert len(cache2.signature_ids) == 2, "Run 2 cache should have 2 signatures"
+
+    # No overlap — caches are fully isolated, no cross-contamination
+    assert set(cache1.signature_ids).isdisjoint(set(cache2.signature_ids))
+    assert cache1.key != cache2.key

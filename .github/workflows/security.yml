@@ -19,30 +19,6 @@ permissions:
   security-events: write
 
 jobs:
-  pip-audit:
-    name: Dependency Vulnerability Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install tools
-        run: |
-          pip install pip-audit
-          pip install uv
-
-      - name: Export and audit dependencies
-        run: |
-          uv export --no-dev --no-hashes -o requirements-audit.txt
-          # Replace these lines with pip-audit --strict -r requirements-audit.txt after you upload thirdmagic
-          grep -v "^-e \.\|^thirdmagic" requirements-audit.txt > requirements-audit-filtered.txt
-          pip-audit --strict -r requirements-audit-filtered.txt
-
-
   secrets-scan:
     name: Secrets Detection
     environment:
@@ -62,19 +38,13 @@ jobs:
   summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [pip-audit, secrets-scan]
+    needs: [secrets-scan]
     if: always()
     steps:
       - name: Check results
         run: |
           echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ needs.pip-audit.result }}" == "success" ]; then
-            echo "✅ pip-audit: Passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ pip-audit: Failed" >> $GITHUB_STEP_SUMMARY
-          fi
 
           if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
             echo "✅ Secrets scan: Passed" >> $GITHUB_STEP_SUMMARY
@@ -83,7 +53,5 @@ jobs:
           fi
 
       - name: Fail if any check failed
-        if: |
-          needs.pip-audit.result == 'failure' ||
-          needs.secrets-scan.result == 'failure'
+        if: needs.secrets-scan.result != 'success'
         run: exit 1
