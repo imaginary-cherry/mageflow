@@ -83,7 +83,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install Python sidecar dependencies
-        run: uv pip install -e "./libs/third-magic" -e "./libs/mage-voyance" --system
+        run: uv pip install -e "./libs/third-magic" -e "./libs/mage-voyance" --system --no-sources
 
       # Pin nuitka-version to 4.0.4 to match Phase 1's tested version.
       # Nuitka-Action@main defaults to latest which may break gRPC/protobuf compatibility.
