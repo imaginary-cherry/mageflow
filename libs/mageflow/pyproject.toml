@@ -65,6 +65,7 @@ testing = [
     "pytest>=9.0.0,<10.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
     "fakeredis[json,lua]>=2.34.0,<3.0.0",
+    "pydantic>=2.0.0,<3.0.0",
 ]
 
 [project.entry-points.pytest11]
