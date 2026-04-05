@@ -33,9 +33,25 @@ class MageWorkflow(Workflow):
 
     def __init__(self, base_workflow: Workflow):
         super().__init__(config=base_workflow.config, client=base_workflow.client)
+        self._added_success_hook = False
+        self._added_failure_hook = False
+
+    def inject_hooks(self):
+        if self._added_success_hook is None:
+
+            @self.on_success_task()
+            async def _noop_success(input, ctx: Context):
+                pass
+
+        if self._added_failure_hook is None:
+
+            @self.on_failure_task()
+            async def _noop_failure(input, ctx: Context):
+                pass
 
     def on_success_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
         parent_decorator = super().on_success_task(**kwargs)
+        self._added_success_hook = True
 
         def wrapper(func):
             @functools.wraps(func)
@@ -56,6 +72,7 @@ class MageWorkflow(Workflow):
 
     def on_failure_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
         parent_decorator = super().on_failure_task(**kwargs)
+        self._added_failure_hook = True
 
         def wrapper(func):
             @functools.wraps(func)

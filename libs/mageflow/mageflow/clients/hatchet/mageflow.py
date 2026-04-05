@@ -154,7 +154,7 @@ class HatchetMageflow(Hatchet):
         base_wf = self.hatchet.workflow(
             name=name, input_validator=input_validator, **kwargs
         )
-        mage_wf = MageWorkflow(base_wf, mageflow=self)
+        mage_wf = MageWorkflow(base_wf)
         self._task_defs.append(
             MageflowTaskDefinition(
                 mageflow_task_name=name, task_name=name, input_validator=input_validator
@@ -273,6 +273,11 @@ class HatchetMageflow(Hatchet):
         **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
         workflows = workflows or []
+
+        for wf in workflows:
+            if isinstance(wf, MageWorkflow):
+                wf.inject_hooks()
+
         mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:
