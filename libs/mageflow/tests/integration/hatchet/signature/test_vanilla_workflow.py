@@ -2,7 +2,6 @@ import asyncio
 
 import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
-from thirdmagic.task import TaskSignature
 
 from tests.integration.hatchet.assertions import get_runs
 from tests.integration.hatchet.conftest import HatchetInitData
@@ -79,6 +78,7 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
     trigger_options,
 ):
     # Arrange
+    redis_client = hatchet_client_init.redis_client
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx)
 
@@ -91,7 +91,7 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
     assert len(completed) >= 1
     hook_key = f"user-hook-success:{ref.workflow_run_id}"
-    hook_value = await TaskSignature.Meta.redis.get(hook_key)
+    hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User success hook did not fire (key={hook_key})"
 
 
@@ -103,6 +103,7 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
     trigger_options,
 ):
     # Arrange
+    redis_client = hatchet_client_init.redis_client
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
@@ -115,7 +116,7 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
     hook_key = f"user-hook-failure:{ref.workflow_run_id}"
-    hook_value = await TaskSignature.Meta.redis.get(hook_key)
+    hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
 
 
@@ -127,11 +128,12 @@ async def test_vanilla_dag_workflow_timeout(
     trigger_options,
 ):
     # Arrange
+    redis_client = hatchet_client_init.redis_client
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, timeout_at_step=2)
 
     # Act
-    await test_dag_wf.aio_run_no_wait(message, options=trigger_options)
+    ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
     await asyncio.sleep(15)
@@ -139,6 +141,9 @@ async def test_vanilla_dag_workflow_timeout(
     assert len(runs) >= 1
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
+    hook_key = f"user-hook-failure:{ref.workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -149,13 +154,14 @@ async def test_vanilla_dag_workflow_retry_then_succeed(
     trigger_options,
 ):
     # Arrange
+    redis_client = hatchet_client_init.redis_client
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(
         base_data=test_ctx, retry_at_step=1, retry_succeed_on_attempt=2
     )
 
     # Act
-    await test_dag_wf.aio_run_no_wait(message, options=trigger_options)
+    ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
     await asyncio.sleep(15)
@@ -163,6 +169,9 @@ async def test_vanilla_dag_workflow_retry_then_succeed(
     assert len(runs) >= 1
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
     assert len(completed) >= 1
+    hook_key = f"user-hook-success:{ref.workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", f"User success hook did not fire (key={hook_key})"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -173,11 +182,12 @@ async def test_vanilla_dag_workflow_retry_to_failure(
     trigger_options,
 ):
     # Arrange
+    redis_client = hatchet_client_init.redis_client
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, retry_at_step=2)
 
     # Act
-    await test_dag_wf.aio_run_no_wait(message, options=trigger_options)
+    ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
     await asyncio.sleep(20)
@@ -185,3 +195,6 @@ async def test_vanilla_dag_workflow_retry_to_failure(
     assert len(runs) >= 1
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
+    hook_key = f"user-hook-failure:{ref.workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
