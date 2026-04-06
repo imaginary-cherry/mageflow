@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -77,6 +78,18 @@ class WorkflowTestMessage(ContextMessage):
     fail_at_step: int | None = None
     fail_at_on_success: bool = False
     fail_at_on_failure: bool = False
+    timeout_at_step: int | None = None
+    retry_at_step: int | None = None
+    retry_succeed_on_attempt: int | None = None
+
+    async def apply_step_behavior(self, step: int, attempt_number: int = 1) -> None:
+        if self.timeout_at_step == step:
+            await asyncio.sleep(30)
+        if self.retry_at_step == step:
+            if not self.retry_succeed_on_attempt or attempt_number < self.retry_succeed_on_attempt:
+                raise MageflowTestError(f"Step {step} retry (attempt {attempt_number})")
+        if self.fail_at_step == step:
+            raise MageflowTestError(f"Step {step} failed")
 
 
 class DagStepResult(BaseModel):

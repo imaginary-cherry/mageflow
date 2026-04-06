@@ -312,29 +312,31 @@ async def concurrent_cache_isolation_task(msg: CacheIsolationMessage):
 
 # --- DAG workflows (message-driven failure behavior) ---
 
-test_dag_wf = hatchet.workflow(
-    name="test-dag-wf", input_validator=WorkflowTestMessage
-)
+test_dag_wf = hatchet.workflow(name="test-dag-wf", input_validator=WorkflowTestMessage)
 
 
-@test_dag_wf.task()
+@test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
+@hatchet.with_ctx
 async def dag_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
-    if input.fail_at_step == 1:
-        raise MageflowTestError("Step 1 failed")
+    await input.apply_step_behavior(1, ctx.attempt_number)
     return DagStepResult(step="1")
 
 
-@test_dag_wf.task()
+@test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
+@hatchet.with_ctx
 async def dag_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
-    if input.fail_at_step == 2:
-        raise MageflowTestError("Step 2 failed")
+    await input.apply_step_behavior(2, ctx.attempt_number)
     return DagStepResult(step="2")
 
 
-@test_dag_wf.task(parents=[dag_step1, dag_step2])
+@test_dag_wf.task(
+    parents=[dag_step1, dag_step2],
+    retries=3,
+    execution_timeout=timedelta(seconds=3),
+)
+@hatchet.with_ctx
 async def dag_step3(input: WorkflowTestMessage, ctx: Context) -> DagStep3Result:
-    if input.fail_at_step == 3:
-        raise MageflowTestError("Step 3 failed")
+    await input.apply_step_behavior(3, ctx.attempt_number)
     one = ctx.task_output(dag_step1)
     two = ctx.task_output(dag_step2)
     return DagStep3Result(
@@ -347,17 +349,21 @@ test_dag_wf_hooks = hatchet.workflow(
 )
 
 
-@test_dag_wf_hooks.task()
+@test_dag_wf_hooks.task(retries=3, execution_timeout=timedelta(seconds=3))
+@hatchet.with_ctx
 async def dag_hooks_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
-    if input.fail_at_step == 1:
-        raise MageflowTestError("Step 1 failed")
+    await input.apply_step_behavior(1, ctx.attempt_number)
     return DagStepResult(step="1")
 
 
-@test_dag_wf_hooks.task(parents=[dag_hooks_step1])
+@test_dag_wf_hooks.task(
+    parents=[dag_hooks_step1],
+    retries=3,
+    execution_timeout=timedelta(seconds=3),
+)
+@hatchet.with_ctx
 async def dag_hooks_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
-    if input.fail_at_step == 2:
-        raise MageflowTestError("Step 2 failed")
+    await input.apply_step_behavior(2, ctx.attempt_number)
     return DagStepResult(step="2")
 
 
