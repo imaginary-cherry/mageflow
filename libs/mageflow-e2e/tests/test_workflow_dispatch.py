@@ -3,8 +3,9 @@ Test that a signed Hatchet workflow dispatch is recorded
 and assertable via mageflow_client.assert_task_dispatched.
 """
 
-import mageflow
 from myapp.client import OrderInput
+
+import mageflow
 
 
 async def test_workflow_dispatched_via_aio_run_no_wait(mageflow_client):
