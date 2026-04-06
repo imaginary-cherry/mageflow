@@ -456,6 +456,18 @@ def assert_overlaps_leq_k_workflows(
             )
 
 
+async def assert_hook_fired(
+    redis_client,
+    workflow_run_id: str,
+    hook_type: str,
+) -> None:
+    hook_key = f"user-hook-{hook_type}:{workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", (
+        f"User {hook_type} hook did not fire (key={hook_key})"
+    )
+
+
 def assert_workflow_run(
     runs: HatchetRuns,
     expected: ExpectedWorkflowRun,
