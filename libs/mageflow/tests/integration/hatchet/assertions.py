@@ -341,7 +341,7 @@ def assert_chain_done(
     for chain_task_id in chain_signature.tasks:
         input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
-        if output_value:
+        if output_value is not None:
             validator = task.model_validators
             return_field_name = return_value_field(validator)
             if return_field_name in validator.model_fields:
