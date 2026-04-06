@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import path from "path";
 
 export const projectRoot = path.resolve(import.meta.dirname, "../../../../");
+export const mageVoyanceRoot = path.join(projectRoot, "libs", "mage-voyance");
 
 function findPython(): string {
   const venvPython = path.join(projectRoot, ".venv", "bin", "python");
@@ -14,9 +15,9 @@ function findPython(): string {
 
 /**
  * Seed test data into Redis using Python seed script
- * @param projectRoot Root directory of the project
+ * @param cwd Working directory for the Python process
  */
-export async function seedTestData(projectRoot: string): Promise<void> {
+export async function seedTestData(cwd: string): Promise<void> {
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
   return new Promise((resolve, reject) => {
@@ -26,14 +27,14 @@ export async function seedTestData(projectRoot: string): Promise<void> {
       findPython(),
       [
         "-m",
-        "tests.integration.frontend.seed_test_data",
+        "integration.frontend.seed_test_data",
         "--action",
         "seed",
         "--redis-url",
         redisUrl,
       ],
       {
-        cwd: projectRoot,
+        cwd,
         env: process.env,
       }
     );
@@ -60,9 +61,9 @@ export async function seedTestData(projectRoot: string): Promise<void> {
 
 /**
  * Clean up test data from Redis using Python cleanup script
- * @param projectRoot Root directory of the project
+ * @param cwd Working directory for the Python process
  */
-export async function cleanupTestData(projectRoot: string): Promise<void> {
+export async function cleanupTestData(cwd: string): Promise<void> {
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
   return new Promise((resolve, reject) => {
@@ -72,14 +73,14 @@ export async function cleanupTestData(projectRoot: string): Promise<void> {
       findPython(),
       [
         "-m",
-        "tests.integration.frontend.seed_test_data",
+        "integration.frontend.seed_test_data",
         "--action",
         "cleanup",
         "--redis-url",
         redisUrl,
       ],
       {
-        cwd: projectRoot,
+        cwd,
         env: process.env,
       }
     );

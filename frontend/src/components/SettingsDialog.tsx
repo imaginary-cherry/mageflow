@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { loadSettings, validateCredentials, saveSettings, isTauriEnvironment } from '@/stores/settingsStore';
+import { loadSettings, saveSettings } from '@/stores/settingsStore';
 
 const settingsSchema = z.object({
   hatchetApiKey: z.string().min(1, 'Hatchet API key is required'),
@@ -25,10 +25,11 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave?: () => Promise<void>;
 }
 
-export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [isValidating, setIsValidating] = useState(false);
+export default function SettingsDialog({ open, onOpenChange, onSave }: SettingsDialogProps) {
+  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -52,34 +53,16 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   }, [open, form]);
 
   const onSubmit = async (values: SettingsFormValues) => {
-    setIsValidating(true);
+    setIsSaving(true);
     try {
-      const result = await validateCredentials(values);
-      if (!result.valid) {
-        if (result.hatchetError) {
-          form.setError('hatchetApiKey', { message: result.hatchetError });
-        }
-        if (result.redisError) {
-          form.setError('redisUrl', { message: result.redisError });
-        }
-        return;
-      }
-
       await saveSettings(values);
-
-      if (isTauriEnvironment()) {
-        try {
-          const { invoke } = await import('@tauri-apps/api/core');
-          await invoke('restart_sidecar');
-        } catch {
-          // restart_sidecar may not exist yet — non-fatal during development
-        }
-      }
-
-      toast.success('Settings saved successfully');
+      toast.success('Settings saved -- restarting...');
       onOpenChange(false);
+      if (onSave) {
+        await onSave();
+      }
     } finally {
-      setIsValidating(false);
+      setIsSaving(false);
     }
   };
 
@@ -106,7 +89,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                       {...field}
                       type="text"
                       placeholder="Enter your Hatchet API key"
-                      disabled={isValidating}
+                      disabled={isSaving}
                     />
                   </FormControl>
                   <FormMessage />
@@ -125,7 +108,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                       {...field}
                       type="text"
                       placeholder="redis://localhost:6379"
-                      disabled={isValidating}
+                      disabled={isSaving}
                     />
                   </FormControl>
                   <FormMessage />
@@ -138,12 +121,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isValidating}
+                disabled={isSaving}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isValidating}>
-                {isValidating ? 'Validating...' : 'Save Settings'}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Settings'}
               </Button>
             </DialogFooter>
           </form>

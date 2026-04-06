@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner, toast } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -54,18 +54,23 @@ function StartupErrorScreen({
 // Main app content once startup is complete.
 function MainApp({
   port,
+  ipcToken,
   onOpenSettings,
   settingsOpen,
   setSettingsOpen,
   retrySidecar,
 }: {
   port: number;
+  ipcToken: string;
   onOpenSettings: () => void;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
   retrySidecar: () => Promise<void>;
 }) {
-  const taskClient = useRef(new HttpTaskClient(`http://127.0.0.1:${port}`)).current;
+  const taskClient = useMemo(
+    () => new HttpTaskClient(`http://127.0.0.1:${port}`, ipcToken),
+    [port, ipcToken],
+  );
 
   // Post-launch health banner state
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -102,7 +107,7 @@ function MainApp({
           setSettingsOpen(true);
         });
       } catch {
-        // listen unavailable — fall through to polling
+        // listen unavailable -- fall through to polling
       }
     }
 
@@ -182,16 +187,16 @@ function MainApp({
             </main>
           </div>
 
-          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSave={retrySidecar} />
         </TooltipProvider>
       </TaskClientProvider>
     </QueryClientProvider>
   );
 }
 
-// Root component — gates all UI on startup phase.
+// Root component -- gates all UI on startup phase.
 const App = () => {
-  const { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar } =
+  const { phase, port, ipcToken, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding } =
     useAppStartup();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -228,18 +233,19 @@ const App = () => {
 
       {/* Startup error also shows settings dialog */}
       {phase === 'startup-error' && (
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSave={retrySidecar} />
       )}
 
-      {/* Main UI — fades in when ready */}
+      {/* Main UI -- fades in when ready */}
       <div
         className={`transition-opacity duration-500 ease-in-out ${
           phase === 'ready' ? 'opacity-100' : 'opacity-0 pointer-events-none fixed inset-0'
         }`}
       >
-        {phase === 'ready' && (
+        {phase === 'ready' && ipcToken && (
           <MainApp
             port={port}
+            ipcToken={ipcToken}
             onOpenSettings={() => setSettingsOpen(true)}
             settingsOpen={settingsOpen}
             setSettingsOpen={setSettingsOpen}

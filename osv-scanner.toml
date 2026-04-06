@@ -1,0 +1,9 @@
+# Ignore pygments==2.19.2 — no fix available for CVE-2026-4539 (LOW severity, ReDoS in AdlLexer).
+# Renovate will open a PR when a patched version is released; remove this override then.
+[[PackageOverrides]]
+name = "pygments"
+version = "2.19.2"
+ecosystem = "PyPI"
+vulnerability.ignore = true
+effectiveUntil = 2026-06-25
+reason = "CVE-2026-4539: ReDoS in AdlLexer. Transitive dep of pytest only, no untrusted input."

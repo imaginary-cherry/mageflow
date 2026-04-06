@@ -1,10 +1,24 @@
 import pytest
+from visualizer.models import (
+    ConnectionStatus,
+    HealthResponse,
+    TaskCallbacksResponse,
+    TaskFromServer,
+)
 
 from integration.frontend.seed_test_data import TEST_PREFIX
 
+# serialization_alias is output-only; remap JSON keys to field names for parsing
+_ALIAS_TO_FIELD = {"children_ids": "subtask_ids", "metadata": "kwargs"}
+
+
+def parse_task(data: dict) -> TaskFromServer:
+    remapped = {_ALIAS_TO_FIELD.get(k, k): v for k, v in data.items()}
+    return TaskFromServer(**remapped)
+
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_health_endpoint_returns_ok(test_client):
+async def test_health_endpoint_returns_connected(test_client):
     # Arrange
     client, _ = test_client
 
@@ -13,7 +27,9 @@ async def test_health_endpoint_returns_ok(test_client):
 
     # Assert
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    health = HealthResponse.model_validate(response.json())
+    assert health.hatchet == ConnectionStatus.CONNECTED
+    assert health.redis == ConnectionStatus.CONNECTED
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -84,6 +100,109 @@ async def test_batch_fetch_tasks_returns_requested_tasks(test_client):
 
     chain_task = next(t for t in tasks if t["id"] == seeded_data.chain.chain_id)
     assert chain_task["status"] == "running"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_batch_fetch_returns_chain_with_children(test_client):
+    """Regression: chains must be returned by batch fetch, not silently dropped."""
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act
+    response = await client.post(
+        "/api/tasks/batch",
+        json={"taskIds": [seeded_data.chain.chain_id]},
+    )
+
+    # Assert
+    assert response.status_code == 200
+    tasks = [parse_task(t) for t in response.json()]
+    assert len(tasks) == 1
+    chain = tasks[0]
+    assert chain.id == seeded_data.chain.chain_id
+    assert chain.type == "ChainTaskSignature"
+    assert chain.status == "running"
+    assert set(chain.subtask_ids) == {
+        seeded_data.chain.task1_id,
+        seeded_data.chain.task2_id,
+    }
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_batch_fetch_returns_swarm_with_children(test_client):
+    """Regression: swarms must be returned by batch fetch, not silently dropped."""
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act
+    response = await client.post(
+        "/api/tasks/batch",
+        json={"taskIds": [seeded_data.swarm.swarm_id]},
+    )
+
+    # Assert
+    assert response.status_code == 200
+    tasks = [parse_task(t) for t in response.json()]
+    assert len(tasks) == 1
+    swarm = tasks[0]
+    assert swarm.id == seeded_data.swarm.swarm_id
+    assert swarm.type == "SwarmTaskSignature"
+    assert swarm.status == "running"
+    assert set(swarm.subtask_ids) == set(seeded_data.swarm.original_task_ids)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_batch_fetch_mixed_signature_types(test_client):
+    """Regression: batch fetch must return all Signature subtypes in one call."""
+    # Arrange
+    client, seeded_data = test_client
+    requested_ids = [
+        seeded_data.basic_task_id,
+        seeded_data.chain.chain_id,
+        seeded_data.swarm.swarm_id,
+    ]
+
+    # Act
+    response = await client.post("/api/tasks/batch", json={"taskIds": requested_ids})
+
+    # Assert
+    assert response.status_code == 200
+    tasks = [parse_task(t) for t in response.json()]
+    assert {t.type for t in tasks} == {
+        "TaskSignature",
+        "ChainTaskSignature",
+        "SwarmTaskSignature",
+    }
+    assert {t.id for t in tasks} == set(requested_ids)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_callbacks_endpoint_works_for_chain_and_swarm(test_client):
+    """Regression: callbacks endpoint must not return None for non-TaskSignature types."""
+    # Arrange
+    client, seeded_data = test_client
+
+    # Act — chain
+    chain_resp = await client.get(
+        f"/api/workflows/{seeded_data.chain.chain_id}/callbacks"
+    )
+    # Act — swarm
+    swarm_resp = await client.get(
+        f"/api/workflows/{seeded_data.swarm.swarm_id}/callbacks"
+    )
+
+    # Assert — both parse as valid models, not None
+    assert chain_resp.status_code == 200
+    assert chain_resp.json() is not None
+    chain_data = TaskCallbacksResponse(**chain_resp.json())
+    assert isinstance(chain_data.success_callback_ids, list)
+    assert isinstance(chain_data.error_callback_ids, list)
+
+    assert swarm_resp.status_code == 200
+    assert swarm_resp.json() is not None
+    swarm_data = TaskCallbacksResponse(**swarm_resp.json())
+    assert isinstance(swarm_data.success_callback_ids, list)
+    assert isinstance(swarm_data.error_callback_ids, list)
 
 
 @pytest.mark.asyncio(loop_scope="session")
