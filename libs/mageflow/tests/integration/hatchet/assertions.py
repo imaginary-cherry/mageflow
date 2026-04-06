@@ -463,32 +463,31 @@ async def assert_hook_fired(
 ) -> None:
     hook_key = f"user-hook-{hook_type}:{workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
-    assert hook_value == "fired", (
-        f"User {hook_type} hook did not fire (key={hook_key})"
-    )
+    assert hook_value == "fired", f"User {hook_type} hook did not fire (key={hook_key})"
 
 
 def assert_workflow_run(
     runs: HatchetRuns,
     expected: ExpectedWorkflowRun,
-) -> None:
+):
     # Find the workflow run (the one with children)
     workflow_runs = [r for r in runs if r.children is not None]
     assert len(workflow_runs) >= 1, "No workflow run found in runs"
     wf_run = workflow_runs[0]
 
     # Check overall workflow status
-    assert wf_run.status == expected.workflow_status, (
-        f"Workflow status: expected {expected.workflow_status}, got {wf_run.status}"
-    )
+    assert (
+        wf_run.status == expected.workflow_status
+    ), f"Workflow status: expected {expected.workflow_status}, got {wf_run.status}"
 
     # Check each expected step in children
+    assert wf_run.children is not None, "Workflow run has no children, it is not a workflow"
     children_by_name = {child.display_name: child for child in wf_run.children}
     for step in expected.steps:
         if step.status is None:
-            assert step.name not in children_by_name, (
-                f"Step '{step.name}' should not have been called"
-            )
+            assert (
+                step.name not in children_by_name
+            ), f"Step '{step.name}' should not have been called"
             continue
 
         assert step.name in children_by_name, (
@@ -496,6 +495,6 @@ def assert_workflow_run(
             f"Available: {list(children_by_name.keys())}"
         )
         child = children_by_name[step.name]
-        assert child.status == step.status, (
-            f"Step '{step.name}': expected {step.status}, got {child.status}"
-        )
+        assert (
+            child.status == step.status
+        ), f"Step '{step.name}': expected {step.status}, got {child.status}"
