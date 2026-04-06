@@ -37,13 +37,13 @@ class MageWorkflow(Workflow):
         self._added_failure_hook = False
 
     def inject_hooks(self):
-        if self._added_success_hook is None:
+        if not self._added_success_hook:
 
             @self.on_success_task()
             async def _noop_success(input, ctx: Context):
                 pass
 
-        if self._added_failure_hook is None:
+        if not self._added_failure_hook:
 
             @self.on_failure_task()
             async def _noop_failure(input, ctx: Context):
