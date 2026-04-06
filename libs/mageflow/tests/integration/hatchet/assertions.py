@@ -118,6 +118,8 @@ def is_task_paused(wf: V1TaskSummary) -> bool:
 
 
 def get_task_param(wf: V1TaskSummary, param_name: str):
+    if wf.additional_metadata is None:
+        return None
     return wf.additional_metadata.get(param_name)
 
 
