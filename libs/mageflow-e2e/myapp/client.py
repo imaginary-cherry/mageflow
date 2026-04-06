@@ -30,3 +30,8 @@ async def validate_order(msg):
 @mf.task(name="charge-payment")
 async def charge_payment(msg):
     pass
+
+
+@mf.durable_task(name="durable-process")
+async def durable_process(msg):
+    pass
