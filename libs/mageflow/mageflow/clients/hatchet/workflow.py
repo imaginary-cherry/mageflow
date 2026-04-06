@@ -61,7 +61,7 @@ class MageWorkflow(Workflow):
                 lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(msg, ctx)
                 is_normal_run = lifecycle.is_vanilla_run()
                 if not is_normal_run:
-                    await lifecycle.task_success(msg)
+                    await lifecycle.task_success(ctx.data.parents)
 
                 return await func(msg, ctx, *task_args, **task_kwargs)
 
