@@ -11,19 +11,19 @@ from tests.integration.hatchet.assertions import (
     get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import ContextMessage
+from tests.integration.hatchet.models import WorkflowTestMessage
 from tests.integration.hatchet.worker import (
-    chain_test_wf,
-    chain_test_wf_fail,
-    chain_test_wf_hooks,
-    chain_test_wf_hooks_fail,
     error_callback,
     task1_callback,
+    test_dag_wf,
+    test_dag_wf_hooks,
 )
+
+pytestmark = pytest.mark.hatchet
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_no_hooks_success(
+async def test_signed_dag_workflow_success(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -34,22 +34,22 @@ async def test_signed_workflow_no_hooks_success(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx)
 
-    signature = await mageflow.asign(chain_test_wf)
+    signature = await mageflow.asign(test_dag_wf)
 
     # Act
     await signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(8)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, signature, check_called_once=False)
     await assert_redis_is_clean(redis_client)
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_no_hooks_failure(
+async def test_signed_dag_workflow_failure(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -60,9 +60,9 @@ async def test_signed_workflow_no_hooks_failure(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
-    signature = await mageflow.asign(chain_test_wf_fail)
+    signature = await mageflow.asign(test_dag_wf)
 
     # Act
     await signature.aio_run_no_wait(message, options=trigger_options)
@@ -75,7 +75,7 @@ async def test_signed_workflow_no_hooks_failure(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_with_success_callbacks(
+async def test_signed_dag_workflow_with_success_callbacks(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -86,12 +86,12 @@ async def test_signed_workflow_with_success_callbacks(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx)
 
     success_cb = await mageflow.asign(task1_callback)
     error_cb = await mageflow.asign(error_callback)
     signature = await mageflow.asign(
-        chain_test_wf,
+        test_dag_wf,
         success_callbacks=[success_cb],
         error_callbacks=[error_cb],
     )
@@ -109,7 +109,7 @@ async def test_signed_workflow_with_success_callbacks(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_with_error_callbacks(
+async def test_signed_dag_workflow_with_error_callbacks(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -120,12 +120,12 @@ async def test_signed_workflow_with_error_callbacks(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
     success_cb = await mageflow.asign(task1_callback)
     error_cb = await mageflow.asign(error_callback)
     signature = await mageflow.asign(
-        chain_test_wf_fail,
+        test_dag_wf,
         error_callbacks=[error_cb],
         success_callbacks=[success_cb],
     )
@@ -142,7 +142,7 @@ async def test_signed_workflow_with_error_callbacks(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_with_hooks_success(
+async def test_signed_dag_workflow_with_hooks_success(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -153,9 +153,9 @@ async def test_signed_workflow_with_hooks_success(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx)
 
-    signature = await mageflow.asign(chain_test_wf_hooks)
+    signature = await mageflow.asign(test_dag_wf_hooks)
 
     # Act
     await signature.aio_run_no_wait(message, options=trigger_options)
@@ -168,7 +168,7 @@ async def test_signed_workflow_with_hooks_success(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_signed_workflow_with_hooks_failure(
+async def test_signed_dag_workflow_with_hooks_failure(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -179,9 +179,9 @@ async def test_signed_workflow_with_hooks_failure(
         hatchet_client_init.redis_client,
         hatchet_client_init.hatchet,
     )
-    message = ContextMessage(base_data=test_ctx)
+    message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
-    signature = await mageflow.asign(chain_test_wf_hooks_fail)
+    signature = await mageflow.asign(test_dag_wf_hooks)
 
     # Act
     await signature.aio_run_no_wait(message, options=trigger_options)

@@ -28,6 +28,8 @@ from tests.integration.hatchet.models import (
     CacheIsolationMessage,
     CommandMessageWithResult,
     ContextMessage,
+    DagStep3Result,
+    DagStepResult,
     MageflowTestError,
     MessageWithData,
     MessageWithMsgResults,
@@ -35,6 +37,7 @@ from tests.integration.hatchet.models import (
     SignatureKeysResult,
     SignatureKeyWithWF,
     SleepTaskMessage,
+    WorkflowTestMessage,
 )
 
 settings = Dynaconf(
@@ -307,67 +310,70 @@ async def concurrent_cache_isolation_task(msg: CacheIsolationMessage):
         task_keys.append(sig.key)
 
 
-chain_test_wf = hatchet.workflow(name="chain-test-wf", input_validator=ContextMessage)
+# --- DAG workflows (message-driven failure behavior) ---
 
-
-@chain_test_wf.task()
-async def chain_wf_step(input, ctx: Context):
-    return {"wf_result": "ok"}
-
-
-chain_test_wf_fail = hatchet.workflow(
-    name="chain-test-wf-fail", input_validator=ContextMessage
+test_dag_wf = hatchet.workflow(
+    name="test-dag-wf", input_validator=WorkflowTestMessage
 )
 
 
-@chain_test_wf_fail.task()
-async def chain_wf_fail_step(input, ctx: Context):
-    raise MageflowTestError("Workflow step failed")
+@test_dag_wf.task()
+async def dag_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    if input.fail_at_step == 1:
+        raise MageflowTestError("Step 1 failed")
+    return DagStepResult(step="1")
 
 
-chain_test_wf_hooks = hatchet.workflow(
-    name="chain-test-wf-hooks", input_validator=ContextMessage
+@test_dag_wf.task()
+async def dag_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    if input.fail_at_step == 2:
+        raise MageflowTestError("Step 2 failed")
+    return DagStepResult(step="2")
+
+
+@test_dag_wf.task(parents=[dag_step1, dag_step2])
+async def dag_step3(input: WorkflowTestMessage, ctx: Context) -> DagStep3Result:
+    if input.fail_at_step == 3:
+        raise MageflowTestError("Step 3 failed")
+    one = ctx.task_output(dag_step1)
+    two = ctx.task_output(dag_step2)
+    return DagStep3Result(
+        step="3", parent_results=[DagStepResult(**one), DagStepResult(**two)]
+    )
+
+
+test_dag_wf_hooks = hatchet.workflow(
+    name="test-dag-wf-hooks", input_validator=WorkflowTestMessage
 )
 
 
-@chain_test_wf_hooks.task()
-async def chain_wf_hooks_step(input, ctx: Context):
-    return {"wf_result": "hooks_ok"}
+@test_dag_wf_hooks.task()
+async def dag_hooks_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    if input.fail_at_step == 1:
+        raise MageflowTestError("Step 1 failed")
+    return DagStepResult(step="1")
 
 
-@chain_test_wf_hooks.on_success_task()
-async def chain_wf_hooks_success(input, ctx: Context):
-    # User's success handler — mageflow composes with this via Task.fn replacement
+@test_dag_wf_hooks.task(parents=[dag_hooks_step1])
+async def dag_hooks_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    if input.fail_at_step == 2:
+        raise MageflowTestError("Step 2 failed")
+    return DagStepResult(step="2")
+
+
+@test_dag_wf_hooks.on_success_task()
+async def dag_hooks_on_success(input, ctx: Context):
+    if hasattr(input, "fail_at_on_success") and input.fail_at_on_success:
+        raise MageflowTestError("on_success hook failed")
     await TaskSignature.Meta.redis.set(
         f"user-hook-success:{ctx.workflow_run_id}", "fired"
     )
 
 
-@chain_test_wf_hooks.on_failure_task()
-async def chain_wf_hooks_failure(input, ctx: Context):
-    # User's failure handler — mageflow composes with this via Task.fn replacement
-    await TaskSignature.Meta.redis.set(
-        f"user-hook-failure:{ctx.workflow_run_id}", "fired"
-    )
-
-
-chain_test_wf_hooks_fail = hatchet.workflow(
-    name="chain-test-wf-hooks-fail", input_validator=ContextMessage
-)
-
-
-@chain_test_wf_hooks_fail.task()
-async def chain_wf_hooks_fail_step(input, ctx: Context):
-    raise MageflowTestError("Workflow step failed with hooks")
-
-
-@chain_test_wf_hooks_fail.on_success_task()
-async def chain_wf_hooks_fail_success(input, ctx: Context):
-    pass  # Should not fire
-
-
-@chain_test_wf_hooks_fail.on_failure_task()
-async def chain_wf_hooks_fail_failure(input, ctx: Context):
+@test_dag_wf_hooks.on_failure_task()
+async def dag_hooks_on_failure(input, ctx: Context):
+    if hasattr(input, "fail_at_on_failure") and input.fail_at_on_failure:
+        raise MageflowTestError("on_failure hook failed")
     await TaskSignature.Meta.redis.set(
         f"user-hook-failure:{ctx.workflow_run_id}", "fired"
     )
@@ -396,10 +402,8 @@ workflows = [
     create_signatures_for_ttl_test,
     retry_cache_durable_task,
     concurrent_cache_isolation_task,
-    chain_test_wf,
-    chain_test_wf_fail,
-    chain_test_wf_hooks,
-    chain_test_wf_hooks_fail,
+    test_dag_wf,
+    test_dag_wf_hooks,
 ]
 
 

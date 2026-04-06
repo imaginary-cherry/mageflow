@@ -73,5 +73,22 @@ class CacheIsolationMessage(ContextMessage):
     sig_count: int = 1
 
 
+class WorkflowTestMessage(ContextMessage):
+    fail_at_step: int | None = None
+    fail_at_on_success: bool = False
+    fail_at_on_failure: bool = False
+
+
+class DagStepResult(BaseModel):
+    step: str
+    status: str = "ok"
+
+
+class DagStep3Result(BaseModel):
+    step: str
+    status: str = "ok"
+    parent_results: list[DagStepResult]
+
+
 class MageflowTestError(Exception):
     pass

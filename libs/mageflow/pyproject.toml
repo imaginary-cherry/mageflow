@@ -121,6 +121,11 @@ directory = "htmlcov"
 # backend = "testcontainers"  # default: uses real Redis via testcontainers (requires Docker)
 # backend = "fakeredis"       # alternative: uses fakeredis (no Docker required)
 
+[tool.pytest.ini_options]
+markers = [
+    "hatchet: tests specific to the Hatchet client integration",
+]
+
 [tool.ruff]
 select = ["I", "F401"]
 
