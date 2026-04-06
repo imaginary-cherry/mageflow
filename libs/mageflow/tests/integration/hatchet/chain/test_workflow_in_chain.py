@@ -89,9 +89,12 @@ async def test_workflow_in_chain_failure(
 
     success_cb = await mageflow.asign(chain_callback)
     error_cb = await mageflow.asign(error_callback)
+    dag_sign = await mageflow.asign(
+        test_dag_wf, **message.model_dump(mode="json", exclude_unset=True)
+    )
 
     chain_signature = await mageflow.achain(
-        [sign_task1, test_dag_wf, task3],
+        [sign_task1, dag_sign, task3],
         success=success_cb,
         error=error_cb,
     )
