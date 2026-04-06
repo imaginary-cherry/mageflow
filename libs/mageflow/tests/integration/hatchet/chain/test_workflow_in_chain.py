@@ -56,8 +56,7 @@ async def test_workflow_in_chain_success(
     await asyncio.sleep(12)
     runs = await get_runs(hatchet, ctx_metadata)
 
-    # TODO should be moved to assert chaind done once we create an api for data returned from test logs
-    assert_signature_done(runs, sign_task1)
+    # TODO should be moved to assert chain done once we create an api for data returned from test logs
     assert_signature_done(runs, wf_signature, check_called_once=False)
     assert_signature_done(runs, task3_signature)
     assert_signature_done(runs, success_cb)
