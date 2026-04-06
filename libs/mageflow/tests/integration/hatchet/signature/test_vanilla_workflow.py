@@ -14,18 +14,28 @@ from tests.integration.hatchet.worker import (
 
 pytestmark = pytest.mark.hatchet
 
+WORKFLOW_PARAMS = pytest.mark.parametrize(
+    "workflow",
+    [
+        pytest.param(test_dag_wf, id="no_hooks"),
+        pytest.param(test_dag_wf_hooks, id="with_hooks"),
+    ],
+)
 
+
+@WORKFLOW_PARAMS
 @pytest.mark.asyncio(loop_scope="session")
 async def test_vanilla_dag_workflow_success(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
     trigger_options,
+    workflow,
 ):
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx)
 
-    await test_dag_wf.aio_run_no_wait(message, options=trigger_options)
+    await workflow.aio_run_no_wait(message, options=trigger_options)
 
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
@@ -35,17 +45,19 @@ async def test_vanilla_dag_workflow_success(
     assert len(completed) >= 1
 
 
+@WORKFLOW_PARAMS
 @pytest.mark.asyncio(loop_scope="session")
 async def test_vanilla_dag_workflow_failure(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
     trigger_options,
+    workflow,
 ):
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
-    await test_dag_wf.aio_run_no_wait(message, options=trigger_options)
+    await workflow.aio_run_no_wait(message, options=trigger_options)
 
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
@@ -56,7 +68,7 @@ async def test_vanilla_dag_workflow_failure(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_vanilla_dag_workflow_with_hooks_success(
+async def test_vanilla_dag_workflow_hooks_success_fires(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
@@ -79,7 +91,7 @@ async def test_vanilla_dag_workflow_with_hooks_success(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_vanilla_dag_workflow_with_hooks_failure(
+async def test_vanilla_dag_workflow_hooks_failure_fires(
     hatchet_client_init: HatchetInitData,
     test_ctx,
     ctx_metadata,
