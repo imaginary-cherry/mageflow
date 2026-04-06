@@ -316,14 +316,12 @@ test_dag_wf = hatchet.workflow(name="test-dag-wf", input_validator=WorkflowTestM
 
 
 @test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
-@hatchet.with_ctx
 async def dag_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
     await input.apply_step_behavior(1, ctx.attempt_number)
     return DagStepResult(step="1")
 
 
 @test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
-@hatchet.with_ctx
 async def dag_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
     await input.apply_step_behavior(2, ctx.attempt_number)
     return DagStepResult(step="2")
@@ -334,7 +332,6 @@ async def dag_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
     retries=3,
     execution_timeout=timedelta(seconds=3),
 )
-@hatchet.with_ctx
 async def dag_step3(input: WorkflowTestMessage, ctx: Context) -> DagStep3Result:
     await input.apply_step_behavior(3, ctx.attempt_number)
     one = ctx.task_output(dag_step1)
@@ -350,7 +347,6 @@ test_dag_wf_hooks = hatchet.workflow(
 
 
 @test_dag_wf_hooks.task(retries=3, execution_timeout=timedelta(seconds=3))
-@hatchet.with_ctx
 async def dag_hooks_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
     await input.apply_step_behavior(1, ctx.attempt_number)
     return DagStepResult(step="1")
@@ -361,7 +357,6 @@ async def dag_hooks_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepRe
     retries=3,
     execution_timeout=timedelta(seconds=3),
 )
-@hatchet.with_ctx
 async def dag_hooks_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
     await input.apply_step_behavior(2, ctx.attempt_number)
     return DagStepResult(step="2")
