@@ -1,13 +1,13 @@
 import pytest
-from hatchet_sdk import Hatchet
+from hatchet_sdk.runnables.workflow import Workflow
 
-from mageflow.client import HatchetMageflow
+from mageflow.clients.hatchet.workflow import MageWorkflow
 from tests.unit.signature_compat_helpers import (
     assert_child_accepts_all_parent_params,
     get_overridden_methods,
 )
 
-OVERRIDDEN_METHODS = get_overridden_methods(HatchetMageflow, Hatchet)
+OVERRIDDEN_METHODS = get_overridden_methods(MageWorkflow, Workflow)
 
 
 @pytest.mark.parametrize(
@@ -15,4 +15,4 @@ OVERRIDDEN_METHODS = get_overridden_methods(HatchetMageflow, Hatchet)
     [[method] for method in OVERRIDDEN_METHODS],
 )
 def test_method_accepts_all_parent_parameters_sanity(method_name: str):
-    assert_child_accepts_all_parent_params(Hatchet, HatchetMageflow, method_name)
+    assert_child_accepts_all_parent_params(Workflow, MageWorkflow, method_name)

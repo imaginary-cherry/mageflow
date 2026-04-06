@@ -16,6 +16,7 @@ from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
 
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
+from tests.integration.hatchet.models import ExpectedWorkflowRun
 from tests.integration.hatchet.worker import MAX_DONE_TTL
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -31,6 +32,8 @@ def _task_error_info(wf: V1TaskSummary) -> str:
 
 
 def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
+    if wf.workflow_name is None:
+        return False
     task_name = wf.workflow_name.removeprefix(hatchet.namespace)
     return task_name.startswith(MAGEFLOW_TASK_INITIALS)
 
@@ -44,15 +47,23 @@ async def get_specific_refs(
     return wf_tasks
 
 
+def is_workflow(run: V1TaskSummary) -> bool:
+    # Also can check run.task_id == 0
+    return run.children is not None
+
+
+async def get_full_run(hatchet: Hatchet, wf: V1TaskSummary) -> V1TaskSummary:
+    if is_workflow(wf):
+        return wf
+    full_wf = await hatchet.runs.aio_get_task_run(wf.task_external_id)
+    full_wf.workflow_name = wf.workflow_name
+    return full_wf
+
+
 async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     runs = await hatchet.runs.aio_list(additional_metadata=ctx_metadata)
-    runs_by_id = {wf.task_external_id: wf for wf in runs.rows}
     # Retrieve tasks data
-    wf_tasks = await asyncio.gather(
-        *[hatchet.runs.aio_get_task_run(wf.task_external_id) for wf in runs.rows]
-    )
-    for wf in wf_tasks:
-        wf.workflow_name = runs_by_id[wf.task_external_id].workflow_name
+    wf_tasks = await asyncio.gather(*[get_full_run(hatchet, wf) for wf in runs.rows])
     return wf_tasks
 
 
@@ -107,7 +118,9 @@ def find_sub_calls_by_task_ref(
 def is_wf_done(wf: V1TaskSummary) -> bool:
     wf_output = wf.output or {}
     completed = wf.status == V1TaskStatus.COMPLETED
-    task_succeeded = completed and "hatchet_results" in wf_output
+    # hatchet workflow doesn't wrap with hatchet results
+    correct_results_pattern = is_workflow(wf) or "hatchet_results" in wf_output
+    task_succeeded = completed and correct_results_pattern
     return task_succeeded or wf.status == V1TaskStatus.FAILED
 
 
@@ -116,6 +129,8 @@ def is_task_paused(wf: V1TaskSummary) -> bool:
 
 
 def get_task_param(wf: V1TaskSummary, param_name: str):
+    if wf.additional_metadata is None:
+        return None
     return wf.additional_metadata.get(param_name)
 
 
@@ -327,9 +342,12 @@ def assert_chain_done(
         input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
         if output_value:
-            input_params |= {return_value_field(task.model_validators): output_value}
+            validator = task.model_validators
+            return_field_name = return_value_field(validator)
+            if return_field_name in validator.model_fields:
+                input_params |= {return_field_name: output_value}
         task_wf = _assert_task_done(task, wf_by_signature, input_params)
-        output_value = task_wf.output["hatchet_results"]
+        output_value = task_wf.output.get("hatchet_results")
 
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
@@ -439,3 +457,49 @@ def assert_overlaps_leq_k_workflows(
                 f"at time {time}. "
                 f"Active workflows: {', '.join(active_workflow_names)}"
             )
+
+
+async def assert_hook_fired(
+    redis_client,
+    workflow_run_id: str,
+    hook_type: str,
+) -> None:
+    hook_key = f"user-hook-{hook_type}:{workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", f"User {hook_type} hook did not fire (key={hook_key})"
+
+
+def assert_workflow_run(
+    runs: HatchetRuns,
+    expected: ExpectedWorkflowRun,
+):
+    # Find the workflow run (the one with children)
+    workflow_runs = [r for r in runs if r.children is not None]
+    assert len(workflow_runs) >= 1, "No workflow run found in runs"
+    wf_run = workflow_runs[0]
+
+    # Check overall workflow status
+    assert (
+        wf_run.status == expected.workflow_status
+    ), f"Workflow status: expected {expected.workflow_status}, got {wf_run.status}"
+
+    # Check each expected step in children
+    assert (
+        wf_run.children is not None
+    ), "Workflow run has no children, it is not a workflow"
+    children_by_name = {child.display_name: child for child in wf_run.children}
+    for step in expected.steps:
+        if step.status is None:
+            assert (
+                step.name not in children_by_name
+            ), f"Step '{step.name}' should not have been called"
+            continue
+
+        assert step.name in children_by_name, (
+            f"Step '{step.name}' not found in workflow children. "
+            f"Available: {list(children_by_name.keys())}"
+        )
+        child = children_by_name[step.name]
+        assert (
+            child.status == step.status
+        ), f"Step '{step.name}': expected {step.status}, got {child.status}"
