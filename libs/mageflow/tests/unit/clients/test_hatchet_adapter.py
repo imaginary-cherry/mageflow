@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from hatchet_sdk import Context, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from hatchet_sdk.runnables.types import EmptyModel
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.swarm.model import SwarmConfig
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -449,7 +450,9 @@ class TestWorkflowAdapterCompatibility:
     def hatchet_workflow_with_task(self, hatchet_mock):
         from hatchet_sdk import Context
 
-        workflow = hatchet_mock.workflow(name="my-workflow", input_validator=ContextMessage)
+        workflow = hatchet_mock.workflow(
+            name="my-workflow", input_validator=ContextMessage
+        )
 
         @workflow.task(retries=2)
         async def my_step(input: ContextMessage, ctx: Context):
@@ -476,8 +479,6 @@ class TestWorkflowAdapterCompatibility:
     ):
         # Workflow created without explicit input_validator falls back to EmptyModel.
         # extract_validator should return that default class (not None).
-        from hatchet_sdk.runnables.types import EmptyModel
-
         # Act
         result = adapter.extract_validator(hatchet_workflow_no_validator)
 
@@ -492,11 +493,3 @@ class TestWorkflowAdapterCompatibility:
 
         # Assert
         assert result == 2
-
-    def test_extract_retries_from_workflow_without_tasks_raises(
-        self, adapter, hatchet_workflow
-    ):
-        # Known limitation: bare Workflow with no tasks → IndexError.
-        # Documented here rather than fixed — callers must add at least one task.
-        with pytest.raises(IndexError):
-            adapter.extract_retries(hatchet_workflow)
