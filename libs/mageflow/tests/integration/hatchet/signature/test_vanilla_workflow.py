@@ -3,7 +3,11 @@ from hatchet_sdk.clients.rest import V1TaskStatus
 
 from tests.integration.hatchet.assertions import get_runs
 from tests.integration.hatchet.conftest import HatchetInitData
-from tests.integration.hatchet.models import WorkflowTestMessage
+from tests.integration.hatchet.models import (
+    DagStep3Result,
+    DagStepResult,
+    WorkflowTestMessage,
+)
 from tests.integration.hatchet.worker import (
     dag_hooks_step1,
     dag_hooks_step2,
@@ -16,22 +20,20 @@ from tests.integration.hatchet.worker import (
 
 pytestmark = pytest.mark.hatchet
 
+_step1 = DagStepResult(step="1")
+_step2 = DagStepResult(step="2")
+
 DAG_WF_EXPECTED_OUTPUT = {
-    dag_step1.name: {"step": "1", "status": "ok"},
-    dag_step2.name: {"step": "2", "status": "ok"},
-    dag_step3.name: {
-        "step": "3",
-        "status": "ok",
-        "parent_results": [
-            {"step": "1", "status": "ok"},
-            {"step": "2", "status": "ok"},
-        ],
-    },
+    dag_step1.name: _step1.model_dump(),
+    dag_step2.name: _step2.model_dump(),
+    dag_step3.name: DagStep3Result(
+        step="3", parent_results=[_step1, _step2]
+    ).model_dump(),
 }
 
 DAG_WF_HOOKS_EXPECTED_OUTPUT = {
-    dag_hooks_step1.name: {"step": "1", "status": "ok"},
-    dag_hooks_step2.name: {"step": "2", "status": "ok"},
+    dag_hooks_step1.name: DagStepResult(step="1").model_dump(),
+    dag_hooks_step2.name: DagStepResult(step="2").model_dump(),
 }
 
 WORKFLOW_PARAMS = pytest.mark.parametrize(
