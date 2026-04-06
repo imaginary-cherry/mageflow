@@ -242,7 +242,7 @@ const App = () => {
           phase === 'ready' ? 'opacity-100' : 'opacity-0 pointer-events-none fixed inset-0'
         }`}
       >
-        {phase === 'ready' && (
+        {phase === 'ready' && ipcToken && (
           <MainApp
             port={port}
             ipcToken={ipcToken}
