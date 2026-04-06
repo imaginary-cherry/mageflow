@@ -108,18 +108,14 @@ describe('TaskGraph with IPC auth integration', () => {
 
     render(<App />)
 
-    // Wait for the app to reach ready state
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument()
-    }, { timeout: 20000 })
+    // With an empty IPC token, MainApp is gated from rendering entirely.
+    // Wait for the startup sequence to settle (health checks pass, phase
+    // reaches "ready"), then verify no task data is shown.
+    await new Promise(resolve => setTimeout(resolve, 5000))
 
     // Task names from seed data should NOT be rendered
     expect(screen.queryByText('basic_test_task')).not.toBeInTheDocument()
     expect(screen.queryByText(/test_chain/)).not.toBeInTheDocument()
     expect(screen.queryByText(/test_swarm/)).not.toBeInTheDocument()
-
-    // Let the rejected 403 promise settle before teardown so it's caught
-    // by the store's try/catch rather than surfacing as an unhandled rejection.
-    await new Promise(resolve => setTimeout(resolve, 100))
   })
 })

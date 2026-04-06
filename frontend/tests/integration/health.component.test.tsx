@@ -39,6 +39,8 @@ function setupTauriMocks(port: number) {
         return JSON.stringify({ hatchetApiKey: 'fake-key', redisUrl: 'redis://fake' })
       case 'get_sidecar_port':
         return port
+      case 'get_ipc_token':
+        return 'test-health-ipc-token'
       case 'set_tray_status':
         return undefined
       case 'check_keychain_health':
