@@ -95,3 +95,29 @@ class TestWorkflowDispatch:
         await sig.acall({"user_id": 99})
         record = mageflow_client.assert_task_dispatched(workflow_name)
         assert record.task_name == workflow_name
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_aio_run_no_wait_dispatch_is_assertable(self, mageflow_client):
+        """aio_run_no_wait on a signed workflow is found by assert_task_dispatched."""
+        hatchet = _make_hatchet()
+        workflow = hatchet.workflow(name="dispatch-no-wait-wf", input_validator=ContextMessage)
+
+        sig = await mageflow.asign(workflow)
+        await sig.aio_run_no_wait(ContextMessage(base_data={"order": 1}))
+
+        record = mageflow_client.assert_task_dispatched("dispatch-no-wait-wf")
+        assert isinstance(record, TaskDispatchRecord)
+        assert record.task_name == sig.task_name
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_aio_run_dispatch_is_assertable(self, mageflow_client):
+        """aio_run on a signed workflow is found by assert_task_dispatched."""
+        hatchet = _make_hatchet()
+        workflow = hatchet.workflow(name="dispatch-run-wf", input_validator=ContextMessage)
+
+        sig = await mageflow.asign(workflow)
+        await sig.aio_run(ContextMessage(base_data={"order": 2}))
+
+        record = mageflow_client.assert_task_dispatched("dispatch-run-wf")
+        assert isinstance(record, TaskDispatchRecord)
+        assert record.task_name == sig.task_name
