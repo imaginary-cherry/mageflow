@@ -41,16 +41,21 @@ class TestWorkflowDispatch:
     """Full sign-to-dispatch-to-assert path for Workflow objects."""
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_dispatch_workflow_records_task_dispatch_record(self, mageflow_client):
+    async def test_dispatch_workflow_records_task_dispatch_record(
+        self, mageflow_client
+    ):
         """After sign(workflow) + acall(), _typed_dispatches contains a TaskDispatchRecord."""
         hatchet = _make_hatchet()
-        workflow = hatchet.workflow(name="order-pipeline", input_validator=ContextMessage)
+        workflow = hatchet.workflow(
+            name="order-pipeline", input_validator=ContextMessage
+        )
 
         sig = await mageflow.asign(workflow)
         await sig.acall({"base_data": {"order_id": 1}})
 
         task_dispatches = [
-            d for d in mageflow_client._typed_dispatches
+            d
+            for d in mageflow_client._typed_dispatches
             if isinstance(d, TaskDispatchRecord)
         ]
         assert len(task_dispatches) >= 1
@@ -60,7 +65,9 @@ class TestWorkflowDispatch:
     async def test_assert_task_dispatched_finds_workflow_by_name(self, mageflow_client):
         """assert_task_dispatched(workflow_name) returns the TaskDispatchRecord."""
         hatchet = _make_hatchet()
-        workflow = hatchet.workflow(name="payment-workflow", input_validator=ContextMessage)
+        workflow = hatchet.workflow(
+            name="payment-workflow", input_validator=ContextMessage
+        )
 
         sig = await mageflow.asign(workflow)
         await sig.acall({"base_data": {"amount": 100}})
@@ -73,13 +80,17 @@ class TestWorkflowDispatch:
     async def test_dispatched_record_has_correct_input(self, mageflow_client):
         """record.input_data matches the dict passed to acall()."""
         hatchet = _make_hatchet()
-        workflow = hatchet.workflow(name="inventory-workflow", input_validator=BaseModel)
+        workflow = hatchet.workflow(
+            name="inventory-workflow", input_validator=BaseModel
+        )
 
         sig = await mageflow.asign(workflow)
         input_data = {"product_id": 42, "quantity": 5}
         await sig.acall(input_data)
 
-        record = mageflow_client.assert_task_dispatched(sig.task_name, {"product_id": 42})
+        record = mageflow_client.assert_task_dispatched(
+            sig.task_name, {"product_id": 42}
+        )
         assert record.input_data == input_data
 
     @pytest.mark.asyncio(loop_scope="session")
@@ -100,7 +111,9 @@ class TestWorkflowDispatch:
     async def test_aio_run_no_wait_dispatch_is_assertable(self, mageflow_client):
         """aio_run_no_wait on a signed workflow is found by assert_task_dispatched."""
         hatchet = _make_hatchet()
-        workflow = hatchet.workflow(name="dispatch-no-wait-wf", input_validator=ContextMessage)
+        workflow = hatchet.workflow(
+            name="dispatch-no-wait-wf", input_validator=ContextMessage
+        )
 
         sig = await mageflow.asign(workflow)
         await sig.aio_run_no_wait(ContextMessage(base_data={"order": 1}))
@@ -113,7 +126,9 @@ class TestWorkflowDispatch:
     async def test_aio_run_dispatch_is_assertable(self, mageflow_client):
         """aio_run on a signed workflow is found by assert_task_dispatched."""
         hatchet = _make_hatchet()
-        workflow = hatchet.workflow(name="dispatch-run-wf", input_validator=ContextMessage)
+        workflow = hatchet.workflow(
+            name="dispatch-run-wf", input_validator=ContextMessage
+        )
 
         sig = await mageflow.asign(workflow)
         await sig.aio_run(ContextMessage(base_data={"order": 2}))

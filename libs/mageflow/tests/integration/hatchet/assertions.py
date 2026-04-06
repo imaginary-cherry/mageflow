@@ -481,7 +481,9 @@ def assert_workflow_run(
     ), f"Workflow status: expected {expected.workflow_status}, got {wf_run.status}"
 
     # Check each expected step in children
-    assert wf_run.children is not None, "Workflow run has no children, it is not a workflow"
+    assert (
+        wf_run.children is not None
+    ), "Workflow run has no children, it is not a workflow"
     children_by_name = {child.display_name: child for child in wf_run.children}
     for step in expected.steps:
         if step.status is None:

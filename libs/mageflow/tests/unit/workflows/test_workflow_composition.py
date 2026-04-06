@@ -10,16 +10,14 @@ following the same pattern as test_workflow_sign.py.
 
 import pytest
 import rapyer
-from hatchet_sdk.runnables.workflow import Workflow
 from thirdmagic.chain.model import ChainTaskSignature
+from thirdmagic.signature import Signature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task import TaskSignature
-from thirdmagic.signature import Signature
 
 import mageflow
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from tests.integration.hatchet.models import ContextMessage
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -160,7 +158,9 @@ async def test_workflow_in_swarm_has_container_id(workflow, hatchet_adapter):
 
 
 @pytest.mark.asyncio
-async def test_workflow_raw_object_in_swarm_tracked_as_single_unit(workflow, hatchet_adapter):
+async def test_workflow_raw_object_in_swarm_tracked_as_single_unit(
+    workflow, hatchet_adapter
+):
     """aswarm([workflow_obj]) auto-resolves Workflow and tracks as single unit.
 
     Covers WFCPS-02 + WFCPS-03: raw Workflow object is resolved to a single

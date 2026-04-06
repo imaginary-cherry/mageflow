@@ -87,7 +87,10 @@ class WorkflowTestMessage(ContextMessage):
         if self.timeout_at_step == step:
             await asyncio.sleep(30)
         if self.retry_at_step == step:
-            if not self.retry_succeed_on_attempt or attempt_number < self.retry_succeed_on_attempt:
+            if (
+                not self.retry_succeed_on_attempt
+                or attempt_number < self.retry_succeed_on_attempt
+            ):
                 raise MageflowTestError(f"Step {step} retry (attempt {attempt_number})")
         if self.fail_at_step == step:
             raise MageflowTestError(f"Step {step} failed")

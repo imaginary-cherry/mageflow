@@ -6,7 +6,6 @@ via the from_task() path.
 """
 
 import pytest
-import pytest_asyncio
 import rapyer
 from thirdmagic.signature import Signature
 from thirdmagic.task import TaskSignature
@@ -15,7 +14,6 @@ from thirdmagic.task.creator import resolve_signatures
 import mageflow
 from mageflow.clients.hatchet.adapter import HatchetClientAdapter
 from tests.integration.hatchet.models import ContextMessage
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -120,7 +118,9 @@ async def test_resolve_signatures_mixed_workflow_and_tasks(workflow, hatchet_ada
     in a single resolve_signatures call.
     """
     # Use a second workflow object as the "other" task in the mixed list
-    workflow2 = hatchet_adapter.hatchet.workflow(name="second-pipeline", input_validator=ContextMessage)
+    workflow2 = hatchet_adapter.hatchet.workflow(
+        name="second-pipeline", input_validator=ContextMessage
+    )
 
     result = await resolve_signatures([workflow, workflow2])
 
@@ -135,7 +135,9 @@ async def test_resolve_signatures_mixed_workflow_and_tasks(workflow, hatchet_ada
 
 
 @pytest.mark.asyncio
-async def test_resolve_signatures_workflow_uses_explicit_branch(workflow, hatchet_adapter):
+async def test_resolve_signatures_workflow_uses_explicit_branch(
+    workflow, hatchet_adapter
+):
     """Workflow objects are routed through the explicit isinstance(Workflow) branch.
 
     Verifies WFCPS-03: resolve_signatures has a dedicated Workflow isinstance check
@@ -145,7 +147,9 @@ async def test_resolve_signatures_workflow_uses_explicit_branch(workflow, hatche
     """
     from hatchet_sdk.runnables.workflow import Workflow
 
-    assert isinstance(workflow, Workflow), "fixture must be a Workflow for this test to be valid"
+    assert isinstance(
+        workflow, Workflow
+    ), "fixture must be a Workflow for this test to be valid"
 
     result = await resolve_signatures([workflow])
     sig = result[0]
@@ -161,11 +165,12 @@ async def test_hatchet_task_type_includes_workflow():
     Verifies WFCPS-03: utils.py HatchetTaskType explicitly includes Workflow class
     so type checkers accept Workflow objects in signed/resolved position.
     """
-    from hatchet_sdk.runnables.workflow import Workflow
-    from thirdmagic.utils import HatchetTaskType
-
     # HatchetTaskType is a type union — verify Workflow is a valid member
     # by checking it's present in the union's args
     import typing
+
+    from hatchet_sdk.runnables.workflow import Workflow
+    from thirdmagic.utils import HatchetTaskType
+
     args = typing.get_args(HatchetTaskType)
     assert Workflow in args, f"Workflow not found in HatchetTaskType args: {args}"
