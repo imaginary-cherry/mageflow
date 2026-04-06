@@ -32,14 +32,16 @@ async def test_vanilla_dag_workflow_success(
     trigger_options,
     workflow,
 ):
+    # Arrange
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx)
 
+    # Act
     await workflow.aio_run_no_wait(message, options=trigger_options)
 
+    # Assert
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
-
     assert len(runs) >= 1
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
     assert len(completed) >= 1
@@ -54,14 +56,16 @@ async def test_vanilla_dag_workflow_failure(
     trigger_options,
     workflow,
 ):
+    # Arrange
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
+    # Act
     await workflow.aio_run_no_wait(message, options=trigger_options)
 
+    # Assert
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
-
     assert len(runs) >= 1
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
@@ -74,17 +78,18 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
     ctx_metadata,
     trigger_options,
 ):
+    # Arrange
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx)
 
+    # Act
     ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
+    # Assert
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
-
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
     assert len(completed) >= 1
-
     hook_key = f"user-hook-success:{ref.workflow_run_id}"
     hook_value = await TaskSignature.Meta.redis.get(hook_key)
     assert hook_value == "fired", f"User success hook did not fire (key={hook_key})"
@@ -97,17 +102,18 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
     ctx_metadata,
     trigger_options,
 ):
+    # Arrange
     hatchet = hatchet_client_init.hatchet
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
 
+    # Act
     ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
+    # Assert
     await asyncio.sleep(15)
     runs = await get_runs(hatchet, ctx_metadata)
-
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
-
     hook_key = f"user-hook-failure:{ref.workflow_run_id}"
     hook_value = await TaskSignature.Meta.redis.get(hook_key)
     assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"

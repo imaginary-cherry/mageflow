@@ -45,7 +45,6 @@ async def test_signed_dag_workflow_success(
         hatchet_client_init.hatchet,
     )
     message = WorkflowTestMessage(base_data=test_ctx)
-
     signature = await mageflow.asign(workflow)
 
     # Act
@@ -73,7 +72,6 @@ async def test_signed_dag_workflow_failure(
         hatchet_client_init.hatchet,
     )
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
-
     signature = await mageflow.asign(workflow)
 
     # Act
@@ -101,7 +99,6 @@ async def test_signed_dag_workflow_with_success_callbacks(
         hatchet_client_init.hatchet,
     )
     message = WorkflowTestMessage(base_data=test_ctx)
-
     success_cb = await mageflow.asign(task1_callback)
     error_cb = await mageflow.asign(error_callback)
     signature = await mageflow.asign(
@@ -137,7 +134,6 @@ async def test_signed_dag_workflow_with_error_callbacks(
         hatchet_client_init.hatchet,
     )
     message = WorkflowTestMessage(base_data=test_ctx, fail_at_step=2)
-
     success_cb = await mageflow.asign(task1_callback)
     error_cb = await mageflow.asign(error_callback)
     signature = await mageflow.asign(
