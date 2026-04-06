@@ -4,6 +4,7 @@ import pytest
 
 import mageflow
 from tests.integration.hatchet.assertions import (
+    assert_chain_done,
     assert_redis_is_clean,
     assert_signature_done,
     assert_signature_failed,
@@ -13,6 +14,7 @@ from tests.integration.hatchet.assertions import (
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import WorkflowTestMessage
 from tests.integration.hatchet.worker import (
+    accept_msg_results,
     chain_callback,
     error_callback,
     task3,
@@ -48,13 +50,13 @@ async def test_workflow_in_chain_success(
     error_cb = await mageflow.asign(error_callback)
 
     chain_signature = await mageflow.achain(
-        [sign_task1, test_dag_wf, task3],
+        [sign_task1, test_dag_wf, accept_msg_results],
         success=success_cb,
         error=error_cb,
     )
     chain_tasks = await chain_signature.sub_tasks()
     wf_signature = chain_tasks[1]
-    task3_signature = chain_tasks[2]
+    accept_msg_results_signature = chain_tasks[2]
 
     # Act
     await chain_signature.aio_run_no_wait(message, options=trigger_options)
@@ -64,9 +66,14 @@ async def test_workflow_in_chain_success(
     runs = await get_runs(hatchet, ctx_metadata)
 
     # TODO should be moved to assert chain done once we create an api for data returned from test logs
-    assert_signature_done(runs, wf_signature, check_called_once=False)
-    assert_signature_done(runs, task3_signature)
-    assert_signature_done(runs, success_cb)
+    wf_info = assert_signature_done(runs, wf_signature, check_called_once=False)
+    last_task_info = assert_signature_done(runs, accept_msg_results_signature)
+
+    # Check the next task start only after all workflow is done
+    assert wf_info.finished_at
+    assert wf_info.finished_at < last_task_info.finished_at
+
+    assert_chain_done(runs, chain_signature, chain_tasks + [success_cb, error_cb])
     assert_signature_not_called(runs, error_cb)
     await _cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)

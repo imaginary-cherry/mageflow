@@ -342,9 +342,12 @@ def assert_chain_done(
         input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
         if output_value:
-            input_params |= {return_value_field(task.model_validators): output_value}
+            validator = task.model_validators
+            return_field_name = return_value_field(validator)
+            if return_field_name in validator.model_fields:
+                input_params |= {return_field_name: output_value}
         task_wf = _assert_task_done(task, wf_by_signature, input_params)
-        output_value = task_wf.output["hatchet_results"]
+        output_value = task_wf.output.get("hatchet_results")
 
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
