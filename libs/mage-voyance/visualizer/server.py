@@ -138,6 +138,11 @@ def add_ipc_auth_middleware(app: FastAPI, ipc_token: str | None) -> None:
         if request.url.path == "/api/health":
             return await call_next(request)
 
+        # CORS preflight requests don't carry custom headers — let them
+        # through so CORSMiddleware can respond with the allow list.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         token = request.headers.get("x-ipc-token")
         if token != ipc_token:
             return JSONResponse(
