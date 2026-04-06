@@ -40,7 +40,7 @@ async def test_vanilla_dag_workflow_success(
     await workflow.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
     assert len(runs) >= 1
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
@@ -64,7 +64,7 @@ async def test_vanilla_dag_workflow_failure(
     await workflow.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
     assert len(runs) >= 1
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
@@ -86,7 +86,7 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
     ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
     completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
     assert len(completed) >= 1
@@ -110,7 +110,7 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
     ref = await test_dag_wf_hooks.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(15)
+    await asyncio.sleep(7)
     runs = await get_runs(hatchet, ctx_metadata)
     failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
     assert len(failed) >= 1
