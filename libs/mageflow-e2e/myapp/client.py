@@ -35,3 +35,17 @@ async def charge_payment(msg):
 @mf.durable_task(name="durable-process")
 async def durable_process(msg):
     pass
+
+
+# Step 6: Register a DAG workflow
+order_workflow = mf.workflow(name="order-workflow", input_validator=OrderInput)
+
+
+@order_workflow.task()
+async def step_one(msg):
+    return {"step": 1}
+
+
+@order_workflow.task(parents=[step_one])
+async def step_two(msg):
+    return {"step": 2}
