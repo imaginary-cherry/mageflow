@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 
+from hatchet_sdk.clients.rest import V1TaskStatus
 from pydantic import BaseModel, Field
 from thirdmagic.message import ReturnValue
 
@@ -101,6 +102,21 @@ class DagStep3Result(BaseModel):
     step: str
     status: str = "ok"
     parent_results: list[DagStepResult]
+
+
+class ExpectedStepStatus(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    name: str
+    status: V1TaskStatus | None  # None means the step should not have been called
+
+
+class ExpectedWorkflowRun(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    workflow_status: V1TaskStatus
+    steps: list[ExpectedStepStatus]
+    expected_output: dict | None = None
 
 
 class MageflowTestError(Exception):

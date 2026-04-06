@@ -1,11 +1,13 @@
 import pytest
 from hatchet_sdk.clients.rest import V1TaskStatus
 
-from tests.integration.hatchet.assertions import get_runs
+from tests.integration.hatchet.assertions import assert_workflow_run, get_runs
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import (
     DagStep3Result,
     DagStepResult,
+    ExpectedStepStatus,
+    ExpectedWorkflowRun,
     WorkflowTestMessage,
 )
 from tests.integration.hatchet.worker import (
@@ -19,6 +21,8 @@ from tests.integration.hatchet.worker import (
 )
 
 pytestmark = pytest.mark.hatchet
+
+# --- Expected step results ---
 
 _step1 = DagStepResult(step="1")
 _step2 = DagStepResult(step="2")
@@ -36,16 +40,74 @@ DAG_WF_HOOKS_EXPECTED_OUTPUT = {
     dag_hooks_step2.name: DagStepResult(step="2").model_dump(),
 }
 
-WORKFLOW_PARAMS = pytest.mark.parametrize(
-    "workflow, expected_output",
-    [
-        pytest.param(test_dag_wf, DAG_WF_EXPECTED_OUTPUT, id="no_hooks"),
-        pytest.param(test_dag_wf_hooks, DAG_WF_HOOKS_EXPECTED_OUTPUT, id="with_hooks"),
+# --- Expected workflow runs per scenario ---
+
+DAG_WF_SUCCESS = ExpectedWorkflowRun(
+    workflow_status=V1TaskStatus.COMPLETED,
+    expected_output=DAG_WF_EXPECTED_OUTPUT,
+    steps=[
+        ExpectedStepStatus(name=dag_step1.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(name=dag_step2.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(name=dag_step3.name, status=V1TaskStatus.COMPLETED),
+    ],
+)
+
+DAG_WF_FAILURE = ExpectedWorkflowRun(
+    workflow_status=V1TaskStatus.FAILED,
+    steps=[
+        ExpectedStepStatus(name=dag_step1.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(name=dag_step2.name, status=V1TaskStatus.FAILED),
+        ExpectedStepStatus(name=dag_step3.name, status=V1TaskStatus.CANCELLED),
+    ],
+)
+
+DAG_WF_HOOKS_SUCCESS = ExpectedWorkflowRun(
+    workflow_status=V1TaskStatus.COMPLETED,
+    expected_output=DAG_WF_HOOKS_EXPECTED_OUTPUT,
+    steps=[
+        ExpectedStepStatus(name=dag_hooks_step1.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(name=dag_hooks_step2.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(
+            name="dag_hooks_on_success-on-success", status=V1TaskStatus.COMPLETED
+        ),
+    ],
+)
+
+DAG_WF_HOOKS_FAILURE = ExpectedWorkflowRun(
+    workflow_status=V1TaskStatus.FAILED,
+    steps=[
+        ExpectedStepStatus(name=dag_hooks_step1.name, status=V1TaskStatus.COMPLETED),
+        ExpectedStepStatus(name=dag_hooks_step2.name, status=V1TaskStatus.FAILED),
+        ExpectedStepStatus(
+            name="dag_hooks_on_failure-on-failure", status=V1TaskStatus.COMPLETED
+        ),
     ],
 )
 
 
-@WORKFLOW_PARAMS
+# --- Parametrize ---
+
+WORKFLOW_SUCCESS_PARAMS = pytest.mark.parametrize(
+    "workflow, expected_run",
+    [
+        pytest.param(test_dag_wf, DAG_WF_SUCCESS, id="no_hooks"),
+        pytest.param(test_dag_wf_hooks, DAG_WF_HOOKS_SUCCESS, id="with_hooks"),
+    ],
+)
+
+WORKFLOW_FAILURE_PARAMS = pytest.mark.parametrize(
+    "workflow, expected_run",
+    [
+        pytest.param(test_dag_wf, DAG_WF_FAILURE, id="no_hooks"),
+        pytest.param(test_dag_wf_hooks, DAG_WF_HOOKS_FAILURE, id="with_hooks"),
+    ],
+)
+
+
+# --- Tests ---
+
+
+@WORKFLOW_SUCCESS_PARAMS
 @pytest.mark.asyncio(loop_scope="session")
 async def test_vanilla_dag_workflow_success(
     hatchet_client_init: HatchetInitData,
@@ -53,7 +115,7 @@ async def test_vanilla_dag_workflow_success(
     ctx_metadata,
     trigger_options,
     workflow,
-    expected_output,
+    expected_run: ExpectedWorkflowRun,
 ):
     # Arrange
     hatchet = hatchet_client_init.hatchet
@@ -63,14 +125,12 @@ async def test_vanilla_dag_workflow_success(
     result = await workflow.aio_run(message, options=trigger_options)
 
     # Assert
-    assert result == expected_output
+    assert result == expected_run.expected_output
     runs = await get_runs(hatchet, ctx_metadata)
-    assert len(runs) >= 1
-    completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
-    assert len(completed) >= 1
+    assert_workflow_run(runs, expected_run)
 
 
-@WORKFLOW_PARAMS
+@WORKFLOW_FAILURE_PARAMS
 @pytest.mark.asyncio(loop_scope="session")
 async def test_vanilla_dag_workflow_failure(
     hatchet_client_init: HatchetInitData,
@@ -78,7 +138,7 @@ async def test_vanilla_dag_workflow_failure(
     ctx_metadata,
     trigger_options,
     workflow,
-    expected_output,
+    expected_run: ExpectedWorkflowRun,
 ):
     # Arrange
     hatchet = hatchet_client_init.hatchet
@@ -89,9 +149,7 @@ async def test_vanilla_dag_workflow_failure(
         await workflow.aio_run(message, options=trigger_options)
 
     runs = await get_runs(hatchet, ctx_metadata)
-    assert len(runs) >= 1
-    failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
-    assert len(failed) >= 1
+    assert_workflow_run(runs, expected_run)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -113,8 +171,7 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
     # Assert
     assert result == DAG_WF_HOOKS_EXPECTED_OUTPUT
     runs = await get_runs(hatchet, ctx_metadata)
-    completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
-    assert len(completed) >= 1
+    assert_workflow_run(runs, DAG_WF_HOOKS_SUCCESS)
     hook_key = f"user-hook-success:{ref.workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User success hook did not fire (key={hook_key})"
@@ -139,8 +196,7 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
-    assert len(failed) >= 1
+    assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     hook_key = f"user-hook-failure:{ref.workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
@@ -165,8 +221,7 @@ async def test_vanilla_dag_workflow_timeout(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
-    assert len(failed) >= 1
+    assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     hook_key = f"user-hook-failure:{ref.workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
@@ -193,8 +248,7 @@ async def test_vanilla_dag_workflow_retry_then_succeed(
     # Assert
     assert result == DAG_WF_HOOKS_EXPECTED_OUTPUT
     runs = await get_runs(hatchet, ctx_metadata)
-    completed = [r for r in runs if r.status == V1TaskStatus.COMPLETED]
-    assert len(completed) >= 1
+    assert_workflow_run(runs, DAG_WF_HOOKS_SUCCESS)
     hook_key = f"user-hook-success:{ref.workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User success hook did not fire (key={hook_key})"
@@ -219,8 +273,7 @@ async def test_vanilla_dag_workflow_retry_to_failure(
 
     # Assert
     runs = await get_runs(hatchet, ctx_metadata)
-    failed = [r for r in runs if r.status == V1TaskStatus.FAILED]
-    assert len(failed) >= 1
+    assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     hook_key = f"user-hook-failure:{ref.workflow_run_id}"
     hook_value = await redis_client.get(hook_key)
     assert hook_value == "fired", f"User failure hook did not fire (key={hook_key})"
