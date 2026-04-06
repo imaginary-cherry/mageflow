@@ -336,9 +336,7 @@ async def dag_step3(input: WorkflowTestMessage, ctx: Context) -> DagStep3Result:
     await input.apply_step_behavior(3, ctx.attempt_number)
     one = ctx.task_output(dag_step1)
     two = ctx.task_output(dag_step2)
-    return DagStep3Result(
-        step="3", parent_results=[DagStepResult(**one), DagStepResult(**two)]
-    )
+    return DagStep3Result(step="3", parent_results=[one, two])
 
 
 test_dag_wf_hooks = hatchet.workflow(
