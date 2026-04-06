@@ -46,15 +46,23 @@ async def get_specific_refs(
     return wf_tasks
 
 
+def is_workflow(run: V1TaskSummary) -> bool:
+    # Also can check run.task_id == 0
+    return run.children is not None
+
+
+async def get_full_run(hatchet: Hatchet, wf: V1TaskSummary) -> V1TaskSummary:
+    if is_workflow(wf):
+        return wf
+    full_wf = await hatchet.runs.aio_get_task_run(wf.task_external_id)
+    full_wf.workflow_name = wf.workflow_name
+    return full_wf
+
+
 async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     runs = await hatchet.runs.aio_list(additional_metadata=ctx_metadata)
-    runs_by_id = {wf.task_external_id: wf for wf in runs.rows}
     # Retrieve tasks data
-    wf_tasks = await asyncio.gather(
-        *[hatchet.runs.aio_get_task_run(wf.task_external_id) for wf in runs.rows]
-    )
-    for wf in wf_tasks:
-        wf.workflow_name = runs_by_id[wf.task_external_id].workflow_name
+    wf_tasks = await asyncio.gather(*[get_full_run(hatchet, wf) for wf in runs.rows])
     return wf_tasks
 
 
@@ -109,7 +117,9 @@ def find_sub_calls_by_task_ref(
 def is_wf_done(wf: V1TaskSummary) -> bool:
     wf_output = wf.output or {}
     completed = wf.status == V1TaskStatus.COMPLETED
-    task_succeeded = completed and "hatchet_results" in wf_output
+    # hatchet workflow doesn't wrap with hatchet results
+    correct_results_pattern = is_workflow(wf) or "hatchet_results" in wf_output
+    task_succeeded = completed and correct_results_pattern
     return task_succeeded or wf.status == V1TaskStatus.FAILED
 
 
