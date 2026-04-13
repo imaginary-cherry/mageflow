@@ -18,17 +18,13 @@ def mage_workflow(orch):
 
 @pytest.fixture
 def mock_activate_success_on_signature():
-    with patch.object(
-        Signature, "activate_success", new_callable=AsyncMock
-    ) as mock:
+    with patch.object(Signature, "activate_success", new_callable=AsyncMock) as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_activate_error_on_signature():
-    with patch.object(
-        Signature, "activate_error", new_callable=AsyncMock
-    ) as mock:
+    with patch.object(Signature, "activate_error", new_callable=AsyncMock) as mock:
         yield mock
 
 
@@ -57,9 +53,7 @@ def user_failure_spy(mage_workflow):
 @pytest_asyncio.fixture
 async def live_task_signature(mock_task_def):
     """Create a real TaskSignature persisted in fakeredis."""
-    signature = await mageflow.asign(
-        "hook_idem_task", model_validators=ContextMessage
-    )
+    signature = await mageflow.asign("hook_idem_task", model_validators=ContextMessage)
     return signature
 
 

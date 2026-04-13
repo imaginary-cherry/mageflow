@@ -58,7 +58,9 @@ class MageWorkflow(Workflow):
             async def task_wrapper(
                 msg: BaseModel, ctx: Context, *task_args, **task_kwargs
             ):
-                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(msg, ctx, False)
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(
+                    msg, ctx, False
+                )
                 is_normal_run = lifecycle.is_vanilla_run()
                 if not is_normal_run:
                     await lifecycle.task_success(ctx.data.parents)
@@ -79,7 +81,9 @@ class MageWorkflow(Workflow):
             async def task_wrapper(
                 msg: BaseModel, ctx: Context, *task_args, **task_kwargs
             ):
-                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(msg, ctx, False)
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(
+                    msg, ctx, False
+                )
                 is_normal_run = lifecycle.is_vanilla_run()
                 if not is_normal_run:
                     await lifecycle.task_failed(
