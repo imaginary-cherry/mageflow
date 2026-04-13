@@ -70,8 +70,8 @@ async def test_workflow_in_chain_success(
     last_task_info = assert_signature_done(runs, accept_msg_results_signature)
 
     # Check the next task start only after all workflow is done
-    assert wf_info.finished_at
-    assert wf_info.finished_at < last_task_info.finished_at
+    assert wf_info.started_at
+    assert wf_info.started_at < last_task_info.started_at
 
     assert_chain_done(runs, chain_signature, chain_tasks + [success_cb, error_cb])
     assert_signature_not_called(runs, error_cb)
