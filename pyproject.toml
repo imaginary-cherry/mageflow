@@ -15,5 +15,5 @@ known-first-party = ["mageflow", "mageflow_mcp", "thirdmagic"]
 
 [dependency-groups]
 dev = [
-    "testcontainers[redis]>=4.14.0,<5.0.0",
+    "testcontainers[redis]>=4.14.2,<5.0.0",
 ]
