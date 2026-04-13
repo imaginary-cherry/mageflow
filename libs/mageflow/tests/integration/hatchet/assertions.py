@@ -72,6 +72,18 @@ _TERMINAL_STATUSES = frozenset(
     {V1TaskStatus.COMPLETED, V1TaskStatus.FAILED, V1TaskStatus.CANCELLED}
 )
 
+# Upper bound on how long any wait_* helper will poll before returning.
+MAX_WAIT_TIMEOUT = 30.0
+
+
+def all_terminal(
+    mapping: dict[str, V1TaskSummary], keys: "set[str] | list[str]"
+) -> bool:
+    """True iff every ``key`` is present in ``mapping`` and its status is terminal."""
+    return all(
+        key in mapping and mapping[key].status in _TERMINAL_STATUSES for key in keys
+    )
+
 
 def children_by_step_name(wf_run: V1TaskSummary) -> dict[str, V1TaskSummary]:
     """Index a workflow run's children by step name.
@@ -109,7 +121,7 @@ async def wait_for_expected_steps(
     hatchet: Hatchet,
     ctx_metadata: dict,
     expected: ExpectedWorkflowRun,
-    timeout: float = 30.0,
+    timeout: float = MAX_WAIT_TIMEOUT,
     interval: float = 0.25,
 ):
     expected_names = {s.name for s in expected.steps if s.status is not None}
@@ -118,11 +130,7 @@ async def wait_for_expected_steps(
         wf = next((r for r in runs if r.children is not None), None)
         if wf is None or wf.status not in _TERMINAL_STATUSES:
             return False
-        children = children_by_step_name(wf)
-        return all(
-            name in children and children[name].status in _TERMINAL_STATUSES
-            for name in expected_names
-        )
+        return all_terminal(children_by_step_name(wf), expected_names)
 
     await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
 
@@ -131,16 +139,14 @@ async def wait_for_signatures_terminal(
     hatchet: Hatchet,
     ctx_metadata: dict,
     signatures: list["Signature"],
-    timeout: float = 30.0,
+    timeout: float = MAX_WAIT_TIMEOUT,
     interval: float = 0.25,
 ):
     expected_keys = {sig.key for sig in signatures}
 
     def _ready(runs: HatchetRuns) -> bool:
-        wf_by_id = map_wf_by_id(runs, also_not_done=True)
-        return all(
-            key in wf_by_id and wf_by_id[key].status in _TERMINAL_STATUSES
-            for key in expected_keys
+        return all_terminal(
+            map_wf_by_id(runs, also_not_done=True), expected_keys
         )
 
     await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
