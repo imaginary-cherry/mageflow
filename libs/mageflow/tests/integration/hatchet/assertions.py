@@ -278,7 +278,7 @@ def _assert_task_done(
             task_workflow.status == V1TaskStatus.COMPLETED
         ), f"{task_workflow.workflow_name} didn't finish ({_task_error_info(task_workflow)})"
     if input_params is not None:
-        task_input = task_workflow.input.get("input", {})
+        task_input = task_workflow.input
         assert (
             input_params.keys() <= task_input.keys()
         ), f"missing params {input_params.keys() - task_input.keys()} for {task_workflow.workflow_name}"
