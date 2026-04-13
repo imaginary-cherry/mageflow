@@ -8,14 +8,12 @@ from thirdmagic.signature import Signature
 from thirdmagic.signature.status import SignatureStatus
 
 import mageflow
-from mageflow.clients.hatchet.workflow import MageWorkflow
 from tests.integration.hatchet.models import ContextMessage
 
 
 @pytest.fixture
-def mage_workflow(hatchet_mock):
-    base_wf = hatchet_mock.workflow(name="test-wf", input_validator=ContextMessage)
-    return MageWorkflow(base_wf)
+def mage_workflow(orch):
+    return orch.workflow(name="test-wf", input_validator=ContextMessage)
 
 
 @pytest.fixture
