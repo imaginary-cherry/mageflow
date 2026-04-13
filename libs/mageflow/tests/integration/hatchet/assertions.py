@@ -291,6 +291,16 @@ def _assert_task_done(
     return task_workflow
 
 
+async def cleanup_hook_keys(redis_client) -> None:
+    """Remove ``user-hook-*`` markers written by test workflows' on_success /
+    on_failure hooks. These are test-only instrumentation keys that never get
+    a TTL, so callers must delete them before ``assert_redis_is_clean``.
+    """
+    hook_keys = await redis_client.keys("user-hook-*")
+    if hook_keys:
+        await redis_client.delete(*hook_keys)
+
+
 async def assert_redis_is_clean(redis_client):
     __tracebackhide__ = False
     non_persistent_keys = await extract_bad_keys_from_redis(redis_client)

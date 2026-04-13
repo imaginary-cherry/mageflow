@@ -9,6 +9,7 @@ from tests.integration.hatchet.assertions import (
     assert_signature_done,
     assert_signature_failed,
     assert_signature_not_called,
+    cleanup_hook_keys,
     get_runs,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
@@ -22,13 +23,6 @@ from tests.integration.hatchet.worker import (
 )
 
 pytestmark = pytest.mark.hatchet
-
-
-async def _cleanup_hook_keys(redis_client):
-    """Remove user-hook-* keys written by workflow on_success/on_failure hooks."""
-    hook_keys = await redis_client.keys("user-hook-*")
-    if hook_keys:
-        await redis_client.delete(*hook_keys)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -75,7 +69,7 @@ async def test_workflow_in_chain_success(
 
     assert_chain_done(runs, chain_signature, chain_tasks + [success_cb, error_cb])
     assert_signature_not_called(runs, error_cb)
-    await _cleanup_hook_keys(redis_client)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -120,5 +114,5 @@ async def test_workflow_in_chain_failure(
     assert_signature_not_called(runs, task3_signature)
     assert_signature_not_called(runs, success_cb)
     assert_signature_done(runs, error_cb)
-    await _cleanup_hook_keys(redis_client)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)

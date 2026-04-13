@@ -8,6 +8,7 @@ from tests.integration.hatchet.assertions import (
     assert_signature_done,
     assert_signature_failed,
     assert_signature_not_called,
+    cleanup_hook_keys,
     get_runs,
     wait_for_signatures_terminal,
 )
@@ -55,6 +56,7 @@ async def test_signed_dag_workflow_success(
     await asyncio.sleep(8)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, signature, check_called_once=False)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -82,6 +84,7 @@ async def test_signed_dag_workflow_failure(
     await asyncio.sleep(8)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_failed(runs, signature)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -117,6 +120,7 @@ async def test_signed_dag_workflow_with_success_callbacks(
     assert_signature_done(runs, signature, check_called_once=False)
     assert_signature_done(runs, success_cb)
     assert_signature_not_called(runs, error_cb)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -151,6 +155,7 @@ async def test_signed_dag_workflow_with_error_callbacks(
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_done(runs, error_cb)
     assert_signature_not_called(runs, success_cb)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -184,6 +189,7 @@ async def test_signed_dag_workflow_timeout(
     assert_signature_failed(runs, signature)
     assert_signature_done(runs, error_cb)
     assert_signature_not_called(runs, success_cb)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -219,6 +225,7 @@ async def test_signed_dag_workflow_retry_then_succeed(
     assert_signature_done(runs, signature, check_called_once=False)
     assert_signature_done(runs, success_cb)
     assert_signature_not_called(runs, error_cb)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
 
 
@@ -252,4 +259,5 @@ async def test_signed_dag_workflow_retry_to_failure(
     assert_signature_failed(runs, signature)
     assert_signature_done(runs, error_cb)
     assert_signature_not_called(runs, success_cb)
+    await cleanup_hook_keys(redis_client)
     await assert_redis_is_clean(redis_client)
