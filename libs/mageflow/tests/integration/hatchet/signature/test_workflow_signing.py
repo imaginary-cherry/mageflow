@@ -9,6 +9,7 @@ from tests.integration.hatchet.assertions import (
     assert_signature_failed,
     assert_signature_not_called,
     get_runs,
+    wait_for_signatures_terminal,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import WorkflowTestMessage
@@ -178,7 +179,7 @@ async def test_signed_dag_workflow_timeout(
     await signature.aio_run_no_wait(message, options=trigger_options)
 
     # Assert
-    await asyncio.sleep(7)
+    await wait_for_signatures_terminal(hatchet, ctx_metadata, [signature, error_cb])
     runs = await get_runs(hatchet, ctx_metadata)
     assert_signature_failed(runs, signature)
     assert_signature_done(runs, error_cb)

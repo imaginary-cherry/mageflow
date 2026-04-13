@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from typing import Callable
 
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1LogLineList, V1TaskStatus, V1TaskSummary
@@ -65,6 +66,84 @@ async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     # Retrieve tasks data
     wf_tasks = await asyncio.gather(*[get_full_run(hatchet, wf) for wf in runs.rows])
     return wf_tasks
+
+
+_TERMINAL_STATUSES = frozenset(
+    {V1TaskStatus.COMPLETED, V1TaskStatus.FAILED, V1TaskStatus.CANCELLED}
+)
+
+
+def children_by_step_name(wf_run: V1TaskSummary) -> dict[str, V1TaskSummary]:
+    """Index a workflow run's children by step name.
+
+    Hatchet 1.23+ renders child display names as ``<step_name>-<millis>``; strip
+    the numeric suffix so tests can look up children by the decorator name.
+    """
+    return {
+        child.display_name.rsplit("-", maxsplit=1)[0]: child
+        for child in (wf_run.children or [])
+    }
+
+
+async def poll_runs_until(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    is_ready: Callable[[HatchetRuns], bool],
+    timeout: float,
+    interval: float,
+):
+    """Fetch runs on ``interval`` until ``is_ready`` returns True or ``timeout``.
+
+    Returns silently on either path — callers fetch runs themselves and assert.
+    """
+    deadline = asyncio.get_event_loop().time() + timeout
+    while True:
+        if is_ready(await get_runs(hatchet, ctx_metadata)):
+            return
+        if asyncio.get_event_loop().time() >= deadline:
+            return
+        await asyncio.sleep(interval)
+
+
+async def wait_for_expected_steps(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    expected: ExpectedWorkflowRun,
+    timeout: float = 30.0,
+    interval: float = 0.25,
+):
+    expected_names = {s.name for s in expected.steps if s.status is not None}
+
+    def _ready(runs: HatchetRuns) -> bool:
+        wf = next((r for r in runs if r.children is not None), None)
+        if wf is None or wf.status not in _TERMINAL_STATUSES:
+            return False
+        children = children_by_step_name(wf)
+        return all(
+            name in children and children[name].status in _TERMINAL_STATUSES
+            for name in expected_names
+        )
+
+    await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
+
+
+async def wait_for_signatures_terminal(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    signatures: list["Signature"],
+    timeout: float = 30.0,
+    interval: float = 0.25,
+):
+    expected_keys = {sig.key for sig in signatures}
+
+    def _ready(runs: HatchetRuns) -> bool:
+        wf_by_id = map_wf_by_id(runs, also_not_done=True)
+        return all(
+            key in wf_by_id and wf_by_id[key].status in _TERMINAL_STATUSES
+            for key in expected_keys
+        )
+
+    await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
 
 
 def map_wf_by_external_id(runs: HatchetRuns) -> WF_MAPPING_BY_WF_ID_TYPE:
@@ -487,10 +566,7 @@ def assert_workflow_run(
     assert (
         wf_run.children is not None
     ), "Workflow run has no children, it is not a workflow"
-    children_by_name = {
-        child.display_name.rsplit("-", maxsplit=1)[0]: child
-        for child in wf_run.children
-    }
+    children_by_name = children_by_step_name(wf_run)
     for step in expected.steps:
         if step.status is None:
             assert (

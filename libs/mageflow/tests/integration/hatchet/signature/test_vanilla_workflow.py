@@ -5,6 +5,7 @@ from tests.integration.hatchet.assertions import (
     assert_hook_fired,
     assert_workflow_run,
     get_runs,
+    wait_for_expected_steps,
 )
 from tests.integration.hatchet.conftest import HatchetInitData
 from tests.integration.hatchet.models import (
@@ -136,6 +137,7 @@ async def test_vanilla_dag_workflow_success(
 
     # Assert
     assert result == expected_run.expected_output
+    await wait_for_expected_steps(hatchet, ctx_metadata, expected_run)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, expected_run)
 
@@ -158,6 +160,7 @@ async def test_vanilla_dag_workflow_failure(
     with pytest.raises(Exception):
         await workflow.aio_run(message, options=trigger_options)
 
+    await wait_for_expected_steps(hatchet, ctx_metadata, expected_run)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, expected_run)
 
@@ -180,6 +183,7 @@ async def test_vanilla_dag_workflow_hooks_success_fires(
 
     # Assert
     assert result == DAG_WF_HOOKS_EXPECTED_OUTPUT
+    await wait_for_expected_steps(hatchet, ctx_metadata, DAG_WF_HOOKS_SUCCESS)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, DAG_WF_HOOKS_SUCCESS)
     await assert_hook_fired(redis_client, ref.workflow_run_id, "success")
@@ -203,6 +207,7 @@ async def test_vanilla_dag_workflow_hooks_failure_fires(
         await ref.aio_result()
 
     # Assert
+    await wait_for_expected_steps(hatchet, ctx_metadata, DAG_WF_HOOKS_FAILURE)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     await assert_hook_fired(redis_client, ref.workflow_run_id, "failure")
@@ -226,6 +231,7 @@ async def test_vanilla_dag_workflow_timeout(
         await ref.aio_result()
 
     # Assert
+    await wait_for_expected_steps(hatchet, ctx_metadata, DAG_WF_HOOKS_FAILURE)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     await assert_hook_fired(redis_client, ref.workflow_run_id, "failure")
@@ -251,6 +257,7 @@ async def test_vanilla_dag_workflow_retry_then_succeed(
 
     # Assert
     assert result == DAG_WF_HOOKS_EXPECTED_OUTPUT
+    await wait_for_expected_steps(hatchet, ctx_metadata, DAG_WF_HOOKS_SUCCESS)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, DAG_WF_HOOKS_SUCCESS)
     await assert_hook_fired(redis_client, ref.workflow_run_id, "success")
@@ -274,6 +281,7 @@ async def test_vanilla_dag_workflow_retry_to_failure(
         await ref.aio_result()
 
     # Assert
+    await wait_for_expected_steps(hatchet, ctx_metadata, DAG_WF_HOOKS_FAILURE)
     runs = await get_runs(hatchet, ctx_metadata)
     assert_workflow_run(runs, DAG_WF_HOOKS_FAILURE)
     await assert_hook_fired(redis_client, ref.workflow_run_id, "failure")
