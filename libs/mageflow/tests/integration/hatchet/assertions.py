@@ -410,7 +410,7 @@ def assert_swarm_task_done(
             callback_wf = assert_signature_done(
                 runs, task, check_called_once=True, **task.kwargs
             )
-            for result in callback_wf.input["input"]["task_result"]:
+            for result in callback_wf.input["task_result"]:
                 assert (
                     result in expected_output
                 ), f"{result} not found in {expected_output} for callback {callback_wf.workflow_name}"
