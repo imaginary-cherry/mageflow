@@ -145,9 +145,7 @@ async def wait_for_signatures_terminal(
     expected_keys = {sig.key for sig in signatures}
 
     def _ready(runs: HatchetRuns) -> bool:
-        return all_terminal(
-            map_wf_by_id(runs, also_not_done=True), expected_keys
-        )
+        return all_terminal(map_wf_by_id(runs, also_not_done=True), expected_keys)
 
     await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
 
@@ -326,7 +324,7 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
     assert (
         hatchet_call.status == V1TaskStatus.CANCELLED
     ), f"{task.task_name} was not cancelled ({_task_error_info(hatchet_call)})"
-    expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
+    expected_dump = task.model_validators.model_validate(hatchet_call.input)
     expected_saved_params = expected_dump.model_dump(exclude_unset=True)
     for key, value in expected_saved_params.items():
         assert task.kwargs.get(key) == value, f"{key} != {value}, from {task.task_name}"
