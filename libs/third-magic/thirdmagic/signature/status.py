@@ -30,3 +30,6 @@ class TaskStatus(AtomicRedisModel):
 
     def should_run(self):
         return self.status in [SignatureStatus.PENDING, SignatureStatus.ACTIVE]
+
+    def is_done(self):
+        return self.status in [SignatureStatus.DONE, SignatureStatus.FAILED]
