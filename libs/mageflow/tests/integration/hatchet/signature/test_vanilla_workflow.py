@@ -37,11 +37,17 @@ DAG_WF_EXPECTED_OUTPUT = {
     dag_step3.name: DagStep3Result(
         step="3", parent_results=[_step1, _step2]
     ).model_dump(),
+    # Hatchet SDK 1.23+ surfaces registered-but-not-fired lifecycle tasks
+    # (on_failure) in the workflow result on successful runs. MageWorkflow
+    # injects a noop on_failure hook, so it shows up here as skipped.
+    "_noop_failure-on-failure": {"skipped": True},
 }
 
 DAG_WF_HOOKS_EXPECTED_OUTPUT = {
     dag_hooks_step1.name: DagStepResult(step="1").model_dump(),
     dag_hooks_step2.name: DagStepResult(step="2").model_dump(),
+    # User-defined on_failure hook also appears as skipped on successful runs.
+    "dag_hooks_on_failure-on-failure": {"skipped": True},
 }
 
 # --- Expected workflow runs per scenario ---
