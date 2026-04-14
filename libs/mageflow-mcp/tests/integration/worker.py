@@ -13,7 +13,7 @@ if os.environ.get("COVERAGE_PROCESS_START"):
 import redis
 from dynaconf import Dynaconf
 from hatchet_sdk import ClientConfig, Context, Hatchet
-from hatchet_sdk.config import HealthcheckConfig, TenacityConfig
+from hatchet_sdk.config import HealthcheckConfig
 
 import mageflow
 from tests.integration.models import (
@@ -33,11 +33,6 @@ config_obj = ClientConfig(
     token=settings.hatchet.api_key,
     **settings.hatchet.to_dict(),
     healthcheck=HealthcheckConfig(enabled=True),
-    # Hatchet Lite's gRPC server can take longer than the SDK default retry
-    # budget to become ready on fresh CI runners. When registration fails the
-    # worker calls sys.exit(1), so we give it more attempts to ride out
-    # startup.
-    tenacity=TenacityConfig(max_attempts=15),
     logger=logger,
 )
 
