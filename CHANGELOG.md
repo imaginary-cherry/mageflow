@@ -1,10 +1,17 @@
 # Changelog
 
+## [0.3.6]
+
+### ✨ Added
+
+- **Signing Hatchet Workflows (`MageWorkflow`)**: Native Hatchet `Workflow` objects can now be tracked by mageflow's signature lifecycle, enabling status callbacks (success/failure) without wrapping tasks in mageflow decorators.
+
 ## [0.3.5]
 
 ### 🐛 Fixed
 
 - **Retry Cache Key Collision**: Fixed a bug where `SignatureRetryCache` the same cache object for all instances of the same task, now each task run has different cache instance.
+
 
 ## [0.3.4]
 

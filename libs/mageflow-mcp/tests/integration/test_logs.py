@@ -24,8 +24,8 @@ async def test_get_logs_for_completed_task_with_content(
     Uses the Hatchet runs API to resolve the correct task_external_id
     (step run ID) from the workflow run, then calls the adapter directly.
     """
-    h = adapter.hatchet
-    workflow_run = await h.runs.aio_get(dispatched_tasks.logging_workflow_run_id)
+    hatchet = adapter.hatchet
+    workflow_run = await hatchet.runs.aio_get(dispatched_tasks.logging_workflow_run_id)
     task_run = workflow_run.tasks[0]
     task_external_id = task_run.task_external_id
 

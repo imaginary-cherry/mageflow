@@ -23,7 +23,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-thirdmagic = { workspace = true }
+thirdmagic = { path = "../third-magic" }
 
 [build-system]
 requires = ["hatchling"]

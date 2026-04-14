@@ -13,6 +13,7 @@ from hatchet_sdk.runnables.types import (
     ConcurrencyLimitStrategy,
     DefaultFilter,
     StickyStrategy,
+    TaskDefaults,
 )
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
@@ -30,6 +31,7 @@ from typing_extensions import override
 from mageflow.callbacks import AcceptParams, handle_task_callback
 from mageflow.chain.messages import ChainCallbackMessage, ChainErrorMessage
 from mageflow.chain.workflows import chain_end_task, chain_error_task
+from mageflow.clients.hatchet.workflow import MageWorkflow
 from mageflow.clients.inner_task_names import (
     ON_CHAIN_END,
     ON_CHAIN_ERROR,
@@ -80,6 +82,19 @@ class TaskOptions(TypedDict, total=False):
     default_additional_metadata: dict[str, Any] | None
 
 
+class WorkflowOptions(TypedDict, total=False):
+    description: str | None
+    on_events: list[str] | None
+    on_crons: list[str] | None
+    version: str | None
+    sticky: StickyStrategy | None
+    default_priority: int
+    concurrency: int | ConcurrencyExpression | list[ConcurrencyExpression] | None
+    task_defaults: TaskDefaults
+    default_filters: list[DefaultFilter] | None
+    default_additional_metadata: dict[str, Any] | None
+
+
 class WorkerOptions(TypedDict, total=False):
     slots: int
     durable_slots: int
@@ -124,6 +139,28 @@ class HatchetMageflow(Hatchet):
                 input_validator=Signature.ClientAdapter.extract_validator(task),
             )
         )
+
+    def workflow(
+        self, *, name: str, input_validator=None, **kwargs: Unpack[WorkflowOptions]
+    ) -> MageWorkflow:
+        """Return a MageWorkflow and record a MageflowTaskDefinition.
+
+        This is a thin proxy over hatchet.workflow() that:
+        - Records a MageflowTaskDefinition with retries=None (no workflow-level retries)
+          and the raw input_validator type supplied by the user.
+        - Returns a MageWorkflow (wrapping the native Workflow) so callers can use
+          @wf.task() directly, and so hooks are self-injected at worker() time.
+        """
+        base_wf = self.hatchet.workflow(
+            name=name, input_validator=input_validator, **kwargs
+        )
+        mage_wf = MageWorkflow(base_wf)
+        self._task_defs.append(
+            MageflowTaskDefinition(
+                mageflow_task_name=name, task_name=name, input_validator=input_validator
+            )
+        )
+        return mage_wf
 
     def task_decorator(self, func: Callable, hatchet_task, is_idempotent: bool = False):
         param_config = (
@@ -237,6 +274,12 @@ class HatchetMageflow(Hatchet):
         lifespan: LifespanFn | None = None,
         **kwargs: Unpack[WorkerOptions],
     ) -> Worker:
+        workflows = workflows or []
+
+        for wf in workflows:
+            if isinstance(wf, MageWorkflow):
+                wf.inject_hooks()
+
         mageflow_flows = self.init_mageflow_hatchet_tasks()
         workflows += mageflow_flows
         if lifespan is None:

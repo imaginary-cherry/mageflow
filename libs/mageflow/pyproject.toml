@@ -65,6 +65,9 @@ testing = [
     "pytest>=9.0.0,<10.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
     "fakeredis[json,lua]>=2.34.0,<3.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "dynaconf>=3.2.13",
+    "psutil>=7.2.2",
 ]
 
 [project.entry-points.pytest11]
@@ -79,7 +82,7 @@ Repository = "https://github.com/imaginary-cherry/mageflow"
 "Changelog" = "https://github.com/imaginary-cherry/mageflow/releases"
 
 [tool.uv.sources]
-thirdmagic = { workspace = true }
+thirdmagic = { path = "../third-magic" }
 
 [build-system]
 requires = ["hatchling"]
@@ -117,6 +120,11 @@ directory = "htmlcov"
 [tool.mageflow.testing]
 # backend = "testcontainers"  # default: uses real Redis via testcontainers (requires Docker)
 # backend = "fakeredis"       # alternative: uses fakeredis (no Docker required)
+
+[tool.pytest.ini_options]
+markers = [
+    "hatchet: tests specific to the Hatchet client integration",
+]
 
 [tool.ruff]
 select = ["I", "F401"]

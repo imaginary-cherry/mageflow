@@ -28,6 +28,8 @@ from tests.integration.hatchet.models import (
     CacheIsolationMessage,
     CommandMessageWithResult,
     ContextMessage,
+    DagStep3Result,
+    DagStepResult,
     MageflowTestError,
     MessageWithData,
     MessageWithMsgResults,
@@ -35,6 +37,7 @@ from tests.integration.hatchet.models import (
     SignatureKeysResult,
     SignatureKeyWithWF,
     SleepTaskMessage,
+    WorkflowTestMessage,
 )
 
 settings = Dynaconf(
@@ -307,6 +310,74 @@ async def concurrent_cache_isolation_task(msg: CacheIsolationMessage):
         task_keys.append(sig.key)
 
 
+# --- DAG workflows (message-driven failure behavior) ---
+
+test_dag_wf = hatchet.workflow(name="test-dag-wf", input_validator=WorkflowTestMessage)
+
+
+@test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
+async def dag_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    await input.apply_step_behavior(1, ctx.attempt_number)
+    return DagStepResult(step="1")
+
+
+@test_dag_wf.task(retries=3, execution_timeout=timedelta(seconds=3))
+async def dag_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    await input.apply_step_behavior(2, ctx.attempt_number)
+    return DagStepResult(step="2")
+
+
+@test_dag_wf.task(
+    parents=[dag_step1, dag_step2],
+    retries=3,
+    execution_timeout=timedelta(seconds=3),
+)
+async def dag_step3(input: WorkflowTestMessage, ctx: Context) -> DagStep3Result:
+    await input.apply_step_behavior(3, ctx.attempt_number)
+    one = ctx.task_output(dag_step1)
+    two = ctx.task_output(dag_step2)
+    return DagStep3Result(step="3", parent_results=[one, two])
+
+
+test_dag_wf_hooks = hatchet.workflow(
+    name="test-dag-wf-hooks", input_validator=WorkflowTestMessage
+)
+
+
+@test_dag_wf_hooks.task(retries=3, execution_timeout=timedelta(seconds=3))
+async def dag_hooks_step1(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    await input.apply_step_behavior(1, ctx.attempt_number)
+    return DagStepResult(step="1")
+
+
+@test_dag_wf_hooks.task(
+    parents=[dag_hooks_step1],
+    retries=3,
+    execution_timeout=timedelta(seconds=3),
+)
+async def dag_hooks_step2(input: WorkflowTestMessage, ctx: Context) -> DagStepResult:
+    await input.apply_step_behavior(2, ctx.attempt_number)
+    return DagStepResult(step="2")
+
+
+@test_dag_wf_hooks.on_success_task()
+async def dag_hooks_on_success(input, ctx: Context):
+    if hasattr(input, "fail_at_on_success") and input.fail_at_on_success:
+        raise MageflowTestError("on_success hook failed")
+    await TaskSignature.Meta.redis.set(
+        f"user-hook-success:{ctx.workflow_run_id}", "fired"
+    )
+
+
+@test_dag_wf_hooks.on_failure_task()
+async def dag_hooks_on_failure(input, ctx: Context):
+    if hasattr(input, "fail_at_on_failure") and input.fail_at_on_failure:
+        raise MageflowTestError("on_failure hook failed")
+    await TaskSignature.Meta.redis.set(
+        f"user-hook-failure:{ctx.workflow_run_id}", "fired"
+    )
+
+
 workflows = [
     task1,
     task2,
@@ -330,6 +401,8 @@ workflows = [
     create_signatures_for_ttl_test,
     retry_cache_durable_task,
     concurrent_cache_isolation_task,
+    test_dag_wf,
+    test_dag_wf_hooks,
 ]
 
 

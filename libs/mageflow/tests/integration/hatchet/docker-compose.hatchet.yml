@@ -26,7 +26,7 @@ services:
       timeout: 5s
       retries: 5
   hatchet-lite:
-    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.79.5
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.83.23
     ports:
       - "8888:8888"
       - "7077:7077"

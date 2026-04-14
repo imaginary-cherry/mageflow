@@ -38,7 +38,7 @@ class HatchetMCPAdapter(BaseMCPAdapter):
             ServiceException: HTTP 5xx — Hatchet server error or unreachable.
             Exception: Any other unexpected error.
         """
-        result = await self.hatchet.logs.aio_list(task_run_id=task_run_id, limit=1000)
+        result = await self.hatchet.logs.aio_list(task_run_id=task_run_id)
         rows = result.rows or []
         return [
             LogEntry(

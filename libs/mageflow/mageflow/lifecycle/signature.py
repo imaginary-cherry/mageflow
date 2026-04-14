@@ -29,8 +29,11 @@ class SignatureLifecycle(BaseLifecycle):
             return signature
 
     async def task_success(self, result: Any):
-        success_publish_tasks = []
         current_task = self.signature
+        if current_task.task_status.is_done():
+            return
+
+        success_publish_tasks = []
         container_id = current_task.signature_container_id
         if container_id:
             container_signature = await rapyer.aget(container_id)
@@ -50,6 +53,9 @@ class SignatureLifecycle(BaseLifecycle):
 
     async def task_failed(self, message: dict, error: BaseException):
         current_task = self.signature
+        if current_task.task_status.is_done():
+            return
+
         error_publish_tasks = []
 
         container_id = current_task.signature_container_id

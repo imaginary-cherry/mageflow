@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-mageflow = { workspace = true }
+mageflow = { path = "../mageflow" }
 
 [build-system]
 requires = ["hatchling"]
