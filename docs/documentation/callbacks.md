@@ -153,6 +153,26 @@ error_logger = await mageflow.asign(error_callback, additional_field1=12345, add
 signature = await mageflow.asign("task", error_callbacks=[error_logger])
 ```
 
+## Signing Workflows
+
+<div style="background: linear-gradient(135deg, #7c4dff 0%, #b388ff 100%); color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9em;">
+  <strong>🧪 Beta</strong>
+</div>
+
+Hatchet `Workflow` objects can be passed directly to `asign`, `achain`, or `aswarm` — the same way you pass a task function:
+
+```python
+wf = hatchet.workflow(name="my-workflow")
+
+sig = await mageflow.asign(wf)
+chain = await mageflow.achain([preprocess_task, wf, postprocess_task])
+```
+
+MageFlow automatically injects lifecycle hooks into workflows registered with the worker, so completion callbacks work the same as standalone tasks.
+
+!!! warning "Signing idempotency not yet supported"
+    Workflow signatures do not participate in the [signature retry cache](idempotency.md) used by durable tasks. If a durable task that signs a workflow retries, a duplicate signature will be created. This is tracked in [#105](https://github.com/imaginary-cherry/mageflow/issues/105).
+
 ## Advanced Signature Configuration
 
 ### Model Validation

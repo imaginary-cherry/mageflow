@@ -61,8 +61,8 @@ async def test_chain_end_crash_at_remove_current_task_retry_succeeds_idempotent(
     # Act - Retry succeeds
     await chain_end_task(setup.msg.chain_results, setup.lifecycle_manager, setup.logger)
 
-    # Assert - activate_success called again on retry (no idempotency guard in task_success)
-    assert mock_chain_activate_success.call_count == 2
+    # Assert - activate_success NOT called again on retry (idempotency guard skips already-done signature)
+    assert mock_chain_activate_success.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -154,8 +154,8 @@ async def test_chain_error_crash_at_remove_current_task_retry_succeeds_idempoten
         setup.logger,
     )
 
-    # Assert - activate_error called again on retry (no idempotency guard in task_failed)
-    assert mock_chain_activate_error.call_count == 2
+    # Assert - activate_error NOT called again on retry (idempotency guard skips already-done signature)
+    assert mock_chain_activate_error.call_count == 1
 
 
 @pytest.mark.asyncio

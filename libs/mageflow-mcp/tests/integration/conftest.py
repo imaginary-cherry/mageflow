@@ -266,7 +266,7 @@ async def dispatched_tasks(
         logging_sig=logging_sig,
         chain_sig=chain_sig,
         chain_task_sigs=[chain_t1, chain_t2, chain_t3],
-        logging_workflow_run_id=str(logging_ref),
+        logging_workflow_run_id=logging_ref.workflow_run_id,
     )
 
 

@@ -31,9 +31,7 @@ async def test__hatchet_adapter__get_logs__returns_log_entries() -> None:
     assert entries[0].line == "Processing item 42"
     assert entries[0].level == "INFO"
     assert entries[0].timestamp == datetime(2026, 2, 24, 12, 0, 0, tzinfo=timezone.utc)
-    hatchet.logs.aio_list.assert_awaited_once_with(
-        task_run_id="run-uuid-123", limit=1000
-    )
+    hatchet.logs.aio_list.assert_awaited_once_with(task_run_id="run-uuid-123")
 
 
 @pytest.mark.asyncio

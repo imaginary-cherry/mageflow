@@ -1,9 +1,102 @@
-from typing import Any
+import functools
+import inspect
+from datetime import timedelta
+from typing import Any, TypedDict, Unpack
 
+from hatchet_sdk import Context
+from hatchet_sdk.rate_limit import RateLimit
+from hatchet_sdk.runnables.types import ConcurrencyExpression
 from hatchet_sdk.runnables.workflow import Workflow
 from hatchet_sdk.utils.typing import JSONSerializableMapping
 from pydantic import BaseModel
+from thirdmagic.task import TaskSignature
 from thirdmagic.utils import deep_merge
+
+Duration = timedelta | str
+
+
+class LifecycleTaskOptions(TypedDict, total=False):
+    name: str | None
+    schedule_timeout: Duration
+    execution_timeout: Duration
+    retries: int
+    rate_limits: list[RateLimit] | None
+    backoff_factor: float | None
+    backoff_max_seconds: int | None
+    concurrency: int | list[ConcurrencyExpression] | None
+
+
+class MageWorkflow(Workflow):
+    """
+    We patch the Workflow class to add Mageflow-specific hooks.
+    """
+
+    def __init__(self, base_workflow: Workflow):
+        super().__init__(config=base_workflow.config, client=base_workflow.client)
+        self._added_success_hook = False
+        self._added_failure_hook = False
+
+    def inject_hooks(self):
+        if not self._added_success_hook:
+
+            @self.on_success_task()
+            async def _noop_success(input, ctx: Context):
+                pass
+
+        if not self._added_failure_hook:
+
+            @self.on_failure_task()
+            async def _noop_failure(input, ctx: Context):
+                pass
+
+    def on_success_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
+        parent_decorator = super().on_success_task(**kwargs)
+        self._added_success_hook = True
+
+        def wrapper(func):
+            @functools.wraps(func)
+            async def task_wrapper(
+                msg: BaseModel, ctx: Context, *task_args, **task_kwargs
+            ):
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(
+                    msg, ctx, False
+                )
+                is_normal_run = lifecycle.is_vanilla_run()
+                if not is_normal_run:
+                    await lifecycle.task_success(ctx.data.parents)
+
+                return await func(msg, ctx, *task_args, **task_kwargs)
+
+            task_wrapper.__signature__ = inspect.signature(func)
+            return parent_decorator(task_wrapper)
+
+        return wrapper
+
+    def on_failure_task(self, **kwargs: Unpack[LifecycleTaskOptions]):
+        parent_decorator = super().on_failure_task(**kwargs)
+        self._added_failure_hook = True
+
+        def wrapper(func):
+            @functools.wraps(func)
+            async def task_wrapper(
+                msg: BaseModel, ctx: Context, *task_args, **task_kwargs
+            ):
+                lifecycle = await TaskSignature.ClientAdapter.create_lifecycle(
+                    msg, ctx, False
+                )
+                is_normal_run = lifecycle.is_vanilla_run()
+                if not is_normal_run:
+                    await lifecycle.task_failed(
+                        msg.model_dump(mode="json", exclude_unset=True),
+                        Exception(str(msg)),
+                    )
+
+                return await func(msg, ctx, *task_args, **task_kwargs)
+
+            task_wrapper.__signature__ = inspect.signature(func)
+            return parent_decorator(task_wrapper)
+
+        return wrapper
 
 
 class MageflowWorkflow(Workflow):

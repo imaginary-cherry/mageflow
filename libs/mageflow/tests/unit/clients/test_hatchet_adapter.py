@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from hatchet_sdk import Context, NonRetryableException
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
+from hatchet_sdk.runnables.types import EmptyModel
 from thirdmagic.consts import TASK_ID_PARAM_NAME
 from thirdmagic.swarm.model import SwarmConfig
 from thirdmagic.task_def import MageflowTaskDefinition
@@ -429,3 +430,66 @@ def test_task_name_returns_task_name(adapter, hatchet_task):
 
     # Assert
     assert result == "my_workflow"
+
+
+# --- TestWorkflowAdapterCompatibility ---
+
+
+class TestWorkflowAdapterCompatibility:
+    """Verify HatchetClientAdapter methods work with Workflow objects (not just Standalone task objects)."""
+
+    @pytest.fixture
+    def hatchet_workflow(self, hatchet_mock):
+        return hatchet_mock.workflow(name="my-workflow", input_validator=ContextMessage)
+
+    @pytest.fixture
+    def hatchet_workflow_no_validator(self, hatchet_mock):
+        return hatchet_mock.workflow(name="no-validator-workflow")
+
+    @pytest.fixture
+    def hatchet_workflow_with_task(self, hatchet_mock):
+        from hatchet_sdk import Context
+
+        workflow = hatchet_mock.workflow(
+            name="my-workflow", input_validator=ContextMessage
+        )
+
+        @workflow.task(retries=2)
+        async def my_step(input: ContextMessage, ctx: Context):
+            pass
+
+        return workflow
+
+    def test_task_name_returns_workflow_name(self, adapter, hatchet_workflow):
+        # Act
+        result = adapter.task_name(hatchet_workflow)
+
+        # Assert — derive expected name from the same API to avoid namespace pitfalls
+        assert result == hatchet_workflow.name
+
+    def test_extract_validator_from_workflow(self, adapter, hatchet_workflow):
+        # Act
+        result = adapter.extract_validator(hatchet_workflow)
+
+        # Assert
+        assert result is ContextMessage
+
+    def test_extract_validator_from_workflow_without_validator(
+        self, adapter, hatchet_workflow_no_validator
+    ):
+        # Workflow created without explicit input_validator falls back to EmptyModel.
+        # extract_validator should return that default class (not None).
+        # Act
+        result = adapter.extract_validator(hatchet_workflow_no_validator)
+
+        # Assert
+        assert result is EmptyModel
+
+    def test_extract_retries_from_workflow_with_task(
+        self, adapter, hatchet_workflow_with_task
+    ):
+        # Act
+        result = adapter.extract_retries(hatchet_workflow_with_task)
+
+        # Assert
+        assert result == 2

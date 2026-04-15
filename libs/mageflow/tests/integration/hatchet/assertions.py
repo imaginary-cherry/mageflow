@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from typing import Callable
 
 from hatchet_sdk import Hatchet
 from hatchet_sdk.clients.rest import V1LogLineList, V1TaskStatus, V1TaskSummary
@@ -16,6 +17,7 @@ from thirdmagic.task import TaskSignature
 from thirdmagic.utils import return_value_field
 
 from tests.integration.hatchet.conftest import extract_bad_keys_from_redis
+from tests.integration.hatchet.models import ExpectedWorkflowRun
 from tests.integration.hatchet.worker import MAX_DONE_TTL
 
 WF_MAPPING_TYPE = dict[str, V1TaskSummary]
@@ -31,6 +33,8 @@ def _task_error_info(wf: V1TaskSummary) -> str:
 
 
 def is_wf_internal_mageflow(hatchet: Hatchet, wf: V1TaskSummary) -> bool:
+    if wf.workflow_name is None:
+        return False
     task_name = wf.workflow_name.removeprefix(hatchet.namespace)
     return task_name.startswith(MAGEFLOW_TASK_INITIALS)
 
@@ -44,16 +48,106 @@ async def get_specific_refs(
     return wf_tasks
 
 
+def is_workflow(run: V1TaskSummary) -> bool:
+    # Also can check run.task_id == 0
+    return run.children is not None
+
+
+async def get_full_run(hatchet: Hatchet, wf: V1TaskSummary) -> V1TaskSummary:
+    if is_workflow(wf):
+        return wf
+    full_wf = await hatchet.runs.aio_get_task_run(wf.task_external_id)
+    full_wf.workflow_name = wf.workflow_name
+    return full_wf
+
+
 async def get_runs(hatchet: Hatchet, ctx_metadata: dict) -> HatchetRuns:
     runs = await hatchet.runs.aio_list(additional_metadata=ctx_metadata)
-    runs_by_id = {wf.task_external_id: wf for wf in runs.rows}
     # Retrieve tasks data
-    wf_tasks = await asyncio.gather(
-        *[hatchet.runs.aio_get_task_run(wf.task_external_id) for wf in runs.rows]
-    )
-    for wf in wf_tasks:
-        wf.workflow_name = runs_by_id[wf.task_external_id].workflow_name
+    wf_tasks = await asyncio.gather(*[get_full_run(hatchet, wf) for wf in runs.rows])
     return wf_tasks
+
+
+_TERMINAL_STATUSES = frozenset(
+    {V1TaskStatus.COMPLETED, V1TaskStatus.FAILED, V1TaskStatus.CANCELLED}
+)
+
+# Upper bound on how long any wait_* helper will poll before returning.
+MAX_WAIT_TIMEOUT = 30.0
+
+
+def all_terminal(
+    mapping: dict[str, V1TaskSummary], keys: "set[str] | list[str]"
+) -> bool:
+    """True iff every ``key`` is present in ``mapping`` and its status is terminal."""
+    return all(
+        key in mapping and mapping[key].status in _TERMINAL_STATUSES for key in keys
+    )
+
+
+def children_by_step_name(wf_run: V1TaskSummary) -> dict[str, V1TaskSummary]:
+    """Index a workflow run's children by step name.
+
+    Hatchet 1.23+ renders child display names as ``<step_name>-<millis>``; strip
+    the numeric suffix so tests can look up children by the decorator name.
+    """
+    return {
+        child.display_name.rsplit("-", maxsplit=1)[0]: child
+        for child in (wf_run.children or [])
+    }
+
+
+async def poll_runs_until(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    is_ready: Callable[[HatchetRuns], bool],
+    timeout: float,
+    interval: float,
+):
+    """Fetch runs on ``interval`` until ``is_ready`` returns True or ``timeout``.
+
+    Returns silently on either path — callers fetch runs themselves and assert.
+    """
+    deadline = asyncio.get_event_loop().time() + timeout
+    while True:
+        if is_ready(await get_runs(hatchet, ctx_metadata)):
+            return
+        if asyncio.get_event_loop().time() >= deadline:
+            return
+        await asyncio.sleep(interval)
+
+
+async def wait_for_expected_steps(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    expected: ExpectedWorkflowRun,
+    timeout: float = MAX_WAIT_TIMEOUT,
+    interval: float = 0.25,
+):
+    expected_names = {s.name for s in expected.steps if s.status is not None}
+
+    def _ready(runs: HatchetRuns) -> bool:
+        wf = next((r for r in runs if r.children is not None), None)
+        if wf is None or wf.status not in _TERMINAL_STATUSES:
+            return False
+        return all_terminal(children_by_step_name(wf), expected_names)
+
+    await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
+
+
+async def wait_for_signatures_terminal(
+    hatchet: Hatchet,
+    ctx_metadata: dict,
+    signatures: list["Signature"],
+    timeout: float = MAX_WAIT_TIMEOUT,
+    interval: float = 0.25,
+):
+    expected_keys = {sig.key for sig in signatures}
+
+    def _ready(runs: HatchetRuns) -> bool:
+        return all_terminal(map_wf_by_id(runs, also_not_done=True), expected_keys)
+
+    await poll_runs_until(hatchet, ctx_metadata, _ready, timeout, interval)
 
 
 def map_wf_by_external_id(runs: HatchetRuns) -> WF_MAPPING_BY_WF_ID_TYPE:
@@ -107,7 +201,9 @@ def find_sub_calls_by_task_ref(
 def is_wf_done(wf: V1TaskSummary) -> bool:
     wf_output = wf.output or {}
     completed = wf.status == V1TaskStatus.COMPLETED
-    task_succeeded = completed and "hatchet_results" in wf_output
+    # hatchet workflow doesn't wrap with hatchet results
+    correct_results_pattern = is_workflow(wf) or "hatchet_results" in wf_output
+    task_succeeded = completed and correct_results_pattern
     return task_succeeded or wf.status == V1TaskStatus.FAILED
 
 
@@ -116,6 +212,8 @@ def is_task_paused(wf: V1TaskSummary) -> bool:
 
 
 def get_task_param(wf: V1TaskSummary, param_name: str):
+    if wf.additional_metadata is None:
+        return None
     return wf.additional_metadata.get(param_name)
 
 
@@ -178,7 +276,7 @@ def _assert_task_done(
             task_workflow.status == V1TaskStatus.COMPLETED
         ), f"{task_workflow.workflow_name} didn't finish ({_task_error_info(task_workflow)})"
     if input_params is not None:
-        task_input = task_workflow.input.get("input", {})
+        task_input = task_workflow.input
         assert (
             input_params.keys() <= task_input.keys()
         ), f"missing params {input_params.keys() - task_input.keys()} for {task_workflow.workflow_name}"
@@ -191,6 +289,16 @@ def _assert_task_done(
             task_res == results
         ), f"{task_workflow.workflow_name} has different results than expected: {task_res}"
     return task_workflow
+
+
+async def cleanup_hook_keys(redis_client) -> None:
+    """Remove ``user-hook-*`` markers written by test workflows' on_success /
+    on_failure hooks. These are test-only instrumentation keys that never get
+    a TTL, so callers must delete them before ``assert_redis_is_clean``.
+    """
+    hook_keys = await redis_client.keys("user-hook-*")
+    if hook_keys:
+        await redis_client.delete(*hook_keys)
 
 
 async def assert_redis_is_clean(redis_client):
@@ -226,7 +334,7 @@ def assert_task_was_paused(runs: HatchetRuns, task: TaskSignature, with_resume=F
     assert (
         hatchet_call.status == V1TaskStatus.CANCELLED
     ), f"{task.task_name} was not cancelled ({_task_error_info(hatchet_call)})"
-    expected_dump = task.model_validators.model_validate(hatchet_call.input["input"])
+    expected_dump = task.model_validators.model_validate(hatchet_call.input)
     expected_saved_params = expected_dump.model_dump(exclude_unset=True)
     for key, value in expected_saved_params.items():
         assert task.kwargs.get(key) == value, f"{key} != {value}, from {task.task_name}"
@@ -302,7 +410,7 @@ def assert_swarm_task_done(
             callback_wf = assert_signature_done(
                 runs, task, check_called_once=True, **task.kwargs
             )
-            for result in callback_wf.input["input"]["task_result"]:
+            for result in callback_wf.input["task_result"]:
                 assert (
                     result in expected_output
                 ), f"{result} not found in {expected_output} for callback {callback_wf.workflow_name}"
@@ -326,10 +434,13 @@ def assert_chain_done(
     for chain_task_id in chain_signature.tasks:
         input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
-        if output_value:
-            input_params |= {return_value_field(task.model_validators): output_value}
+        if output_value is not None:
+            validator = task.model_validators
+            return_field_name = return_value_field(validator)
+            if return_field_name in validator.model_fields:
+                input_params |= {return_field_name: output_value}
         task_wf = _assert_task_done(task, wf_by_signature, input_params)
-        output_value = task_wf.output["hatchet_results"]
+        output_value = task_wf.output.get("hatchet_results")
 
     if check_callbacks:
         for chain_success in chain_signature.success_callbacks:
@@ -439,3 +550,49 @@ def assert_overlaps_leq_k_workflows(
                 f"at time {time}. "
                 f"Active workflows: {', '.join(active_workflow_names)}"
             )
+
+
+async def assert_hook_fired(
+    redis_client,
+    workflow_run_id: str,
+    hook_type: str,
+) -> None:
+    hook_key = f"user-hook-{hook_type}:{workflow_run_id}"
+    hook_value = await redis_client.get(hook_key)
+    assert hook_value == "fired", f"User {hook_type} hook did not fire (key={hook_key})"
+
+
+def assert_workflow_run(
+    runs: HatchetRuns,
+    expected: ExpectedWorkflowRun,
+):
+    # Find the workflow run (the one with children)
+    workflow_runs = [r for r in runs if r.children is not None]
+    assert len(workflow_runs) >= 1, "No workflow run found in runs"
+    wf_run = workflow_runs[0]
+
+    # Check overall workflow status
+    assert (
+        wf_run.status == expected.workflow_status
+    ), f"Workflow status: expected {expected.workflow_status}, got {wf_run.status}"
+
+    # Check each expected step in children
+    assert (
+        wf_run.children is not None
+    ), "Workflow run has no children, it is not a workflow"
+    children_by_name = children_by_step_name(wf_run)
+    for step in expected.steps:
+        if step.status is None:
+            assert (
+                step.name not in children_by_name
+            ), f"Step '{step.name}' should not have been called"
+            continue
+
+        assert step.name in children_by_name, (
+            f"Step '{step.name}' not found in workflow children. "
+            f"Available: {list(children_by_name.keys())}"
+        )
+        child = children_by_name[step.name]
+        assert (
+            child.status == step.status
+        ), f"Step '{step.name}': expected {step.status}, got {child.status}"
