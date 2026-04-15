@@ -2,6 +2,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { loadSettings, isTauriEnvironment } from '@/stores/settingsStore';
 
+export class HealthCheckError extends Error {
+  constructor(
+    message: string,
+    public readonly hatchetError?: string,
+    public readonly redisError?: string,
+  ) {
+    super(message);
+    this.name = 'HealthCheckError';
+  }
+}
+
 export type AppPhase =
   | 'loading-settings'
   | 'onboarding'
@@ -43,15 +54,18 @@ async function updateTrayStatus(phase: AppPhase): Promise<void> {
 export interface UseAppStartupResult {
   phase: AppPhase;
   port: number;
+  ipcToken: string;
   statusMessage: string;
   errorMessage: string;
   onOnboardingComplete: () => Promise<void>;
   retrySidecar: () => Promise<void>;
+  goToOnboarding: () => void;
 }
 
 export function useAppStartup(): UseAppStartupResult {
   const [phase, setPhase] = useState<AppPhase>('loading-settings');
   const [port, setPort] = useState<number>(0);
+  const [ipcToken, setIpcToken] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>(PHASE_MESSAGES['loading-settings']);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
@@ -102,12 +116,8 @@ export function useAppStartup(): UseAppStartupResult {
         const resp = await fetch(healthUrl);
         if (resp.ok) {
           const data = (await resp.json()) as HealthStatus;
-          // If the field is explicitly "connected" we're done.
-          // If the overall status is "ok" and the field is missing we treat it as connected
-          // (simple health endpoint without per-service fields).
           if (data[field] === 'connected') return;
           if (!data[field] && data.status === 'ok') return;
-          // field present but not connected — keep polling
         }
       } catch (e) {
         lastErr = e as Error;
@@ -117,8 +127,20 @@ export function useAppStartup(): UseAppStartupResult {
   }
 
   /**
+   * Fetch IPC token from Tauri. Non-fatal on failure.
+   */
+  async function fetchIpcToken(): Promise<void> {
+    try {
+      const token = await invoke<string>('get_ipc_token');
+      setIpcToken(token);
+    } catch {
+      // token fetch failure is non-fatal for health polling
+    }
+  }
+
+  /**
    * Core startup polling: given a port, drive through hatchet -> redis -> ready phases.
-   * Extracted so it can be reused after onboarding.
+   * THROWS HealthCheckError on failure -- callers must handle.
    */
   const pollForReady = useCallback(async (resolvedPort: number) => {
     const healthUrl = `http://127.0.0.1:${resolvedPort}/api/health`;
@@ -127,18 +149,22 @@ export function useAppStartup(): UseAppStartupResult {
     try {
       await pollHealth(healthUrl, 'hatchet');
     } catch {
-      transitionTo('startup-error', 'Could not connect to Hatchet');
-      setErrorMessage('Could not connect to Hatchet');
-      return;
+      throw new HealthCheckError(
+        'Could not connect to Hatchet -- check your Hatchet API key in Settings',
+        'Could not connect to Hatchet -- check your Hatchet API key',
+        undefined,
+      );
     }
 
     transitionTo('connecting-redis');
     try {
       await pollHealth(healthUrl, 'redis');
     } catch {
-      transitionTo('startup-error', 'Could not connect to Redis');
-      setErrorMessage('Could not connect to Redis');
-      return;
+      throw new HealthCheckError(
+        'Could not connect to Redis -- check your Redis URL in Settings',
+        undefined,
+        'Could not connect to Redis -- check your Redis URL',
+      );
     }
 
     transitionTo('ready');
@@ -157,7 +183,7 @@ export function useAppStartup(): UseAppStartupResult {
     }
 
     if (!isTauriEnvironment()) {
-      // Browser dev mode — skip invoke calls, use VITE_API_URL or default port 8000
+      // Browser dev mode -- skip invoke calls, use VITE_API_URL or default port 8000
       const devPort = parseInt(import.meta.env.VITE_API_PORT ?? '8000', 10);
       setPort(devPort);
       transitionTo('ready');
@@ -176,7 +202,23 @@ export function useAppStartup(): UseAppStartupResult {
     }
     setPort(resolvedPort);
 
-    await pollForReady(resolvedPort);
+    try {
+      await pollForReady(resolvedPort);
+    } catch (err) {
+      if (err instanceof HealthCheckError) {
+        transitionTo('startup-error', err.message);
+        setErrorMessage(err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Startup failed';
+        transitionTo('startup-error', msg);
+        setErrorMessage(msg);
+      }
+      return;
+    }
+
+    // Fetch IPC token after health checks pass — the Rust side stores the token
+    // only after its own poll_health completes inside spawn_sidecar.
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
   useEffect(() => {
@@ -215,7 +257,21 @@ export function useAppStartup(): UseAppStartupResult {
     }
 
     setPort(resolvedPort);
-    await pollForReady(resolvedPort);
+
+    // Let HealthCheckError propagate to Onboarding component for inline errors
+    try {
+      await pollForReady(resolvedPort);
+    } catch (err) {
+      if (err instanceof HealthCheckError) {
+        throw err;
+      }
+      const msg = err instanceof Error ? err.message : 'Startup failed';
+      transitionTo('startup-error', msg);
+      setErrorMessage(msg);
+      return;
+    }
+
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
   const retrySidecar = useCallback(async () => {
@@ -236,8 +292,27 @@ export function useAppStartup(): UseAppStartupResult {
       return;
     }
     setPort(resolvedPort);
-    await pollForReady(resolvedPort);
+
+    try {
+      await pollForReady(resolvedPort);
+    } catch (err) {
+      if (err instanceof HealthCheckError) {
+        transitionTo('startup-error', err.message);
+        setErrorMessage(err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Startup failed';
+        transitionTo('startup-error', msg);
+        setErrorMessage(msg);
+      }
+      return;
+    }
+
+    await fetchIpcToken();
   }, [transitionTo, pollForReady]);
 
-  return { phase, port, statusMessage, errorMessage, onOnboardingComplete, retrySidecar };
+  const goToOnboarding = useCallback(() => {
+    transitionTo('onboarding');
+  }, [transitionTo]);
+
+  return { phase, port, ipcToken, statusMessage, errorMessage, onOnboardingComplete, retrySidecar, goToOnboarding };
 }

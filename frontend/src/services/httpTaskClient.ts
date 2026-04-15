@@ -17,8 +17,9 @@ interface TaskFromServer {
 
 export class HttpTaskClient implements TaskClient {
   private readonly baseUrl: string;
+  private readonly ipcToken?: string;
 
-  constructor(baseUrl?: string) {
+  constructor(baseUrl?: string, ipcToken?: string) {
     if (baseUrl !== undefined) {
       this.baseUrl = baseUrl;
     } else if (!isTauriEnvironment()) {
@@ -28,6 +29,17 @@ export class HttpTaskClient implements TaskClient {
       // Tauri mode: baseUrl must be supplied by the startup hook
       this.baseUrl = '';
     }
+    this.ipcToken = ipcToken;
+  }
+
+  private getHeaders(): HeadersInit {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.ipcToken) {
+      headers['X-IPC-Token'] = this.ipcToken;
+    }
+    return headers;
   }
 
   private handleResponse(response: Response, context: string): void {
@@ -42,7 +54,9 @@ export class HttpTaskClient implements TaskClient {
 
   async getRootTaskIds(): Promise<string[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/workflows/roots`);
+      const response = await fetch(`${this.baseUrl}/api/workflows/roots`, {
+        headers: this.getHeaders(),
+      });
       this.handleResponse(response, 'root task IDs');
       const data = await response.json();
       return data.taskIds;
@@ -58,9 +72,7 @@ export class HttpTaskClient implements TaskClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/tasks/batch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({ taskIds: [id] }),
       });
 
@@ -88,9 +100,7 @@ export class HttpTaskClient implements TaskClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/tasks/batch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({ taskIds: ids }),
       });
 
@@ -113,7 +123,8 @@ export class HttpTaskClient implements TaskClient {
   ): Promise<PaginatedChildren> {
     try {
       const response = await fetch(
-        `${this.baseUrl}/api/workflows/${taskId}/children?page=${page}&page_size=${limit}`
+        `${this.baseUrl}/api/workflows/${taskId}/children?page=${page}&page_size=${limit}`,
+        { headers: this.getHeaders() }
       );
 
       this.handleResponse(response, `children of task ${taskId}`);
@@ -123,9 +134,7 @@ export class HttpTaskClient implements TaskClient {
 
       const batchResponse = await fetch(`${this.baseUrl}/api/tasks/batch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({ taskIds }),
       });
 
@@ -152,6 +161,7 @@ export class HttpTaskClient implements TaskClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/cancel`, {
         method: 'POST',
+        headers: this.getHeaders(),
       });
 
       this.handleResponse(response, `cancel task ${taskId}`);
@@ -167,6 +177,7 @@ export class HttpTaskClient implements TaskClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/pause`, {
         method: 'POST',
+        headers: this.getHeaders(),
       });
 
       this.handleResponse(response, `pause task ${taskId}`);
@@ -182,6 +193,7 @@ export class HttpTaskClient implements TaskClient {
     try {
       const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/retry`, {
         method: 'POST',
+        headers: this.getHeaders(),
       });
 
       this.handleResponse(response, `retry task ${taskId}`);

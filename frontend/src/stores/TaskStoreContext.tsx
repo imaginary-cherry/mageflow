@@ -71,27 +71,35 @@ export const TaskStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     fetchedRef.current.add(id);
 
     dispatch({ type: 'SET_LOADING', id });
-    const task = await client.getTask(id);
-    if (!task) {
-      dispatch({ type: 'CLEAR_LOADING', id });
-      return;
-    }
-    dispatch({ type: 'SET_TASK', task });
+    try {
+      const task = await client.getTask(id);
+      if (!task) {
+        dispatch({ type: 'CLEAR_LOADING', id });
+        return;
+      }
+      dispatch({ type: 'SET_TASK', task });
 
-    // Recursively load children and callbacks
-    const idsToLoad = [
-      ...task.children_ids,
-      ...task.success_callback_ids,
-      ...task.error_callback_ids,
-    ];
-    idsToLoad.forEach(childId => loadTask(childId));
+      // Recursively load children and callbacks
+      const idsToLoad = [
+        ...task.children_ids,
+        ...task.success_callback_ids,
+        ...task.error_callback_ids,
+      ];
+      idsToLoad.forEach(childId => loadTask(childId));
+    } catch {
+      dispatch({ type: 'CLEAR_LOADING', id });
+    }
   }, []);
 
   const loadRootTaskIds = useCallback(async () => {
     dispatch({ type: 'SET_ROOT_LOADING', loading: true });
-    const ids = await client.getRootTaskIds();
-    dispatch({ type: 'SET_ROOT_IDS', ids });
-    ids.forEach(id => loadTask(id));
+    try {
+      const ids = await client.getRootTaskIds();
+      dispatch({ type: 'SET_ROOT_IDS', ids });
+      ids.forEach(id => loadTask(id));
+    } catch {
+      dispatch({ type: 'SET_ROOT_IDS', ids: [] });
+    }
   }, [loadTask]);
 
   const refresh = useCallback(() => {

@@ -6,6 +6,15 @@
 
 - **Signing Hatchet Workflows (`MageWorkflow`)**: Native Hatchet `Workflow` objects can now be tracked by mageflow's signature lifecycle, enabling status callbacks (success/failure) without wrapping tasks in mageflow decorators.
 
+### 🐛 Fixed
+
+- **Keychain Access Error Handling**: The app now distinguishes between missing credentials (first launch) and macOS blocking keychain access (e.g. after app rename/update). A dedicated error screen guides the user to re-enter credentials instead of silently dropping into onboarding.
+
+### 🔄 Changed
+
+- **App Renamed to Mage Voyance**: Product name changed from "Mageflow Viewer" to "Mage Voyance" across the Tauri config, tray tooltip, onboarding, splash screen, and Homebrew cask.
+
+
 ## [0.3.5]
 
 ### 🐛 Fixed
