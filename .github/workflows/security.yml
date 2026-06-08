@@ -19,6 +19,33 @@ permissions:
   security-events: write
 
 jobs:
+  # Dependency vulnerability scanning via OSV (Google's OSV.dev database).
+  # fail-on-vuln: false -> the job never fails the build. Findings are uploaded
+  # as SARIF, surfacing as code-scanning alerts in the Security tab and as
+  # annotations on the PR. This is alert-only; it does NOT block merges.
+  # Suppressions live in osv-scanner.toml.
+  osv-scan-scheduled:
+    name: Dependency Vulnerability Scan
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.3"
+    with:
+      fail-on-vuln: false
+      scan-args: |-
+        -r
+        --config=osv-scanner.toml
+        ./
+
+  osv-scan-pr:
+    name: Dependency Vulnerability Scan (PR)
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@v2.3.3"
+    with:
+      fail-on-vuln: false
+      scan-args: |-
+        -r
+        --config=osv-scanner.toml
+        ./
+
   secrets-scan:
     name: Secrets Detection
     environment:
@@ -38,7 +65,7 @@ jobs:
   summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [secrets-scan]
+    needs: [osv-scan-scheduled, osv-scan-pr, secrets-scan]
     if: always()
     steps:
       - name: Check results
@@ -46,12 +73,26 @@ jobs:
           echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
+          # OSV is alert-only (fail-on-vuln: false). One of the two jobs is
+          # skipped depending on the event type. Report it, but never block on it.
+          OSV_RESULT="${{ needs.osv-scan-scheduled.result }}"
+          if [ "$OSV_RESULT" == "skipped" ]; then
+            OSV_RESULT="${{ needs.osv-scan-pr.result }}"
+          fi
+
+          if [ "$OSV_RESULT" == "success" ]; then
+            echo "✅ OSV scan: Completed (alerts in Security tab, if any)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ OSV scan: Did not complete ($OSV_RESULT)" >> $GITHUB_STEP_SUMMARY
+          fi
+
           if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
             echo "✅ Secrets scan: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Secrets scan: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Fail if any check failed
-        if: needs.secrets-scan.result != 'success'
+      # Only secrets detection blocks the build. OSV is intentionally alert-only.
+      - name: Fail if secrets scan failed
+        if: needs.secrets-scan.result == 'failure'
         run: exit 1
