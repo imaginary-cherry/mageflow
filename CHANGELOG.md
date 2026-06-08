@@ -14,6 +14,21 @@
 
 - **App Renamed to Mage Voyance**: Product name changed from "Mageflow Viewer" to "Mage Voyance" across the Tauri config, tray tooltip, onboarding, splash screen, and Homebrew cask.
 
+### 🔒 Security
+
+- **Patched dependency vulnerabilities** (#121, #122, #123): bumped vulnerable transitive and dev/test dependencies across the uv workspace lockfiles:
+  - `urllib3` 2.6.3 → 2.7.0 (cross-origin header leak, decompression-bomb bypass)
+  - `python-multipart` 0.0.22 → 0.0.32 (header DoS)
+  - `dynaconf` 3.2.12 → 3.2.13 (`@jinja` RCE)
+  - `aiohttp` 3.13.3 → 3.14.1 (deserialization, Windows UNC SSRF, multipart header bypass, DoS)
+  - `cryptography` 46.0.6 → 48.0.0 (buffer overflow)
+  - `starlette` 0.52.1 → 1.2.1 (host-header bypass)
+  - `idna` 3.11 → 3.18 (`encode()` bypass)
+  - `pytest` 9.0.2 → 9.0.3 (tmpdir handling, dev/test only)
+  - `black` 26.1.0 → 26.5.1 (cache file-name write, dev/test only)
+  - `Pygments` 2.19.2 → 2.20.0 (ReDoS, dev/test only)
+  - `lupa` (GHSA-69v7-xpr6-6gjm) left as-is — no patch available, test-only via `fakeredis[lua]` with trusted input; risk accepted.
+
 
 ## [0.3.5]
 
