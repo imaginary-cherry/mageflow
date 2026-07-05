@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 import pytest_asyncio
 from thirdmagic.signature import Signature
@@ -31,7 +33,13 @@ async def _mageflow_redis_client(_mageflow_testing_config):
         yield client
         await client.aclose()
     else:
-        from testcontainers.redis import AsyncRedisContainer
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The @wait_container_is_ready decorator is deprecated.*",
+                category=DeprecationWarning,
+            )
+            from testcontainers.redis import AsyncRedisContainer
 
         with AsyncRedisContainer(
             image="redis/redis-stack-server:7.2.0-v13"

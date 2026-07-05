@@ -119,6 +119,8 @@ class _StubRunRef:
 
 
 class TestClientAdapter(BaseClientAdapter):
+    __test__ = False
+
     def __init__(
         self,
         task_defs: dict[str, MageflowTaskDefinition] | None = None,

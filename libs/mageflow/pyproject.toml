@@ -125,7 +125,9 @@ directory = "htmlcov"
 markers = [
     "hatchet: tests specific to the Hatchet client integration",
 ]
+filterwarnings = [
+    "ignore:The @wait_container_is_ready decorator is deprecated.*:DeprecationWarning:testcontainers.redis",
+]
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["I", "F401"]
-
