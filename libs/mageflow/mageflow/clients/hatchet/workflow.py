@@ -1,7 +1,7 @@
 import functools
 import inspect
 from datetime import timedelta
-from typing import Any, TypedDict, Unpack
+from typing import Any, TypedDict, Unpack, cast
 
 from hatchet_sdk import Context
 from hatchet_sdk.rate_limit import RateLimit
@@ -122,5 +122,4 @@ class MageflowWorkflow(Workflow):
         else:
             return_field = input
 
-        full_msg = deep_merge(return_field, kwargs)
-        return super(MageflowWorkflow, self)._serialize_input(full_msg)
+        return cast(JSONSerializableMapping, deep_merge(return_field, kwargs))

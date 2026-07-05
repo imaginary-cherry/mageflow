@@ -45,7 +45,7 @@ from mageflow.startup import (
     lifespan_initialize,
     teardown_mageflow,
 )
-from mageflow.swarm.consts import SWARM_TASK_ID_PARAM_NAME
+from mageflow.swarm.consts import SWARM_ITEM_ID_PARAM_NAME, SWARM_TASK_ID_PARAM_NAME
 from mageflow.swarm.messages import (
     FillSwarmMessage,
     SwarmErrorMessage,
@@ -223,17 +223,29 @@ class HatchetMageflow(Hatchet):
         on_chain_error_task = hatchet_chain_error(self.chain_error_task)
 
         # Swarm tasks
+        swarm_callback_concurrency = [
+            ConcurrencyExpression(
+                expression=(
+                    f"input.{SWARM_TASK_ID_PARAM_NAME} + ':' + "
+                    f"input.{SWARM_ITEM_ID_PARAM_NAME}"
+                ),
+                max_runs=1,
+                limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+            )
+        ]
         swarm_done = self.hatchet.durable_task(
             name=ON_SWARM_ITEM_DONE,
             input_validator=SwarmResultsMessage,
             retries=5,
             execution_timeout=timedelta(minutes=1),
+            concurrency=swarm_callback_concurrency,
         )
         swarm_error = self.hatchet.durable_task(
             name=ON_SWARM_ITEM_ERROR,
             input_validator=SwarmErrorMessage,
             retries=5,
             execution_timeout=timedelta(minutes=5),
+            concurrency=swarm_callback_concurrency,
         )
         swarm_done = swarm_done(self.swarm_item_done)
         swarm_error = swarm_error(self.swarm_item_failed)

@@ -9,6 +9,7 @@
 ### 🐛 Fixed
 
 - **Keychain Access Error Handling**: The app now distinguishes between missing credentials (first launch) and macOS blocking keychain access (e.g. after app rename/update). A dedicated error screen guides the user to re-enter credentials instead of silently dropping into onboarding.
+- **Swarm Callback Concurrency**: Duplicate swarm done/error callbacks are now serialized per swarm item using the swarm and item IDs.
 
 ### 🔄 Changed
 
