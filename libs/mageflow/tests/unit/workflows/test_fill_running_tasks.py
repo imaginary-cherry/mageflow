@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 import thirdmagic
 from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -6,6 +8,20 @@ from thirdmagic.swarm.model import SwarmConfig
 
 from mageflow.swarm.workflows import fill_running_tasks
 from tests.integration.hatchet.models import ContextMessage
+
+
+@pytest.mark.asyncio
+async def test_fill_running_tasks_does_not_extract_when_task_ids_are_empty(
+    empty_swarm, mock_adapter
+):
+    # Act
+    with patch("rapyer.afind", side_effect=AssertionError) as mock_afind:
+        tasks = await fill_running_tasks(empty_swarm)
+
+    # Assert
+    assert tasks == []
+    mock_afind.assert_not_called()
+    mock_adapter.acall_signatures.assert_not_awaited()
 
 
 @pytest.mark.asyncio
