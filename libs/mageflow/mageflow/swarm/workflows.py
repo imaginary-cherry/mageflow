@@ -105,25 +105,26 @@ async def fill_running_tasks(
             publish_state.task_ids.extend(task_ids_to_run)
             swarm.tasks_left_to_run.remove_range(0, num_of_task_to_run)
 
-    if task_ids_to_run:
-        tasks = await rapyer.afind(*task_ids_to_run)
-        tasks = cast(list[Signature], tasks)
+    if not task_ids_to_run:
+        return []
 
-        # Update the kwargs locally, so swarm kwargs wont be duplicated on redis but still sent to task
-        swarm_kwargs = swarm.kwargs.copy()
-        swarm_msg = swarm_kwargs.pop(SWARM_MESSAGE_PARAM_NAME, None)
-        for task in tasks:
-            task.kwargs.update(**swarm_kwargs)
+    tasks = await rapyer.afind(*task_ids_to_run)
+    tasks = cast(list[Signature], tasks)
 
-        await swarm.ClientAdapter.acall_signatures(
-            tasks,
-            swarm_msg,
-            set_return_field=swarm.config.send_swarm_message_to_return_field,
-            **pub_kwargs,
-        )
+    # Update the kwargs locally, so swarm kwargs wont be duplicated on redis but still sent to task
+    swarm_kwargs = swarm.kwargs.copy()
+    swarm_msg = swarm_kwargs.pop(SWARM_MESSAGE_PARAM_NAME, None)
+    for task in tasks:
+        task.kwargs.update(**swarm_kwargs)
 
-        async with publish_state.apipeline():
-            publish_state.task_ids.clear()
-            swarm.current_running_tasks += num_of_task_to_run
-        return tasks
-    return []
+    await swarm.ClientAdapter.acall_signatures(
+        tasks,
+        swarm_msg,
+        set_return_field=swarm.config.send_swarm_message_to_return_field,
+        **pub_kwargs,
+    )
+
+    async with publish_state.apipeline():
+        publish_state.task_ids.clear()
+        swarm.current_running_tasks += num_of_task_to_run
+    return tasks
