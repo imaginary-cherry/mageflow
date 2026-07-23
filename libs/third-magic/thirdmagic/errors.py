@@ -28,3 +28,7 @@ class TaskAndMsgsDontMatchForSwarmError(SwarmError, RuntimeError):
 
 class UnrecognizedTaskError(MageflowError):
     pass
+
+
+class NotAContainerError(MageflowError):
+    pass
