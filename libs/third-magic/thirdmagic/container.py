@@ -6,6 +6,7 @@ from typing import Any
 from rapyer.fields import RapyerKey
 
 from thirdmagic.signature import Signature
+from thirdmagic.signature.status import ContainerStatus
 
 
 class ContainerTaskSignature(Signature, ABC):
@@ -16,6 +17,10 @@ class ContainerTaskSignature(Signature, ABC):
 
     @abc.abstractmethod
     async def sub_tasks(self) -> list[Signature]:
+        pass
+
+    @abc.abstractmethod
+    async def container_status(self) -> ContainerStatus:
         pass
 
     async def remove_references(self):

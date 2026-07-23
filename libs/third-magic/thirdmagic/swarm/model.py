@@ -14,7 +14,7 @@ from thirdmagic.errors import (
     TooManyTasksError,
 )
 from thirdmagic.signature import Signature
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
@@ -186,6 +186,19 @@ class SwarmTaskSignature(ContainerTaskSignature):
         done_tasks = self.finished_tasks + self.failed_tasks
         finished_all_tasks = set(done_tasks) == set(self.tasks)
         return self.is_swarm_closed and finished_all_tasks
+
+    async def container_status(self) -> ContainerStatus:
+        return ContainerStatus.from_counts(
+            signature_id=self.key,
+            task_name=self.task_name,
+            status=self.task_status.status,
+            total=len(self.tasks),
+            finished=len(self.finished_tasks),
+            failed=len(self.failed_tasks),
+            running=self.current_running_tasks,
+            pending=len(self.tasks_left_to_run),
+            is_done=await self.is_swarm_done(),
+        )
 
     def has_published_callback(self):
         return self.task_status.status == SignatureStatus.DONE
