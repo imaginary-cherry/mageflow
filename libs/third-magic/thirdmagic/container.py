@@ -20,7 +20,7 @@ class ContainerTaskSignature(Signature, ABC):
         pass
 
     @abc.abstractmethod
-    async def container_status(self) -> ContainerStatus:
+    async def astatus(self) -> ContainerStatus:
         pass
 
     async def remove_references(self):

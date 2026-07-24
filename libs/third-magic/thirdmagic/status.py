@@ -20,5 +20,5 @@ async def astatus(*signature_ids: RapyerKey) -> ContainersStatus:
             raise NotAContainerError(
                 f"Signature {signature.key} is not a container signature"
             )
-        statuses.append(await signature.container_status())
+        statuses.append(await signature.astatus())
     return ContainersStatus(containers=statuses)

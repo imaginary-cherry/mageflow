@@ -187,7 +187,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         finished_all_tasks = set(done_tasks) == set(self.tasks)
         return self.is_swarm_closed and finished_all_tasks
 
-    async def container_status(self) -> ContainerStatus:
+    async def astatus(self) -> ContainerStatus:
         return ContainerStatus.from_counts(
             signature_id=self.key,
             task_name=self.task_name,

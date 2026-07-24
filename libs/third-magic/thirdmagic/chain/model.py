@@ -47,7 +47,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
 
-    async def container_status(self) -> ContainerStatus:
+    async def astatus(self) -> ContainerStatus:
         sub_tasks = await self.sub_tasks()
         finished = failed = running = 0
         for task in sub_tasks:

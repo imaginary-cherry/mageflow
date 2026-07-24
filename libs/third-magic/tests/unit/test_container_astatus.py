@@ -5,7 +5,7 @@ from thirdmagic.signature.status import SignatureStatus
 
 
 @pytest.mark.asyncio
-async def test_swarm_container_status_terminal_percentage(mock_task_def):
+async def test_swarm_astatus_terminal_percentage(mock_task_def):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="test_swarm")
     tasks = [await thirdmagic.sign(f"test_task_{i}") for i in range(4)]
@@ -19,7 +19,7 @@ async def test_swarm_container_status_terminal_percentage(mock_task_def):
         swarm.tasks_left_to_run.append(tasks[3].key)
 
     # Act
-    status = await swarm.container_status()
+    status = await swarm.astatus()
 
     # Assert
     assert status.signature_id == swarm.key
@@ -33,7 +33,7 @@ async def test_swarm_container_status_terminal_percentage(mock_task_def):
 
 
 @pytest.mark.asyncio
-async def test_swarm_container_status_done_is_full(mock_task_def):
+async def test_swarm_astatus_done_is_full(mock_task_def):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="test_swarm")
     tasks = [await thirdmagic.sign(f"test_task_{i}") for i in range(2)]
@@ -45,7 +45,7 @@ async def test_swarm_container_status_done_is_full(mock_task_def):
         swarm.is_swarm_closed = True
 
     # Act
-    status = await swarm.container_status()
+    status = await swarm.astatus()
 
     # Assert
     assert status.percentage == 100.0
@@ -53,12 +53,12 @@ async def test_swarm_container_status_done_is_full(mock_task_def):
 
 
 @pytest.mark.asyncio
-async def test_swarm_container_status_empty_is_zero(mock_task_def):
+async def test_swarm_astatus_empty_is_zero(mock_task_def):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="test_swarm")
 
     # Act
-    status = await swarm.container_status()
+    status = await swarm.astatus()
 
     # Assert
     assert status.total == 0
@@ -66,7 +66,7 @@ async def test_swarm_container_status_empty_is_zero(mock_task_def):
 
 
 @pytest.mark.asyncio
-async def test_chain_container_status_classifies_children(mock_task_def):
+async def test_chain_astatus_classifies_children(mock_task_def):
     # Arrange
     tasks = [await thirdmagic.sign(f"chain_task_{i}") for i in range(4)]
     chain = await thirdmagic.chain([task.key for task in tasks])
@@ -77,7 +77,7 @@ async def test_chain_container_status_classifies_children(mock_task_def):
     # tasks[3] stays PENDING
 
     # Act
-    status = await chain.container_status()
+    status = await chain.astatus()
 
     # Assert
     assert status.total == 4
