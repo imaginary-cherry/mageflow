@@ -1,5 +1,3 @@
-import dataclasses
-
 import pytest
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.consts import REMOVED_TASK_TTL
@@ -22,7 +20,7 @@ def _restore_signature_class_vars():
     originals = [(cls, cls.Meta.ttl, cls.SignatureSettings) for cls in classes]
     yield
     for cls, orig_ttl, orig_settings in originals:
-        cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
+        cls.Meta = cls.Meta.model_copy(update={"ttl": orig_ttl})
         cls.SignatureSettings = orig_settings
 
 
@@ -61,7 +59,7 @@ def test_publish_state_follows_swarm_config():
     assert PublishState.Meta.ttl == 777
 
 
-def test_dataclasses_replace_preserves_other_fields():
+def test_apply_ttl_config_preserves_other_fields():
     original_refresh = TaskSignature.Meta.refresh_ttl
     apply_ttl_config(
         TTLConfig(

@@ -160,7 +160,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         tasks = await resolve_signatures(tasks)
         task_keys = [task.key for task in tasks]
 
-        async with self.apipeline(use_existing_pipe=True):
+        async with self.apipeline(use_existing_pipe=True, ignore_redis_error=True):
             for task in tasks:
                 task.signature_container_id = self.key
             self.tasks.extend(task_keys)
