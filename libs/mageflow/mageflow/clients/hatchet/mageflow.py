@@ -17,10 +17,13 @@ from hatchet_sdk.runnables.types import (
 )
 from hatchet_sdk.runnables.workflow import BaseWorkflow, Standalone
 from hatchet_sdk.worker.worker import LifespanFn
+from rapyer.fields import RapyerKey
 from redis.asyncio import Redis
 from thirdmagic import chain, sign
 from thirdmagic.chain import ChainTaskSignature
 from thirdmagic.signature import Signature
+from thirdmagic.signature.status import ContainersStatus
+from thirdmagic.status import astatus
 from thirdmagic.swarm import SwarmTaskSignature
 from thirdmagic.swarm.creator import SignatureOptions, swarm
 from thirdmagic.task import TaskInputType, TaskSignature, TaskSignatureConvertible
@@ -328,6 +331,9 @@ class HatchetMageflow(Hatchet):
         **kwargs: Unpack[SignatureOptions],
     ):
         return await swarm(tasks, task_name, **kwargs)
+
+    async def astatus(self, *signature_ids: RapyerKey) -> ContainersStatus:
+        return await astatus(*signature_ids)
 
     def with_ctx(self, func):
         func.__user_ctx__ = True

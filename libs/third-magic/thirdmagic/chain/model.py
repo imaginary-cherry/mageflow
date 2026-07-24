@@ -7,7 +7,7 @@ from rapyer.fields import RapyerKey
 
 from thirdmagic.container import ContainerTaskSignature
 from thirdmagic.errors import MissingSignatureError
-from thirdmagic.signature.status import SignatureStatus
+from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.utils import HAS_HATCHET
 
@@ -46,6 +46,31 @@ class ChainTaskSignature(ContainerTaskSignature):
     async def sub_tasks(self) -> list[TaskSignature]:
         sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
+
+    async def astatus(self) -> ContainerStatus:
+        sub_tasks = await self.sub_tasks()
+        finished = failed = running = 0
+        for task in sub_tasks:
+            status = task.task_status.status
+            if status == SignatureStatus.DONE:
+                finished += 1
+            elif status == SignatureStatus.FAILED:
+                failed += 1
+            elif status == SignatureStatus.ACTIVE:
+                running += 1
+        total = len(self.tasks)
+        pending = total - finished - failed - running
+        return ContainerStatus.from_counts(
+            signature_id=self.key,
+            task_name=self.task_name,
+            status=self.task_status.status,
+            total=total,
+            finished=finished,
+            failed=failed,
+            running=running,
+            pending=pending,
+            is_done=self.task_status.is_done(),
+        )
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
         first_task = await rapyer.afind_one(self.tasks[0])
