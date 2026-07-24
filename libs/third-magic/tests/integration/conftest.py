@@ -13,26 +13,9 @@ from thirdmagic.signature import Signature
 REDIS_URL = os.environ.get("THIRDMAGIC_TEST_REDIS_URL", "redis://localhost:6379")
 
 
-async def _has_json_module(client: aioredis.Redis) -> bool:
-    modules = await client.execute_command("MODULE", "LIST")
-    names = {
-        (m[1].decode() if isinstance(m[1], bytes) else m[1])
-        for m in modules
-        if len(m) > 1
-    }
-    return "ReJSON" in names or "json" in names
-
-
 @pytest_asyncio.fixture
 async def real_redis():
-    client = aioredis.Redis.from_url(REDIS_URL)
-    try:
-        await client.ping()
-    except Exception:
-        pytest.skip(f"No Redis reachable at {REDIS_URL}")
-    if not await _has_json_module(client):
-        await client.aclose()
-        pytest.skip(f"Redis at {REDIS_URL} lacks the RedisJSON module")
+    client = aioredis.Redis.from_url(REDIS_URL, decode_responses=True)
     await client.flushall()
     await rapyer.init_rapyer(client)
     try:
