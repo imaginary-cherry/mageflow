@@ -3,7 +3,6 @@ from rapyer.fields import RapyerKey
 from thirdmagic import abounded_field
 from thirdmagic.chain.creator import chain as achain
 from thirdmagic.signature import Signature
-from thirdmagic.signature.status import ContainersStatus, ContainerStatus
 from thirdmagic.status import astatus
 from thirdmagic.swarm.creator import swarm as aswarm
 from thirdmagic.task import TaskSignature
@@ -42,8 +41,6 @@ __all__ = [
     "achain",
     "aswarm",
     "astatus",
-    "ContainerStatus",
-    "ContainersStatus",
     "start_mageflow",
     "abounded_field",
 ]

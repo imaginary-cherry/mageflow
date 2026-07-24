@@ -160,6 +160,12 @@ print("overall", status.overall_percentage)
 
 The percentage is terminal-state based — `(finished + failed) / total * 100` — so it reflects how many child tasks have reached a final state.
 
+The result models are defined in `thirdmagic` and imported from there:
+
+```python
+from thirdmagic import ContainerStatus, ContainersStatus
+```
+
 #### `ContainerStatus`
 
 Per-container breakdown returned inside `ContainersStatus.containers`.
