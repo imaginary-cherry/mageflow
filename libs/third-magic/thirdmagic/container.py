@@ -3,10 +3,26 @@ import asyncio
 from abc import ABC
 from typing import Any
 
+from rapyer.actions import ActionGroup
+from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
 
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import ContainerStatus
+
+# Write actions that refresh (and cascade) a container's TTL; not READ/FETCH/DELETE.
+CONTAINER_WRITE_ACTIONS = (
+    ActionGroup.CREATE
+    | ActionGroup.UPDATE
+    | ActionGroup.APPEND
+    | ActionGroup.ERASE
+    | ActionGroup.ARITHMETIC
+)
+
+
+def container_ttl_cascade_meta() -> RedisConfig:
+    # cascade is declared per-field via CascadeTTL(); init resets Meta.cascade_ttl.
+    return RedisConfig(ttl=24 * 60 * 60, refresh_ttl=CONTAINER_WRITE_ACTIONS)
 
 
 class ContainerTaskSignature(Signature, ABC):

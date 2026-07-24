@@ -1,13 +1,15 @@
 import asyncio
-from typing import Any, Optional, Self, cast
+from typing import Annotated, Any, ClassVar, Optional, Self, cast
 
 import rapyer
 from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
+from rapyer.cascade import CascadeTTL
+from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
-from rapyer.types import RedisInt, RedisList
+from rapyer.types import RedisInt, RedisList, Reference
 
-from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_meta
 from thirdmagic.errors import (
     SwarmIsCanceledError,
     TaskAndMsgsDontMatchForSwarmError,
@@ -54,6 +56,12 @@ class SwarmTaskSignature(ContainerTaskSignature):
     current_running_tasks: RedisInt = 0
     publishing_state_id: str
     config: SwarmConfig = Field(default_factory=SwarmConfig)
+    # Cascade edge: writing to the swarm refreshes and cascades TTL to its sub-tasks.
+    sub_task_refs: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+        default_factory=list
+    )
+
+    Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
     @field_validator(
         "tasks", "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
@@ -165,6 +173,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
                 task.signature_container_id = self.key
             self.tasks.extend(task_keys)
             self.tasks_left_to_run.extend(task_keys)
+            self.sub_task_refs.extend([Reference(task) for task in tasks])
+            await self.asave()
 
         if close_on_max_task and not self.config.can_add_task(self):
             # We dont activate check for finish the swarm, this check is done by the tasks that were added.

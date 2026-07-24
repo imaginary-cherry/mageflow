@@ -1,11 +1,14 @@
 import asyncio
-from typing import Any, cast
+from typing import Annotated, Any, ClassVar, cast
 
 import rapyer
 from pydantic import BaseModel, Field, field_validator
+from rapyer.cascade import CascadeTTL
+from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
+from rapyer.types import Reference
 
-from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_meta
 from thirdmagic.errors import MissingSignatureError
 from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.task.model import TaskSignature
@@ -17,6 +20,12 @@ if HAS_HATCHET:
 
 class ChainTaskSignature(ContainerTaskSignature):
     tasks: list[RapyerKey] = Field(default_factory=list)
+    # Cascade edge: writing to the chain refreshes and cascades TTL to its sub-tasks.
+    sub_task_refs: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+        default_factory=list
+    )
+
+    Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
     @field_validator("tasks", mode="before")
     @classmethod
