@@ -81,3 +81,11 @@ async def interrupt()
 ```
 
 Interrupts all tasks in the chain and sets the status to `INTERRUPTED`.
+
+#### `astatus()`
+
+Return a `ContainerStatus` describing the chain's progress. Child tasks are classified by their `task_status` (done / failed / running / pending) and the percentage is terminal-state based. See [`mageflow.astatus`](functions.md#mageflowastatussignature_ids) for the model fields and the batch helper that covers several containers at once.
+
+```python
+async def astatus() -> ContainerStatus
+```

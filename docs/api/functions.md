@@ -130,6 +130,60 @@ async def load_signature(key: RapyerKey) -> Optional[Signature]
 signature = await mageflow.load_signature(task_key)
 ```
 
+## Status
+
+### `mageflow.astatus(*signature_ids)`
+
+Report the progress of one or more **container** signatures (swarms / chains) in a single Redis lookup.
+
+```python
+async def astatus(*signature_ids: RapyerKey) -> ContainersStatus
+```
+
+**Parameters:**
+
+- `*signature_ids` (RapyerKey): Keys of the container signatures to inspect.
+
+**Returns:** a `ContainersStatus` model describing every requested container. Calling it with no ids returns an empty `ContainersStatus` without touching Redis.
+
+**Raises:**
+
+- `MissingSignatureError`: one of the keys does not exist.
+- `NotAContainerError`: one of the keys points to a non-container signature (e.g. a plain `TaskSignature`).
+
+```python
+status = await mageflow.astatus(swarm.key, chain.key)
+for container in status.containers:
+    print(container.task_name, container.percentage, container.is_done)
+print("overall", status.overall_percentage)
+```
+
+The percentage is terminal-state based — `(finished + failed) / total * 100` — so it reflects how many child tasks have reached a final state.
+
+#### `ContainerStatus`
+
+Per-container breakdown returned inside `ContainersStatus.containers`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `signature_id` | RapyerKey | Key of the container signature |
+| `task_name` | str | The container's task name |
+| `status` | SignatureStatus | The container's own lifecycle status |
+| `total` | int | Total child tasks |
+| `finished` | int | Children that completed successfully |
+| `failed` | int | Children that errored |
+| `running` | int | Children currently running |
+| `pending` | int | Children not yet started |
+| `percentage` | float | `(finished + failed) / total * 100`, `0.0` when `total == 0` |
+| `is_done` | bool | Whether the container itself has completed |
+
+#### `ContainersStatus`
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `containers` | list[ContainerStatus] | One entry per requested container |
+| `overall_percentage` | float (property) | Terminal-state percentage aggregated across all containers |
+
 ## Atomic Operations
 
 ### `mageflow.abounded_field(ignore_redis_error=False)`

@@ -135,6 +135,14 @@ Check if swarm has completed all tasks.
 async def is_swarm_done() -> bool
 ```
 
+#### `astatus()`
+
+Return a `ContainerStatus` describing the swarm's progress (counts + terminal-state percentage), computed from its bookkeeping lists without loading child tasks. See [`mageflow.astatus`](functions.md#mageflowastatussignature_ids) for the model fields and the batch helper that covers several containers at once.
+
+```python
+async def astatus() -> ContainerStatus
+```
+
 ## Error Classes
 
 ### TooManyTasksError

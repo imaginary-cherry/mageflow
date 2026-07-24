@@ -67,6 +67,15 @@ Create a task swarm.
 swarm = await client.aswarm(tasks=[task1, task2], task_name="my-swarm")
 ```
 
+#### `astatus(*signature_ids)`
+
+Report the progress of one or more container signatures (swarms / chains). See [`mageflow.astatus`](functions.md#mageflowastatussignature_ids) for the returned `ContainersStatus` / `ContainerStatus` models.
+
+```python
+status = await client.astatus(swarm.key, chain.key)
+print(status.overall_percentage)
+```
+
 #### `with_ctx`
 
 Override the default parameter configuration to enable context for a specific task.

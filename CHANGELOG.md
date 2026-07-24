@@ -4,6 +4,7 @@
 
 ### ✨ Added
 
+- **Container Status / Progress (`mageflow.astatus`)** (#134): Container signatures (swarms and chains) now expose an `astatus()` method returning a structured `ContainerStatus` (total / finished / failed / running / pending, terminal-state percentage, and completion flag). The new `mageflow.astatus(*ids)` loads several containers in a single Redis lookup and returns a `ContainersStatus` with an aggregate `overall_percentage`, raising on missing or non-container ids.
 - **Signing Hatchet Workflows (`MageWorkflow`)**: Native Hatchet `Workflow` objects can now be tracked by mageflow's signature lifecycle, enabling status callbacks (success/failure) without wrapping tasks in mageflow decorators.
 
 ### 🐛 Fixed
