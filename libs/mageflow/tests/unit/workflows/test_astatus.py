@@ -51,6 +51,16 @@ async def test_astatus_aggregates_multiple_containers(mock_adapter):
 
 
 @pytest.mark.asyncio
+async def test_astatus_empty_ids_returns_empty_without_db_scan(mock_adapter):
+    # Act
+    result = await mageflow.astatus()
+
+    # Assert
+    assert isinstance(result, ContainersStatus)
+    assert result.containers == []
+
+
+@pytest.mark.asyncio
 async def test_astatus_raises_for_non_container(mock_adapter):
     # Arrange
     task = await mageflow.asign("plain_task", model_validators=ContextMessage)
