@@ -1,6 +1,7 @@
 import pytest
+from thirdmagic import ContainersStatus, ContainerStatus
 from thirdmagic.errors import MissingSignatureError, NotAContainerError
-from thirdmagic.signature.status import ContainersStatus
+from thirdmagic.signature.status import SignatureStatus
 
 import mageflow
 from tests.integration.hatchet.models import ContextMessage
@@ -18,19 +19,28 @@ async def test_astatus_returns_status_for_single_container(mock_adapter):
         finished_indices=[0],
         failed_indices=[1],
     )
+    expected = ContainersStatus(
+        containers=[
+            ContainerStatus(
+                signature_id=setup.swarm_task.key,
+                task_name="test_swarm",
+                status=SignatureStatus.PENDING,
+                total=4,
+                finished=1,
+                failed=1,
+                running=1,
+                pending=1,
+                percentage=50.0,
+                is_done=False,
+            )
+        ]
+    )
 
     # Act
     result = await mageflow.astatus(setup.swarm_task.key)
 
     # Assert
-    assert isinstance(result, ContainersStatus)
-    status = result.containers[0]
-    assert status.signature_id == setup.swarm_task.key
-    assert status.total == 4
-    assert status.finished == 1
-    assert status.failed == 1
-    assert status.pending == 1
-    assert status.percentage == 50.0
+    assert result == expected
 
 
 @pytest.mark.asyncio
@@ -40,12 +50,40 @@ async def test_astatus_aggregates_multiple_containers(mock_adapter):
         num_tasks=2, stop_after_n_failures=None, finished_indices=[0, 1]
     )
     second = await create_swarm_item_test_setup(num_tasks=2, stop_after_n_failures=None)
+    expected = ContainersStatus(
+        containers=[
+            ContainerStatus(
+                signature_id=first.swarm_task.key,
+                task_name="test_swarm",
+                status=SignatureStatus.PENDING,
+                total=2,
+                finished=2,
+                failed=0,
+                running=1,
+                pending=0,
+                percentage=100.0,
+                is_done=False,
+            ),
+            ContainerStatus(
+                signature_id=second.swarm_task.key,
+                task_name="test_swarm",
+                status=SignatureStatus.PENDING,
+                total=2,
+                finished=0,
+                failed=0,
+                running=1,
+                pending=0,
+                percentage=0.0,
+                is_done=False,
+            ),
+        ]
+    )
 
     # Act
     result = await mageflow.astatus(first.swarm_task.key, second.swarm_task.key)
 
     # Assert
-    assert len(result.containers) == 2
+    assert result == expected
     # 2 terminal tasks out of 4 total across both swarms
     assert result.overall_percentage == 50.0
 

@@ -1,6 +1,7 @@
 import pytest
 
 import thirdmagic
+from thirdmagic import ContainerStatus
 from thirdmagic.signature.status import SignatureStatus
 
 
@@ -18,18 +19,24 @@ async def test_swarm_astatus_terminal_percentage(mock_task_def):
         swarm.current_running_tasks = 1
         swarm.tasks_left_to_run.append(tasks[3].key)
 
+    expected = ContainerStatus(
+        signature_id=swarm.key,
+        task_name="test_swarm",
+        status=SignatureStatus.PENDING,
+        total=4,
+        finished=1,
+        failed=1,
+        running=1,
+        pending=1,
+        percentage=50.0,
+        is_done=False,
+    )
+
     # Act
     status = await swarm.astatus()
 
     # Assert
-    assert status.signature_id == swarm.key
-    assert status.total == 4
-    assert status.finished == 1
-    assert status.failed == 1
-    assert status.running == 1
-    assert status.pending == 1
-    assert status.percentage == 50.0
-    assert status.is_done is False
+    assert status == expected
 
 
 @pytest.mark.asyncio
@@ -44,25 +51,48 @@ async def test_swarm_astatus_done_is_full(mock_task_def):
         swarm.finished_tasks.extend([task.key for task in tasks])
         swarm.is_swarm_closed = True
 
+    expected = ContainerStatus(
+        signature_id=swarm.key,
+        task_name="test_swarm",
+        status=SignatureStatus.PENDING,
+        total=2,
+        finished=2,
+        failed=0,
+        running=0,
+        pending=0,
+        percentage=100.0,
+        is_done=True,
+    )
+
     # Act
     status = await swarm.astatus()
 
     # Assert
-    assert status.percentage == 100.0
-    assert status.is_done is True
+    assert status == expected
 
 
 @pytest.mark.asyncio
 async def test_swarm_astatus_empty_is_zero(mock_task_def):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="test_swarm")
+    expected = ContainerStatus(
+        signature_id=swarm.key,
+        task_name="test_swarm",
+        status=SignatureStatus.PENDING,
+        total=0,
+        finished=0,
+        failed=0,
+        running=0,
+        pending=0,
+        percentage=0.0,
+        is_done=False,
+    )
 
     # Act
     status = await swarm.astatus()
 
     # Assert
-    assert status.total == 0
-    assert status.percentage == 0.0
+    assert status == expected
 
 
 @pytest.mark.asyncio
@@ -76,13 +106,21 @@ async def test_chain_astatus_classifies_children(mock_task_def):
     await tasks[2].change_status(SignatureStatus.ACTIVE)
     # tasks[3] stays PENDING
 
+    expected = ContainerStatus(
+        signature_id=chain.key,
+        task_name=chain.task_name,
+        status=SignatureStatus.PENDING,
+        total=4,
+        finished=1,
+        failed=1,
+        running=1,
+        pending=1,
+        percentage=50.0,
+        is_done=False,
+    )
+
     # Act
     status = await chain.astatus()
 
     # Assert
-    assert status.total == 4
-    assert status.finished == 1
-    assert status.failed == 1
-    assert status.running == 1
-    assert status.pending == 1
-    assert status.percentage == 50.0
+    assert status == expected
