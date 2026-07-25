@@ -223,7 +223,7 @@ async def test_swarm_suspend_sanity(swarm_with_tasks):
         swarm_data.swarm_signature, SignatureStatus.SUSPENDED
     )
     await assert_tasks_changed_status(
-        swarm_data.swarm_signature.tasks, SignatureStatus.SUSPENDED
+        swarm_data.swarm_signature.task_ids, SignatureStatus.SUSPENDED
     )
     await assert_tasks_changed_status(
         swarm_data.task_signatures, SignatureStatus.SUSPENDED

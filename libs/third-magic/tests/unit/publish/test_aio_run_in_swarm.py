@@ -43,8 +43,8 @@ async def test_aio_run_tasks_in_swarm_each_task_gets_own_message(mock_adapter):
     await swarm.aio_run_tasks_in_swarm([t1, t2], [msg1, msg2])
 
     reloaded = await SwarmTaskSignature.aget(swarm.key)
-    sub1 = await TaskSignature.aget(reloaded.tasks[0])
-    sub2 = await TaskSignature.aget(reloaded.tasks[1])
+    sub1 = await TaskSignature.aget(reloaded.task_ids[0])
+    sub2 = await TaskSignature.aget(reloaded.task_ids[1])
     assert sub1.kwargs["base_data"] == {"a": 1}
     assert sub2.kwargs["base_data"] == {"b": 2}
 
@@ -143,8 +143,8 @@ async def test_aio_run_in_swarm_list_tasks_all_get_same_kwargs(mock_adapter):
     await swarm.aio_run_in_swarm([t1, t2], msg)
 
     reloaded = await SwarmTaskSignature.aget(swarm.key)
-    sub1 = await TaskSignature.aget(reloaded.tasks[0])
-    sub2 = await TaskSignature.aget(reloaded.tasks[1])
+    sub1 = await TaskSignature.aget(reloaded.task_ids[0])
+    sub2 = await TaskSignature.aget(reloaded.task_ids[1])
     assert sub1.kwargs["base_data"] == {"shared": "data"}
     assert sub2.kwargs["base_data"] == {"shared": "data"}
 
@@ -239,7 +239,7 @@ async def test_aio_run_in_swarm_tasks_in_redis_before_afill_swarm_called__when_s
             reloaded = await SwarmTaskSignature.aget(swarm_arg.key)
             snapshots.append(
                 {
-                    "tasks": list(reloaded.tasks),
+                    "tasks": list(reloaded.task_ids),
                     "tasks_left_to_run": list(reloaded.tasks_left_to_run),
                 }
             )

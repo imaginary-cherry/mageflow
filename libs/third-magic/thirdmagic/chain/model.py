@@ -2,7 +2,7 @@ import asyncio
 from typing import Annotated, Any, ClassVar, cast
 
 import rapyer
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from rapyer.cascade import CascadeTTL
 from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
@@ -19,30 +19,25 @@ if HAS_HATCHET:
 
 
 class ChainTaskSignature(ContainerTaskSignature):
-    tasks: list[RapyerKey] = Field(default_factory=list)
-    # Cascade edge: writing to the chain refreshes and cascades TTL to its sub-tasks.
-    sub_task_refs: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+    # Sub-tasks are ForeignKey edges so a write to the chain cascades TTL to them.
+    tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
         default_factory=list
     )
 
     Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
-    @field_validator("tasks", mode="before")
-    @classmethod
-    def validate_tasks(cls, v: list[TaskSignature]):
-        return [cls.validate_task_key(item) for item in v]
-
     @property
     def task_ids(self) -> list[RapyerKey]:
-        return self.tasks
+        return [ref.target_key for ref in self.tasks]
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        sub_task_idx = self.tasks.index(sub_task.key)
+        task_ids = self.task_ids
+        sub_task_idx = task_ids.index(sub_task.key)
         # If this is the last task, activate chain success callbacks
-        if sub_task_idx == len(self.tasks) - 1:
+        if sub_task_idx == len(task_ids) - 1:
             await self.ClientAdapter.acall_chain_done(results, self)
         else:
-            next_task_key = self.tasks[sub_task_idx + 1]
+            next_task_key = task_ids[sub_task_idx + 1]
             next_task = await rapyer.aget(next_task_key)
             next_task = cast(TaskSignature, next_task)
             await next_task.acall(results, set_return_field=True, **self.kwargs)
@@ -53,7 +48,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
+        sub_tasks = await rapyer.afind(*self.task_ids, skip_missing=True)
         return cast(list[TaskSignature], sub_tasks)
 
     async def astatus(self) -> ContainerStatus:
@@ -82,7 +77,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         )
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        first_task = await rapyer.afind_one(self.tasks[0])
+        first_task = await rapyer.afind_one(self.task_ids[0])
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
 
@@ -98,28 +93,28 @@ class ChainTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.tasks
+            TaskSignature.safe_change_status(task, status) for task in self.task_ids
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *pause_chain_tasks, return_exceptions=True)
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.suspend_from_key(task_id) for task_id in self.task_ids],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def interrupt(self):
         await asyncio.gather(
-            *[TaskSignature.interrupt_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.interrupt_from_key(task_id) for task_id in self.task_ids],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.INTERRUPTED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_key) for task_key in self.tasks],
+            *[TaskSignature.resume_from_key(task_key) for task_key in self.task_ids],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

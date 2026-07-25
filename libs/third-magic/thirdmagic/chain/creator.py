@@ -1,5 +1,4 @@
 import rapyer
-from rapyer.types import Reference
 
 from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.model import TaskInputType
@@ -35,7 +34,6 @@ async def chain(
         success_callbacks=[success] if success else [],
         error_callbacks=[error] if error else [],
         tasks=tasks,
-        sub_task_refs=[Reference(task) for task in tasks],
         kwargs=kwargs,
     )
     async with rapyer.apipeline(use_existing_pipe=True):

@@ -90,11 +90,11 @@ async def test__swarm_with_swarms_and_chains__sanity(
         assert_chain_done(runs, chain, tasks, check_callbacks=False)
 
         # Check kwargs for an inner task was called
-        signed_task = tasks_map[chain.tasks[-1]]
+        signed_task = tasks_map[chain.task_ids[-1]]
         assert_signature_done(runs, signed_task, field_int=field_int_val)
 
         # Check the first task is called with msg params
-        first_task = tasks_map[chain.tasks[0]]
+        first_task = tasks_map[chain.task_ids[0]]
         assert_signature_done(runs, first_task, **msg_dump, **main_swarm_kwargs)
 
         # Check error was not called
@@ -116,9 +116,9 @@ async def test__swarm_with_swarms_and_chains__sanity(
         # **main_swarm_kwargs
     )
     # Assert swarms were called with params
-    first_task = tasks_map[base_swarm.tasks[0]]
+    first_task = tasks_map[base_swarm.task_ids[0]]
     assert_signature_done(runs, first_task, base_data=test_ctx)
-    second_task = tasks_map[base_swarm.tasks[1]]
+    second_task = tasks_map[base_swarm.task_ids[1]]
     assert_signature_done(runs, second_task, **msg_dump)
 
     # Check final success was called

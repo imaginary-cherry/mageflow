@@ -19,10 +19,10 @@ WRITE_ACTIONS = (
 
 @pytest.mark.parametrize("container_cls", [SwarmTaskSignature, ChainTaskSignature])
 def test_container_refreshes_and_cascades_on_write(container_cls):
-    # Assert: writes refresh TTL, and the sub_task_refs edge carries a cascade marker
+    # Assert: writes refresh TTL, and the tasks edge carries a cascade marker
     assert container_cls.Meta.refresh_ttl == WRITE_ACTIONS
-    assert "sub_task_refs" in container_cls._contain_fk
-    metadata = container_cls.model_fields["sub_task_refs"].metadata
+    assert "tasks" in container_cls._contain_fk
+    metadata = container_cls.model_fields["tasks"].metadata
     assert any(isinstance(marker, CascadeTTL) for marker in metadata)
 
 
@@ -35,11 +35,11 @@ def test_cascade_plan_has_container_to_task_edges():
         edges = plan[name].fks
         targets = {edge.target for edge in edges}
         assert "TaskSignature" in targets
-        assert any(edge.path == "$.sub_task_refs" for edge in edges)
+        assert any(edge.path == "$.tasks" for edge in edges)
 
 
 @pytest.mark.asyncio
-async def test_chain_persists_sub_task_refs(mock_task_def):
+async def test_chain_tasks_persist_as_references(mock_task_def):
     # Arrange
     tasks = [await thirdmagic.sign(f"chain_task_{i}") for i in range(3)]
     chain = await thirdmagic.chain([task.key for task in tasks])
@@ -48,11 +48,11 @@ async def test_chain_persists_sub_task_refs(mock_task_def):
     reloaded = await ChainTaskSignature.aget(chain.key)
 
     # Assert
-    assert [ref.target_key for ref in reloaded.sub_task_refs] == list(reloaded.tasks)
+    assert reloaded.task_ids == [task.key for task in tasks]
 
 
 @pytest.mark.asyncio
-async def test_swarm_persists_sub_task_refs_on_add(mock_task_def):
+async def test_swarm_tasks_persist_as_references_on_add(mock_task_def):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="test_swarm")
     tasks = [await thirdmagic.sign(f"test_task_{i}") for i in range(3)]
@@ -62,4 +62,4 @@ async def test_swarm_persists_sub_task_refs_on_add(mock_task_def):
     reloaded = await SwarmTaskSignature.aget(swarm.key)
 
     # Assert
-    assert [ref.target_key for ref in reloaded.sub_task_refs] == list(reloaded.tasks)
+    assert reloaded.task_ids == [task.key for task in tasks]

@@ -44,8 +44,10 @@ class SwarmConfig(AtomicRedisModel):
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
-    # TODO - TASKS list should be set once we enable this in rapyer
-    tasks: RedisList[RapyerKey] = Field(default_factory=list)
+    # Sub-tasks are ForeignKey edges so a write to the swarm cascades TTL to them.
+    tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+        default_factory=list
+    )
     tasks_left_to_run: RedisList[RapyerKey] = Field(default_factory=list)
     finished_tasks: RedisList[RapyerKey] = Field(default_factory=list)
     failed_tasks: RedisList[RapyerKey] = Field(default_factory=list)
@@ -56,15 +58,11 @@ class SwarmTaskSignature(ContainerTaskSignature):
     current_running_tasks: RedisInt = 0
     publishing_state_id: str
     config: SwarmConfig = Field(default_factory=SwarmConfig)
-    # Cascade edge: writing to the swarm refreshes and cascades TTL to its sub-tasks.
-    sub_task_refs: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
-        default_factory=list
-    )
 
     Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
     @field_validator(
-        "tasks", "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
+        "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
     )
     @classmethod
     def validate_tasks(cls, v):
@@ -72,10 +70,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     @property
     def task_ids(self) -> list[RapyerKey]:
-        return self.tasks
+        return [ref.target_key for ref in self.tasks]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        tasks = await rapyer.afind(*self.tasks)
+        tasks = await rapyer.afind(*self.task_ids)
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
@@ -143,7 +141,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.tasks
+            TaskSignature.safe_change_status(task, status) for task in self.task_ids
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
@@ -171,9 +169,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
         async with self.apipeline(use_existing_pipe=True, ignore_redis_error=True):
             for task in tasks:
                 task.signature_container_id = self.key
-            self.tasks.extend(task_keys)
+            self.tasks.extend([Reference(task) for task in tasks])
             self.tasks_left_to_run.extend(task_keys)
-            self.sub_task_refs.extend([Reference(task) for task in tasks])
             await self.asave()
 
         if close_on_max_task and not self.config.can_add_task(self):
@@ -194,7 +191,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def is_swarm_done(self):
         done_tasks = self.finished_tasks + self.failed_tasks
-        finished_all_tasks = set(done_tasks) == set(self.tasks)
+        finished_all_tasks = set(done_tasks) == set(self.task_ids)
         return self.is_swarm_closed and finished_all_tasks
 
     async def astatus(self) -> ContainerStatus:
@@ -226,14 +223,14 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(swarm_id) for swarm_id in self.tasks],
+            *[TaskSignature.suspend_from_key(swarm_id) for swarm_id in self.task_ids],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.resume_from_key(task_id) for task_id in self.task_ids],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

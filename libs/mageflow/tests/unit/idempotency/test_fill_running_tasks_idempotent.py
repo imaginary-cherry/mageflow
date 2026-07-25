@@ -90,7 +90,7 @@ async def test_two_consecutive_calls_ignore_second_call__no_concurrency_resource
     )
 
     reloaded_swarm = await SwarmTaskSignature.aget(swarm_signature.key)
-    assert reloaded_swarm.tasks_left_to_run == swarm_signature.tasks[-2:]
+    assert reloaded_swarm.tasks_left_to_run == swarm_signature.task_ids[-2:]
     reloaded_publish_state = await PublishState.aget(
         swarm_signature.publishing_state_id
     )
