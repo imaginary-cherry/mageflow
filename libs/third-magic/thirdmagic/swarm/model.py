@@ -43,7 +43,7 @@ class SwarmConfig(AtomicRedisModel):
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
-    # TODO - TASKS list should be set once we enable this in rapyer
+    # Sub-tasks are ForeignKey edges so a write to the swarm cascades TTL to them.
     tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
         default_factory=list
     )
@@ -169,7 +169,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         async with self.apipeline(use_existing_pipe=True, ignore_redis_error=True):
             for task in tasks:
                 task.signature_container_id = self.key
-            self.tasks = self.tasks + [Reference(task) for task in tasks]
+            self.tasks.extend([Reference(task) for task in tasks])
             self.tasks_left_to_run.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
