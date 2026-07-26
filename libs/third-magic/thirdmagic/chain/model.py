@@ -31,16 +31,16 @@ class ChainTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        task_ids = self.task_ids
-        sub_task_idx = task_ids.index(sub_task.key)
         # If this is the last task, activate chain success callbacks
-        if sub_task_idx == len(task_ids) - 1:
+        if self.tasks[-1].target_key == sub_task.key:
             await self.ClientAdapter.acall_chain_done(results, self)
-        else:
-            next_task_key = task_ids[sub_task_idx + 1]
-            next_task = await rapyer.aget(next_task_key)
-            next_task = cast(TaskSignature, next_task)
-            await next_task.acall(results, set_return_field=True, **self.kwargs)
+            return
+        for idx, ref in enumerate(self.tasks):
+            if ref.target_key == sub_task.key:
+                next_task = await rapyer.aget(self.tasks[idx + 1].target_key)
+                next_task = cast(TaskSignature, next_task)
+                await next_task.acall(results, set_return_field=True, **self.kwargs)
+                return
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: BaseException, original_msg: dict
@@ -77,7 +77,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         )
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        first_task = await rapyer.afind_one(self.task_ids[0])
+        first_task = await rapyer.afind_one(self.tasks[0].target_key)
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
 
