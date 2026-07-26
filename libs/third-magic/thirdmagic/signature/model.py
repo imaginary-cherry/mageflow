@@ -34,6 +34,8 @@ class Signature(AtomicRedisModel, ABC):
     error_callbacks: RedisList[RapyerKey] = Field(default_factory=list)
     task_status: TaskStatus = Field(default_factory=TaskStatus)
     signature_container_id: Optional[RapyerKey] = None
+    # Position of this signature within its chain container (None outside a chain).
+    chain_index: Optional[int] = None
 
     Meta: ClassVar[RedisConfig] = RedisConfig(ttl=24 * 60 * 60, refresh_ttl=False)
     ClientAdapter: ClassVar[BaseClientAdapter] = DefaultClientAdapter()

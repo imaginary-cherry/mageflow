@@ -1,6 +1,7 @@
 import asyncio
 from typing import Annotated, Any, ClassVar, Optional, Self, cast
 
+import rapyer
 from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
 from rapyer.cascade import CascadeTTL
@@ -72,7 +73,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        tasks = await asyncio.gather(*(ref.afetch() for ref in self.tasks))
+        tasks = await rapyer.afind(*(ref.target_key for ref in self.tasks))
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):

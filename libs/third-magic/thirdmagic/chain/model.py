@@ -31,16 +31,14 @@ class ChainTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        # If this is the last task, activate chain success callbacks
-        if self.tasks[-1].target_key == sub_task.key:
+        next_idx = sub_task.chain_index + 1
+        # If this was the last task, activate chain success callbacks
+        if next_idx >= len(self.tasks):
             await self.ClientAdapter.acall_chain_done(results, self)
             return
-        for idx, ref in enumerate(self.tasks):
-            if ref.target_key == sub_task.key:
-                next_task = await rapyer.aget(self.tasks[idx + 1].target_key)
-                next_task = cast(TaskSignature, next_task)
-                await next_task.acall(results, set_return_field=True, **self.kwargs)
-                return
+        next_task = await rapyer.aget(self.tasks[next_idx].target_key)
+        next_task = cast(TaskSignature, next_task)
+        await next_task.acall(results, set_return_field=True, **self.kwargs)
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: BaseException, original_msg: dict
@@ -48,10 +46,10 @@ class ChainTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await asyncio.gather(
-            *(ref.afetch() for ref in self.tasks), return_exceptions=True
+        sub_tasks = await rapyer.afind(
+            *(ref.target_key for ref in self.tasks), skip_missing=True
         )
-        return [task for task in sub_tasks if isinstance(task, TaskSignature)]
+        return cast(list[TaskSignature], sub_tasks)
 
     async def astatus(self) -> ContainerStatus:
         sub_tasks = await self.sub_tasks()
