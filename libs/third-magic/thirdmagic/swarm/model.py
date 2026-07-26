@@ -44,7 +44,7 @@ class SwarmConfig(AtomicRedisModel):
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
-    # Sub-tasks are ForeignKey edges so a write to the swarm cascades TTL to them.
+    # TODO - TASKS list should be set once we enable this in rapyer
     tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
         default_factory=list
     )
