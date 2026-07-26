@@ -10,14 +10,8 @@ from rapyer.fields import RapyerKey
 from thirdmagic.signature import Signature
 from thirdmagic.signature.status import ContainerStatus
 
-# Write actions that refresh (and cascade) a container's TTL; not READ/FETCH/DELETE.
-CONTAINER_WRITE_ACTIONS = (
-    ActionGroup.CREATE
-    | ActionGroup.UPDATE
-    | ActionGroup.APPEND
-    | ActionGroup.ERASE
-    | ActionGroup.ARITHMETIC
-)
+# A container refreshes (and cascades) its TTL when it is created or updated.
+CONTAINER_WRITE_ACTIONS = ActionGroup.CREATE | ActionGroup.UPDATE
 
 
 def container_ttl_cascade_meta() -> RedisConfig:

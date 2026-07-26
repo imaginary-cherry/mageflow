@@ -2,6 +2,7 @@ import pytest
 
 import thirdmagic
 from thirdmagic import ContainerStatus
+from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.signature.status import SignatureStatus
 
 
@@ -119,8 +120,9 @@ async def test_chain_astatus_classifies_children(mock_task_def):
         is_done=False,
     )
 
-    # Act
-    status = await chain.astatus()
+    # Act: astatus runs on a freshly-loaded container (as mageflow.astatus does)
+    reloaded = await ChainTaskSignature.aget(chain.key)
+    status = await reloaded.astatus()
 
     # Assert
     assert status == expected

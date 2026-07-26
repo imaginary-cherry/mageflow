@@ -48,8 +48,10 @@ class ChainTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await rapyer.afind(*self.task_ids, skip_missing=True)
-        return cast(list[TaskSignature], sub_tasks)
+        sub_tasks = await asyncio.gather(
+            *(ref.afetch() for ref in self.tasks), return_exceptions=True
+        )
+        return [task for task in sub_tasks if isinstance(task, TaskSignature)]
 
     async def astatus(self) -> ContainerStatus:
         sub_tasks = await self.sub_tasks()
@@ -93,28 +95,29 @@ class ChainTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.task_ids
+            TaskSignature.safe_change_status(ref.target_key, status)
+            for ref in self.tasks
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *pause_chain_tasks, return_exceptions=True)
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(task_id) for task_id in self.task_ids],
+            *[TaskSignature.suspend_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def interrupt(self):
         await asyncio.gather(
-            *[TaskSignature.interrupt_from_key(task_id) for task_id in self.task_ids],
+            *[TaskSignature.interrupt_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.INTERRUPTED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_key) for task_key in self.task_ids],
+            *[TaskSignature.resume_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

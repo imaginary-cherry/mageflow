@@ -1,7 +1,6 @@
 import asyncio
 from typing import Annotated, Any, ClassVar, Optional, Self, cast
 
-import rapyer
 from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
 from rapyer.cascade import CascadeTTL
@@ -73,7 +72,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        tasks = await rapyer.afind(*self.task_ids)
+        tasks = await asyncio.gather(*(ref.afetch() for ref in self.tasks))
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
@@ -85,7 +84,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_swarm_item_error(error, self, sub_task)
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        # We update the kwargs that everyone are using, we also tell weather we should put this in the Return value or just in the message
+        # Update shared kwargs and record whether the swarm msg goes to the return value.
         async with self.apipeline():
             self.kwargs.update(**{SWARM_MESSAGE_PARAM_NAME: msg})
             self.config.send_swarm_message_to_return_field = set_return_field
@@ -141,12 +140,13 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.task_ids
+            TaskSignature.safe_change_status(ref.target_key, status)
+            for ref in self.tasks
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
-    # TODO - once there is if statements in rapyer we need to use them to add tasks only if swarm is not closed
+    # TODO - use rapyer if-statements to add tasks only when the swarm is not closed.
     async def add_tasks(
         self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
     ) -> list[Signature]:
@@ -223,14 +223,14 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(swarm_id) for swarm_id in self.task_ids],
+            *[TaskSignature.suspend_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_id) for task_id in self.task_ids],
+            *[TaskSignature.resume_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

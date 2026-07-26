@@ -8,13 +8,7 @@ from thirdmagic.chain.model import ChainTaskSignature
 from thirdmagic.swarm.model import SwarmTaskSignature
 from thirdmagic.task.model import TaskSignature
 
-WRITE_ACTIONS = (
-    ActionGroup.CREATE
-    | ActionGroup.UPDATE
-    | ActionGroup.APPEND
-    | ActionGroup.ERASE
-    | ActionGroup.ARITHMETIC
-)
+WRITE_ACTIONS = ActionGroup.CREATE | ActionGroup.UPDATE
 
 
 @pytest.mark.parametrize("container_cls", [SwarmTaskSignature, ChainTaskSignature])
