@@ -37,9 +37,8 @@ async def chain(
         kwargs=kwargs,
     )
     async with rapyer.apipeline(use_existing_pipe=True):
-        for index, task in enumerate(tasks):
+        for task in tasks:
             task.signature_container_id = chain_task_signature.key
-            task.chain_index = index
         await chain_task_signature.asave()
 
         await cache_signature(chain_task_signature)

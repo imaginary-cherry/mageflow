@@ -23,6 +23,8 @@ class ChainTaskSignature(ContainerTaskSignature):
     tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
         default_factory=list
     )
+    # Index of the currently-running sub-task; a cached pointer, re-synced on miss.
+    current_index: int = 0
 
     Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
@@ -31,11 +33,23 @@ class ChainTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        next_idx = sub_task.chain_index + 1
+        idx = self.current_index
+        # Pointer stale (e.g. a retry) — re-locate the completed task by scanning.
+        if idx >= len(self.tasks) or self.tasks[idx].target_key != sub_task.key:
+            idx = next(
+                (
+                    i
+                    for i, ref in enumerate(self.tasks)
+                    if ref.target_key == sub_task.key
+                ),
+                len(self.tasks),
+            )
+        next_idx = idx + 1
         # If this was the last task, activate chain success callbacks
         if next_idx >= len(self.tasks):
             await self.ClientAdapter.acall_chain_done(results, self)
             return
+        await self.aupdate(current_index=next_idx)
         next_task = await rapyer.aget(self.tasks[next_idx].target_key)
         next_task = cast(TaskSignature, next_task)
         await next_task.acall(results, set_return_field=True, **self.kwargs)
