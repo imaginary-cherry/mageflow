@@ -72,6 +72,10 @@ jobs:
         working-directory: libs/third-magic
         run: pytest tests/unit
 
+      - name: Run Integration Tests
+        working-directory: libs/third-magic
+        run: pytest tests/integration
+
   mageflow-mcp-unit-tests:
     name: Unit Tests (Mageflow MCP)
     runs-on: ubuntu-latest

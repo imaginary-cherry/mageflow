@@ -11,7 +11,7 @@ class Msg(BaseModel):
     x: int = 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_swarm_write_cascades_ttl_to_sub_tasks(real_redis, mock_adapter):
     # Arrange
     swarm = await thirdmagic.swarm(task_name="cascade_swarm")
@@ -31,7 +31,7 @@ async def test_swarm_write_cascades_ttl_to_sub_tasks(real_redis, mock_adapter):
         assert await real_redis.ttl(task.key) > SHORT_TTL
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_chain_write_cascades_ttl_to_sub_tasks(real_redis, mock_adapter):
     # Arrange
     tasks = [

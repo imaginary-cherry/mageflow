@@ -170,9 +170,8 @@ class SwarmTaskSignature(ContainerTaskSignature):
         async with self.apipeline(use_existing_pipe=True, ignore_redis_error=True):
             for task in tasks:
                 task.signature_container_id = self.key
-            self.tasks.extend([Reference(task) for task in tasks])
+            self.tasks = self.tasks + [Reference(task) for task in tasks]
             self.tasks_left_to_run.extend(task_keys)
-            await self.asave()
 
         if close_on_max_task and not self.config.can_add_task(self):
             # We dont activate check for finish the swarm, this check is done by the tasks that were added.

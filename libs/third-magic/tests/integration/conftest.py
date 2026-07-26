@@ -1,28 +1,42 @@
-import os
+import warnings
 from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
 import rapyer
-import redis.asyncio as aioredis
 
 from thirdmagic.clients import BaseClientAdapter
 from thirdmagic.signature import Signature
 
 # Cascade needs a real Redis Stack (Functions + RedisJSON); fakeredis cannot emulate it.
-REDIS_URL = os.environ.get("THIRDMAGIC_TEST_REDIS_URL", "redis://localhost:6379")
+REDIS_STACK_IMAGE = "redis/redis-stack-server:7.2.0-v13"
 
 
-@pytest_asyncio.fixture
-async def real_redis():
-    client = aioredis.Redis.from_url(REDIS_URL, decode_responses=True)
-    await client.flushall()
-    await rapyer.init_rapyer(client)
-    try:
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def _redis_container():
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The @wait_container_is_ready decorator is deprecated.*",
+            category=DeprecationWarning,
+        )
+        from testcontainers.redis import AsyncRedisContainer
+
+    with AsyncRedisContainer(image=REDIS_STACK_IMAGE) as container:
+        client = await container.get_async_client(decode_responses=True)
         yield client
-    finally:
-        await client.flushall()
         await client.aclose()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def real_redis(_redis_container):
+    await _redis_container.flushall()
+    await rapyer.init_rapyer(_redis_container)
+    try:
+        yield _redis_container
+    finally:
+        await rapyer.teardown_rapyer()
+        await _redis_container.flushall()
 
 
 @pytest.fixture
