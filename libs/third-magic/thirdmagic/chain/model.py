@@ -12,7 +12,7 @@ from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_m
 from thirdmagic.errors import MissingSignatureError
 from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.task.model import TaskSignature
-from thirdmagic.utils import HAS_HATCHET
+from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -60,8 +60,8 @@ class ChainTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await rapyer.afind(
-            *(ref.target_key for ref in self.tasks), skip_missing=True
+        sub_tasks = await afind_keys_guarded(
+            (ref.target_key for ref in self.tasks), skip_missing=True
         )
         return cast(list[TaskSignature], sub_tasks)
 

@@ -1,7 +1,6 @@
 import asyncio
 from typing import Annotated, Any, ClassVar, Optional, Self, cast
 
-import rapyer
 from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
 from rapyer.cascade import CascadeTTL
@@ -21,7 +20,7 @@ from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 from thirdmagic.task.model import TaskSignature
-from thirdmagic.utils import HAS_HATCHET
+from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -73,7 +72,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         return [ref.target_key for ref in self.tasks]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        tasks = await rapyer.afind(*(ref.target_key for ref in self.tasks))
+        tasks = await afind_keys_guarded(ref.target_key for ref in self.tasks)
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
