@@ -1,42 +1,59 @@
 import asyncio
-from typing import Any, cast
+from typing import Annotated, Any, ClassVar, cast
 
 import rapyer
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
+from rapyer.cascade import CascadeTTL
+from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
+from rapyer.types import Reference
 
-from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_meta
 from thirdmagic.errors import MissingSignatureError
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.task.model import TaskSignature
-from thirdmagic.utils import HAS_HATCHET
+from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
 
 
 class ChainTaskSignature(ContainerTaskSignature):
-    tasks: list[RapyerKey] = Field(default_factory=list)
+    # FK edges cascade TTL; the Signature base lets a nested chain/swarm resolve and recurse.
+    tasks: Annotated[list[Reference[Signature]], CascadeTTL()] = Field(
+        default_factory=list
+    )
+    # Index of the currently-running sub-task; a cached pointer, re-synced on miss.
+    current_index: int = 0
 
-    @field_validator("tasks", mode="before")
-    @classmethod
-    def validate_tasks(cls, v: list[TaskSignature]):
-        return [cls.validate_task_key(item) for item in v]
+    Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
 
     @property
     def task_ids(self) -> list[RapyerKey]:
-        return self.tasks
+        return [ref.target_key for ref in self.tasks]
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
-        sub_task_idx = self.tasks.index(sub_task.key)
-        # If this is the last task, activate chain success callbacks
-        if sub_task_idx == len(self.tasks) - 1:
+        idx = self.current_index
+        # Pointer stale (e.g. a retry) — re-locate the completed task by scanning.
+        if idx >= len(self.tasks) or self.tasks[idx].target_key != sub_task.key:
+            idx = next(
+                (
+                    i
+                    for i, ref in enumerate(self.tasks)
+                    if ref.target_key == sub_task.key
+                ),
+                len(self.tasks),
+            )
+        next_idx = idx + 1
+        # If this was the last task, activate chain success callbacks
+        if next_idx >= len(self.tasks):
             await self.ClientAdapter.acall_chain_done(results, self)
-        else:
-            next_task_key = self.tasks[sub_task_idx + 1]
-            next_task = await rapyer.aget(next_task_key)
-            next_task = cast(TaskSignature, next_task)
-            await next_task.acall(results, set_return_field=True, **self.kwargs)
+            return
+        await self.aupdate(current_index=next_idx)
+        next_task = await rapyer.aget(self.tasks[next_idx].target_key)
+        next_task = cast(TaskSignature, next_task)
+        await next_task.acall(results, set_return_field=True, **self.kwargs)
 
     async def on_sub_task_error(
         self, sub_task: TaskSignature, error: BaseException, original_msg: dict
@@ -44,7 +61,9 @@ class ChainTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_chain_error(original_msg, error, self, sub_task)
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        sub_tasks = await rapyer.afind(*self.tasks, skip_missing=True)
+        sub_tasks = await afind_keys_guarded(
+            (ref.target_key for ref in self.tasks), skip_missing=True
+        )
         return cast(list[TaskSignature], sub_tasks)
 
     async def astatus(self) -> ContainerStatus:
@@ -73,7 +92,7 @@ class ChainTaskSignature(ContainerTaskSignature):
         )
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        first_task = await rapyer.afind_one(self.tasks[0])
+        first_task = await rapyer.afind_one(self.tasks[0].target_key)
         if first_task is None:
             raise MissingSignatureError(f"First task from chain {self.key} not found")
 
@@ -89,28 +108,29 @@ class ChainTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         pause_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.tasks
+            TaskSignature.safe_change_status(ref.target_key, status)
+            for ref in self.tasks
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *pause_chain_tasks, return_exceptions=True)
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.suspend_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def interrupt(self):
         await asyncio.gather(
-            *[TaskSignature.interrupt_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.interrupt_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.INTERRUPTED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_key) for task_key in self.tasks],
+            *[TaskSignature.resume_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

@@ -96,7 +96,7 @@ async def test_chain_creation_with_various_task_types_loads_correctly_from_redis
     # Assert
     loaded_chain = await ChainTaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
-    assert loaded_chain.tasks == [task.key for task in tasks]
+    assert loaded_chain.task_ids == [task.key for task in tasks]
 
     for task in tasks:
         loaded_task = await TaskSignature.aget(task.key)
@@ -148,7 +148,7 @@ async def test_chain_success_callbacks_tasks_linked_via_container_sanity():
 
     loaded_chain = await ChainTaskSignature.aget(chain_signature.key)
     assert isinstance(loaded_chain, ChainTaskSignature)
-    assert loaded_chain.tasks == [task1.key, task2.key, task3.key]
+    assert loaded_chain.task_ids == [task1.key, task2.key, task3.key]
 
 
 @pytest.mark.asyncio

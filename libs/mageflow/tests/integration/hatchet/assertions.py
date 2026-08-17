@@ -431,7 +431,7 @@ def assert_chain_done(
     chain_tasks = [task_map[task_id] for task_id in chain_signature.tasks]
     assert_tasks_in_order(wf_by_signature, chain_tasks)
     output_value = None
-    for chain_task_id in chain_signature.tasks:
+    for chain_task_id in chain_signature.task_ids:
         input_params = chain_kwargs.copy()
         task = task_map[chain_task_id]
         if output_value is not None:

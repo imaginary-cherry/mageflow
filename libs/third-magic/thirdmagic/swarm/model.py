@@ -1,13 +1,14 @@
 import asyncio
-from typing import Any, Optional, Self, cast
+from typing import Annotated, Any, ClassVar, Optional, Self, cast
 
-import rapyer
 from pydantic import BaseModel, Field, field_validator
 from rapyer import AtomicRedisModel
+from rapyer.cascade import CascadeTTL
+from rapyer.config import RedisConfig
 from rapyer.fields import RapyerKey
-from rapyer.types import RedisInt, RedisList
+from rapyer.types import RedisInt, RedisList, Reference
 
-from thirdmagic.container import ContainerTaskSignature
+from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_meta
 from thirdmagic.errors import (
     SwarmIsCanceledError,
     TaskAndMsgsDontMatchForSwarmError,
@@ -19,7 +20,7 @@ from thirdmagic.swarm.consts import SWARM_MESSAGE_PARAM_NAME
 from thirdmagic.swarm.state import PublishState
 from thirdmagic.task.creator import TaskSignatureConvertible, resolve_signatures
 from thirdmagic.task.model import TaskSignature
-from thirdmagic.utils import HAS_HATCHET
+from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -42,8 +43,10 @@ class SwarmConfig(AtomicRedisModel):
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
-    # TODO - TASKS list should be set once we enable this in rapyer
-    tasks: RedisList[RapyerKey] = Field(default_factory=list)
+    # FK edges cascade TTL; the Signature base lets a nested chain/swarm resolve and recurse.
+    tasks: Annotated[list[Reference[Signature]], CascadeTTL()] = Field(
+        default_factory=list
+    )
     tasks_left_to_run: RedisList[RapyerKey] = Field(default_factory=list)
     finished_tasks: RedisList[RapyerKey] = Field(default_factory=list)
     failed_tasks: RedisList[RapyerKey] = Field(default_factory=list)
@@ -55,8 +58,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
     publishing_state_id: str
     config: SwarmConfig = Field(default_factory=SwarmConfig)
 
+    Meta: ClassVar[RedisConfig] = container_ttl_cascade_meta()
+
     @field_validator(
-        "tasks", "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
+        "tasks_left_to_run", "finished_tasks", "failed_tasks", mode="before"
     )
     @classmethod
     def validate_tasks(cls, v):
@@ -64,10 +69,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     @property
     def task_ids(self) -> list[RapyerKey]:
-        return self.tasks
+        return [ref.target_key for ref in self.tasks]
 
     async def sub_tasks(self) -> list[TaskSignature]:
-        tasks = await rapyer.afind(*self.tasks)
+        tasks = await afind_keys_guarded(ref.target_key for ref in self.tasks)
         return cast(list[TaskSignature], tasks)
 
     async def on_sub_task_done(self, sub_task: TaskSignature, results: Any):
@@ -79,7 +84,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
         await self.ClientAdapter.acall_swarm_item_error(error, self, sub_task)
 
     async def acall(self, msg: Any, set_return_field: bool = True, **kwargs):
-        # We update the kwargs that everyone are using, we also tell weather we should put this in the Return value or just in the message
+        # Update shared kwargs and record whether the swarm msg goes to the return value.
         async with self.apipeline():
             self.kwargs.update(**{SWARM_MESSAGE_PARAM_NAME: msg})
             self.config.send_swarm_message_to_return_field = set_return_field
@@ -135,12 +140,13 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def change_status(self, status: SignatureStatus):
         paused_chain_tasks = [
-            TaskSignature.safe_change_status(task, status) for task in self.tasks
+            TaskSignature.safe_change_status(ref.target_key, status)
+            for ref in self.tasks
         ]
         pause_chain = super().change_status(status)
         await asyncio.gather(pause_chain, *paused_chain_tasks, return_exceptions=True)
 
-    # TODO - once there is if statements in rapyer we need to use them to add tasks only if swarm is not closed
+    # TODO - use rapyer if-statements to add tasks only when the swarm is not closed.
     async def add_tasks(
         self, tasks: list[TaskSignatureConvertible], close_on_max_task: bool = True
     ) -> list[Signature]:
@@ -160,10 +166,10 @@ class SwarmTaskSignature(ContainerTaskSignature):
         tasks = await resolve_signatures(tasks)
         task_keys = [task.key for task in tasks]
 
-        async with self.apipeline(use_existing_pipe=True):
+        async with self.apipeline(use_existing_pipe=True, ignore_redis_error=True):
             for task in tasks:
                 task.signature_container_id = self.key
-            self.tasks.extend(task_keys)
+            self.tasks.extend([Reference(task) for task in tasks])
             self.tasks_left_to_run.extend(task_keys)
 
         if close_on_max_task and not self.config.can_add_task(self):
@@ -184,7 +190,7 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def is_swarm_done(self):
         done_tasks = self.finished_tasks + self.failed_tasks
-        finished_all_tasks = set(done_tasks) == set(self.tasks)
+        finished_all_tasks = set(done_tasks) == set(self.task_ids)
         return self.is_swarm_closed and finished_all_tasks
 
     async def astatus(self) -> ContainerStatus:
@@ -216,14 +222,14 @@ class SwarmTaskSignature(ContainerTaskSignature):
 
     async def suspend(self):
         await asyncio.gather(
-            *[TaskSignature.suspend_from_key(swarm_id) for swarm_id in self.tasks],
+            *[TaskSignature.suspend_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(SignatureStatus.SUSPENDED)
 
     async def resume(self):
         await asyncio.gather(
-            *[TaskSignature.resume_from_key(task_id) for task_id in self.tasks],
+            *[TaskSignature.resume_from_key(ref.target_key) for ref in self.tasks],
             return_exceptions=True,
         )
         await super().change_status(self.task_status.last_status)

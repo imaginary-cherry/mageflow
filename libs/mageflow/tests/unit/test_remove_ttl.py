@@ -1,5 +1,3 @@
-import dataclasses
-
 import pytest
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.signature import Signature
@@ -29,9 +27,11 @@ def _apply_ttl():
         )
     )
     yield
-    PublishState.Meta = dataclasses.replace(PublishState.Meta, ttl=original_publish_ttl)
+    PublishState.Meta = PublishState.Meta.model_copy(
+        update={"ttl": original_publish_ttl}
+    )
     for cls, orig_ttl, orig_settings in originals:
-        cls.Meta = dataclasses.replace(cls.Meta, ttl=orig_ttl)
+        cls.Meta = cls.Meta.model_copy(update={"ttl": orig_ttl})
         cls.SignatureSettings = orig_settings
 
 

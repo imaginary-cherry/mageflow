@@ -4,6 +4,7 @@
 
 ### ✨ Added
 
+- **Cascade TTL to container sub-tasks** (#136): Swarm and chain signatures now declare their sub-tasks as `Reference` foreign keys (`sub_task_refs`) with `CascadeTTL()`, and refresh their TTL on any write. Writing to a container therefore cascades a TTL refresh to all of its sub-tasks, keeping the whole subtree alive together (cascade edge-following requires a real Redis Stack).
 - **Container Status / Progress (`mageflow.astatus`)** (#134): Container signatures (swarms and chains) now expose an `astatus()` method returning a structured `ContainerStatus` (total / finished / failed / running / pending, terminal-state percentage, and completion flag). The new `mageflow.astatus(*ids)` loads several containers in a single Redis lookup and returns a `ContainersStatus` with an aggregate `overall_percentage`, raising on missing or non-container ids.
 - **Signing Hatchet Workflows (`MageWorkflow`)**: Native Hatchet `Workflow` objects can now be tracked by mageflow's signature lifecycle, enabling status callbacks (success/failure) without wrapping tasks in mageflow decorators.
 
@@ -15,6 +16,7 @@
 
 ### 🔄 Changed
 
+- **Rapyer bumped to `>=1.3.4`** (#136): all workspaces now require rapyer 1.3.x for `Reference` foreign keys, `CascadeTTL`, and action-scoped `refresh_ttl`. Adapted to 1.3.x changes: instance `apipeline` re-fetches on entry (swarm `add_tasks` uses `ignore_redis_error=True`), and `RedisConfig` is now a pydantic model (`apply_ttl_config` uses `model_copy` instead of `dataclasses.replace`).
 - **App Renamed to Mage Voyance**: Product name changed from "Mageflow Viewer" to "Mage Voyance" across the Tauri config, tray tooltip, onboarding, splash screen, and Homebrew cask.
 
 ### 🔒 Security

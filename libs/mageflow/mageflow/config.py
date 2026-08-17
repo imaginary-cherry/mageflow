@@ -1,4 +1,3 @@
-import dataclasses
 from dataclasses import field
 from typing import Optional
 
@@ -47,6 +46,6 @@ def apply_ttl_config(ttl_config: TTLConfig):
         active_ttl = sig_config.active_ttl or ttl_config.active_ttl
         done_ttl = sig_config.ttl_when_sign_done or ttl_config.ttl_when_sign_done
 
-        sig_type.Meta = dataclasses.replace(sig_type.Meta, ttl=active_ttl)
+        sig_type.Meta = sig_type.Meta.model_copy(update={"ttl": active_ttl})
         if issubclass(sig_type, Signature):
             sig_type.SignatureSettings = SignatureConfig(ttl_when_sign_done=done_ttl)

@@ -229,3 +229,6 @@ frontend/node_modules/
 /scripts
 /frontend/.idea/
 .planning/
+# OS / tooling
+.DS_Store
+.codex/

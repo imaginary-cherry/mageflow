@@ -106,7 +106,7 @@ async def test_chain_with_mixed_task_types_loads_and_chains_correctly_sanity(
     loaded_chain = await assert_task_reloaded_as_type(
         chain_signature.key, ChainTaskSignature
     )
-    assert loaded_chain.tasks == [simple_task.key, swarm_task.key, final_task.key]
+    assert loaded_chain.task_ids == [simple_task.key, swarm_task.key, final_task.key]
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,21 @@
 import dataclasses
-from typing import Callable, Optional, TypeVar, get_type_hints
+from typing import Any, Callable, Iterable, Optional, TypeVar, get_type_hints
 
+import rapyer
 from pydantic import BaseModel
+from rapyer.fields import RapyerKey
 
 from thirdmagic.message import DEFAULT_RESULT_NAME, ReturnValueAnnotation
 
 PropType = TypeVar("PropType", bound=dataclasses.dataclass)
+
+
+async def afind_keys_guarded(keys: Iterable[RapyerKey], **kwargs) -> list[Any]:
+    # afind() with no keys scans the whole DB, so an empty key set returns [].
+    keys = list(keys)
+    if not keys:
+        return []
+    return await rapyer.afind(*keys, **kwargs)
 
 
 def get_marked_fields(

@@ -15,7 +15,7 @@ from rapyer.types import RedisDatetime, RedisDict, RedisList
 from thirdmagic.clients import BaseClientAdapter, DefaultClientAdapter
 from thirdmagic.consts import REMOVED_TASK_TTL
 from thirdmagic.signature.status import PauseActionTypes, SignatureStatus, TaskStatus
-from thirdmagic.utils import HAS_HATCHET
+from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
 
 if HAS_HATCHET:
     from hatchet_sdk.clients.admin import TriggerWorkflowOptions
@@ -74,12 +74,12 @@ class Signature(AtomicRedisModel, ABC):
         await self.remove()
 
     async def activate_success(self, msg):
-        success_signatures = await rapyer.afind(*self.success_callbacks)
+        success_signatures = await afind_keys_guarded(self.success_callbacks)
         success_signatures = cast(list[Signature], success_signatures)
         return await self.ClientAdapter.acall_signatures(success_signatures, msg, True)
 
     async def activate_error(self, msg):
-        error_signatures = await rapyer.afind(*self.error_callbacks)
+        error_signatures = await afind_keys_guarded(self.error_callbacks)
         error_signatures = cast(list[Signature], error_signatures)
         return await self.ClientAdapter.acall_signatures(error_signatures, msg, False)
 
@@ -93,7 +93,7 @@ class Signature(AtomicRedisModel, ABC):
         if success:
             keys_to_remove.extend([success_id for success_id in self.success_callbacks])
 
-        signatures = cast(list[Signature], await rapyer.afind(*keys_to_remove))
+        signatures = cast(list[Signature], await afind_keys_guarded(keys_to_remove))
         await asyncio.gather(*[signature.remove() for signature in signatures])
 
     async def remove_references(self):

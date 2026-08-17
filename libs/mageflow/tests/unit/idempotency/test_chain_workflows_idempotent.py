@@ -110,7 +110,7 @@ async def test__chain_end_fail_on_remove_task__able_to_delete(
                 setup.msg.chain_results, setup.lifecycle_manager, setup.logger
             )
 
-    sub_tasks_exists = await redis_client.exists(*setup.chain_signature.tasks)
+    sub_tasks_exists = await redis_client.exists(*setup.chain_signature.task_ids)
     assert not sub_tasks_exists
     await chain_end_task(setup.msg.chain_results, setup.lifecycle_manager, setup.logger)
     chain_exists = await redis_client.exists(*setup.chain_signature.key)
@@ -219,7 +219,7 @@ async def test__chain_error_fail_on_remove_task__able_to_delete(
                 setup.logger,
             )
 
-    sub_tasks_exists = await redis_client.exists(*setup.chain_signature.tasks)
+    sub_tasks_exists = await redis_client.exists(*setup.chain_signature.task_ids)
     assert not sub_tasks_exists
     await chain_end_task(setup.msg.chain_results, setup.lifecycle_manager, setup.logger)
     chain_exists = await redis_client.exists(*setup.chain_signature.key)

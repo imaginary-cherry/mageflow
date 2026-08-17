@@ -63,7 +63,7 @@ async def test_workflow_in_chain_creates_correct_subtasks(workflow, hatchet_adap
     assert len(chain_sig.tasks) == 2
 
     # First sub-task should be the workflow-derived TaskSignature
-    wf_task = await rapyer.afind_one(chain_sig.tasks[0])
+    wf_task = await rapyer.afind_one(chain_sig.task_ids[0])
     assert wf_task is not None
     assert isinstance(wf_task, TaskSignature)
     assert wf_task.task_name == workflow.name
@@ -79,7 +79,7 @@ async def test_workflow_in_chain_subtask_has_container_id(workflow, hatchet_adap
 
     chain_sig = await mageflow.achain([workflow, task_sig])
 
-    wf_task = await rapyer.afind_one(chain_sig.tasks[0])
+    wf_task = await rapyer.afind_one(chain_sig.task_ids[0])
     assert wf_task is not None
     assert wf_task.signature_container_id == chain_sig.key
 
@@ -101,8 +101,8 @@ async def test_workflow_in_chain_with_raw_object(workflow, hatchet_adapter):
     assert isinstance(chain_sig, ChainTaskSignature)
     assert len(chain_sig.tasks) == 2
 
-    first_task = await rapyer.afind_one(chain_sig.tasks[0])
-    second_task = await rapyer.afind_one(chain_sig.tasks[1])
+    first_task = await rapyer.afind_one(chain_sig.task_ids[0])
+    second_task = await rapyer.afind_one(chain_sig.task_ids[1])
 
     assert first_task is not None
     assert second_task is not None
@@ -133,7 +133,7 @@ async def test_workflow_in_swarm_tracked_as_single_unit(workflow, hatchet_adapte
 
     assert isinstance(swarm, SwarmTaskSignature)
     assert len(swarm.tasks) == 1
-    assert swarm.tasks[0] == wf_sig.key
+    assert swarm.task_ids[0] == wf_sig.key
 
 
 @pytest.mark.asyncio
@@ -176,7 +176,7 @@ async def test_workflow_raw_object_in_swarm_tracked_as_single_unit(
     assert isinstance(swarm, SwarmTaskSignature)
     assert len(swarm.tasks) == 1
 
-    wf_task = await rapyer.afind_one(swarm.tasks[0])
+    wf_task = await rapyer.afind_one(swarm.task_ids[0])
     assert wf_task is not None
     assert isinstance(wf_task, TaskSignature)
     assert wf_task.task_name == workflow.name

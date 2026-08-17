@@ -34,7 +34,7 @@ async def test__sub_task_is_cancelled__swarm_still_finish(
     for i in range(2):
         await swarm.aio_run_in_swarm(task1, regular_message, options=trigger_options)
     await swarm.close_swarm()
-    tasks = await TaskSignature.afind(*swarm.tasks)
+    tasks = await TaskSignature.afind(*swarm.task_ids)
     await asyncio.sleep(15)
 
     # Assert
