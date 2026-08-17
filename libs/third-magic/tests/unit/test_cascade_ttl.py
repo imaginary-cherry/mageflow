@@ -24,12 +24,14 @@ def test_cascade_plan_has_container_to_task_edges():
     # Act
     plan = build_cascade_plan([SwarmTaskSignature, ChainTaskSignature, TaskSignature])
 
-    # Assert
+    # Assert: the tasks edge enumerates every Signature class a sub-task may really be
     for name in ("SwarmTaskSignature", "ChainTaskSignature"):
-        edges = plan[name].fks
-        targets = {edge.target for edge in edges}
-        assert "TaskSignature" in targets
-        assert any(edge.path == "$.tasks" for edge in edges)
+        tasks_edge = next(edge for edge in plan[name].fks if edge.path == "$.tasks")
+        assert set(tasks_edge.candidates) == {
+            "TaskSignature",
+            "SwarmTaskSignature",
+            "ChainTaskSignature",
+        }
 
 
 @pytest.mark.asyncio

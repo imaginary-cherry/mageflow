@@ -10,6 +10,7 @@ from rapyer.types import Reference
 
 from thirdmagic.container import ContainerTaskSignature, container_ttl_cascade_meta
 from thirdmagic.errors import MissingSignatureError
+from thirdmagic.signature import Signature
 from thirdmagic.signature.status import ContainerStatus, SignatureStatus
 from thirdmagic.task.model import TaskSignature
 from thirdmagic.utils import HAS_HATCHET, afind_keys_guarded
@@ -19,8 +20,8 @@ if HAS_HATCHET:
 
 
 class ChainTaskSignature(ContainerTaskSignature):
-    # Sub-tasks are ForeignKey edges so a write to the chain cascades TTL to them.
-    tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+    # FK edges cascade TTL; the Signature base lets a nested chain/swarm resolve and recurse.
+    tasks: Annotated[list[Reference[Signature]], CascadeTTL()] = Field(
         default_factory=list
     )
     # Index of the currently-running sub-task; a cached pointer, re-synced on miss.

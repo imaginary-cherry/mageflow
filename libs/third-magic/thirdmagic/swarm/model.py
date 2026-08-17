@@ -43,8 +43,8 @@ class SwarmConfig(AtomicRedisModel):
 
 
 class SwarmTaskSignature(ContainerTaskSignature):
-    # Sub-tasks are ForeignKey edges so a write to the swarm cascades TTL to them.
-    tasks: Annotated[list[Reference[TaskSignature]], CascadeTTL()] = Field(
+    # FK edges cascade TTL; the Signature base lets a nested chain/swarm resolve and recurse.
+    tasks: Annotated[list[Reference[Signature]], CascadeTTL()] = Field(
         default_factory=list
     )
     tasks_left_to_run: RedisList[RapyerKey] = Field(default_factory=list)

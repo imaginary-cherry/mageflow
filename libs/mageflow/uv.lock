@@ -1302,15 +1302,15 @@ wheels = [
 
 [[package]]
 name = "rapyer"
-version = "1.3.4"
+version = "1.3.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "redis" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/f8/9c5448f68ab88ac30037cacfd0cb8d17342133abf0289d942623d6b2f347/rapyer-1.3.4.tar.gz", hash = "sha256:cd61c9708c0b7568b473368fdea46671569d1a90d5d0b6c96ec280953f9b6de8", size = 3226823, upload-time = "2026-07-21T13:56:17.67Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/73/74a65b66eb5f64aa38d4e3e3808b1cb3b0d0d7a4bbf9be790436439333e1/rapyer-1.3.6.tar.gz", hash = "sha256:f3c344003c60bd5c1d94f3f01f11dfc24c9df3dca9714097280e4d778eb816b4", size = 3240093, upload-time = "2026-08-17T12:57:21.858Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/14/c32b0f348c88f552d541b06910f28ea411b233158478b907a7157254422a/rapyer-1.3.4-py3-none-any.whl", hash = "sha256:229376bb8e2094a1f1e02e9980aa382fc9979196cd610c60ce07f4990ab8dcf3", size = 86601, upload-time = "2026-07-21T13:56:16.299Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/6b/97030660f496de546319995256c40c58d24a78bd2a4ab44b4dcd018beb8c/rapyer-1.3.6-py3-none-any.whl", hash = "sha256:0a0999266430d4293e3ddf0826be76f771f3cab97bce056c46591d7c303cab4c", size = 88305, upload-time = "2026-08-17T12:57:20.514Z" },
 ]
 
 [[package]]
@@ -1440,8 +1440,9 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2,<10.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0,<2.0.0" },
-    { name = "rapyer", specifier = ">=1.3.4,<1.4.0" },
+    { name = "rapyer", specifier = ">=1.3.6,<1.4.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.5" },
+    { name = "testcontainers", extras = ["redis"], marker = "extra == 'dev'", specifier = ">=4.14.0,<5.0.0" },
 ]
 provides-extras = ["dev"]
 
